@@ -4,11 +4,13 @@ using UnityEngine;
 
 public class PlayerObjectController : NetworkBehaviour
 {
+
     //Player Data
     [SyncVar] public int ConnectionId;
     [SyncVar] public int PlayerId;
     [SyncVar] public ulong PlayerSteamId;
     [SyncVar(hook = nameof(PlayerNameUpdate))] public string PlayerName;
+    [SyncVar(hook = nameof(PlayerReadyUpdate))] public bool Ready;
 
     private MyNetworkManager _manager;
 
@@ -19,7 +21,32 @@ public class PlayerObjectController : NetworkBehaviour
             if (_manager != null) { return _manager; }
             return _manager = MyNetworkManager.singleton as MyNetworkManager;
         }
+    }
 
+    public void PlayerReadyUpdate(bool OldValue, bool NewValue)
+    {
+        if (isServer)
+        {
+            this.Ready = NewValue;
+        }
+        if (isClient)
+        {
+            LobbyController.Instance.UpdatePlayerList();
+        }
+    }
+
+    [Command]
+    private void CmdSetPlayerReady()
+    {
+        this.PlayerReadyUpdate(this.Ready, !this.Ready);
+    }
+
+    public void ChangeReady()
+    {
+        if (isOwned)
+        {
+            CmdSetPlayerReady();
+        }
     }
 
     public override void OnStartAuthority()

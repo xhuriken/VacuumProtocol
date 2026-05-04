@@ -1,7 +1,7 @@
-using UnityEngine;
-using UnityEngine.UI;
 using Steamworks;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 public class PlayerListItem : MonoBehaviour
 {
     public string PlayerName;
@@ -11,6 +11,8 @@ public class PlayerListItem : MonoBehaviour
 
     public TextMeshProUGUI PlayerNameText;
     public RawImage PlayerIcon;
+    public TextMeshProUGUI PlayerReadyText;
+    public bool Ready;
 
     protected Callback<AvatarImageLoaded_t> ImageLoaded;
 
@@ -19,24 +21,32 @@ public class PlayerListItem : MonoBehaviour
         ImageLoaded = Callback<AvatarImageLoaded_t>.Create(OnImageLoaded);
     }
 
+    public void ChangeReadyStatus()
+    {
+        //Visual
+        PlayerReadyText.text = Ready ? "Charged !" : "Not Charged !";
+        PlayerReadyText.color = Ready ? Color.green : Color.red;
+    }
+
     public void SetPlayerValues()
     {
         PlayerNameText.text = PlayerName;
-        if(!AvatarReceived) GetPlayerIcon();
+        ChangeReadyStatus();
+        if (!AvatarReceived) GetPlayerIcon();
 
     }
 
     void GetPlayerIcon()
     {
         int ImageId = SteamFriends.GetLargeFriendAvatar(new CSteamID(PlayerSteamId));
-        if(ImageId == -1 ) { return; }
+        if (ImageId == -1) { return; }
         PlayerIcon.texture = GetSteamImageAsTexture(ImageId);
 
     }
 
     private void OnImageLoaded(AvatarImageLoaded_t callback)
     {
-        if(callback.m_steamID.m_SteamID == PlayerSteamId)
+        if (callback.m_steamID.m_SteamID == PlayerSteamId)
         {
             PlayerIcon.texture = GetSteamImageAsTexture(callback.m_iImage);
         }
