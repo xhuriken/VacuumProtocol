@@ -1,8 +1,31 @@
 using Mirror;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Steamworks;
 
 public class MyNetworkManager :  NetworkManager
 {
+
+    [SerializeField] private PlayerObjectController _playerPrefab;
+    public List<PlayerObjectController> GamePlayers { get; } = new List<PlayerObjectController>();
+
+    public override void OnServerAddPlayer(NetworkConnectionToClient conn)
+    {
+        //base.OnServerAddPlayer(conn);
+        if(SceneManager.GetActiveScene().name == "Lobby")
+        {
+            PlayerObjectController _playerInstance = Instantiate(_playerPrefab);
+            _playerInstance.ConnecionId = conn.connectionId;
+            _playerInstance.PlayerId = GamePlayers.Count + 1;
+            _playerInstance.PlayerSteamId = (ulong)SteamMatchmaking.GetLobbyMemberByIndex((CSteamID)SteamLobby.Instance.CurrentLobbyId, GamePlayers.Count);
+
+            NetworkServer.AddPlayerForConnection(conn, _playerInstance.gameObject);
+        }   
+        PlayerObjectController player = conn.identity.GetComponent<PlayerObjectController>();
+        GamePlayers.Add(player);
+    }
+
     public override void OnStartServer()
     {
         base.OnStartServer();
