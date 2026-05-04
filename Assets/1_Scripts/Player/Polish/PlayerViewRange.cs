@@ -15,6 +15,8 @@ public class PlayerViewRange : NetworkBehaviour
     [SerializeField] private float _viewAngle = 45f;
     [SerializeField] private LayerMask _entityLayer;
     [SerializeField] private LayerMask _obstacleLayer;
+    [Header("References")]
+    [SerializeField] private Transform _viewReference;
 
     [SerializeField] private readonly List<IEntity> _detectedEntities = new List<IEntity>();
     [SerializeField] private IEntity _highestPriorityEntity;
@@ -32,25 +34,25 @@ public class PlayerViewRange : NetworkBehaviour
     /// </summary>
     private void DetectEntities()
     {
-        if (!isLocalPlayer) return;
+        if (!isLocalPlayer || _viewReference == null) return;
         // Reset list
         _detectedEntities.Clear();
         _highestPriorityEntity = null;
 
         // Raycast Sphere
-        Collider[] targetsInRadius = Physics.OverlapSphere(transform.position, _viewDistance, _entityLayer);
+        Collider[] targetsInRadius = Physics.OverlapSphere(_viewReference.position, _viewDistance, _entityLayer);
 
         foreach (Collider target in targetsInRadius)
         {
-            Vector3 directionToTarget = (target.transform.position - transform.position).normalized;
+            Vector3 directionToTarget = (target.transform.position - _viewReference.position).normalized;
 
             // Cone check
-            if (Vector3.Angle(transform.forward, directionToTarget) < _viewAngle / 2f)
+            if (Vector3.Angle(_viewReference.forward, directionToTarget) < _viewAngle / 2f)
             {
-                float distanceToTarget = Vector3.Distance(transform.position, target.transform.position);
+                float distanceToTarget = Vector3.Distance(_viewReference.position, target.transform.position);
 
                 // Obstacle check !
-                if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, _obstacleLayer))
+                if (!Physics.Raycast(_viewReference.position, directionToTarget, distanceToTarget, _obstacleLayer))
                 {
                     if (target.TryGetComponent(out IEntity entity))
                     {
@@ -91,13 +93,13 @@ public class PlayerViewRange : NetworkBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, _viewDistance);
+        Gizmos.DrawWireSphere(_viewReference.position, _viewDistance);
 
-        Vector3 leftBoundary = Quaternion.Euler(0, -_viewAngle / 2f, 0) * transform.forward;
-        Vector3 rightBoundary = Quaternion.Euler(0, _viewAngle / 2f, 0) * transform.forward;
+        Vector3 leftBoundary = Quaternion.Euler(0, -_viewAngle / 2f, 0) * _viewReference.forward;
+        Vector3 rightBoundary = Quaternion.Euler(0, _viewAngle / 2f, 0) * _viewReference.forward;
 
         Gizmos.color = Color.red;
-        Gizmos.DrawRay(transform.position, leftBoundary * _viewDistance);
-        Gizmos.DrawRay(transform.position, rightBoundary * _viewDistance);
+        Gizmos.DrawRay(_viewReference.position, leftBoundary * _viewDistance);
+        Gizmos.DrawRay(_viewReference.position, rightBoundary * _viewDistance);
     }
 }

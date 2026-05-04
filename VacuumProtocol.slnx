@@ -10,6 +10,7 @@
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Mirror.csproj" />
   <Project Path="SimpleWebTransport.csproj" />
+  <Project Path="FizzySteamworks.csproj" />
   <Project Path="Mirror.Authenticators.csproj" />
   <Project Path="Mirror.Transports.csproj" />
   <Project Path="EncryptionTransportEditor.csproj" />

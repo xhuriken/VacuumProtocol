@@ -27,7 +27,7 @@ public class Eye : NetworkBehaviour
         else
         {
             // If no entity is detected, reset the target rotation to the PLAYER forward direction (or any default orientation you prefer).
-            _targetRotation = Quaternion.LookRotation(transform.parent.forward); 
+            _targetRotation = transform.parent.rotation;
         }
         transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * _rotationSpeed);
     }
