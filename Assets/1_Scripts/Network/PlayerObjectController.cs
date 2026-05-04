@@ -1,11 +1,11 @@
-using UnityEngine;
 using Mirror;
 using Steamworks;
+using UnityEngine;
 
 public class PlayerObjectController : NetworkBehaviour
 {
     //Player Data
-    [SyncVar] public int ConnecionId;
+    [SyncVar] public int ConnectionId;
     [SyncVar] public int PlayerId;
     [SyncVar] public ulong PlayerSteamId;
     [SyncVar(hook = nameof(PlayerNameUpdate))] public string PlayerName;
@@ -16,7 +16,7 @@ public class PlayerObjectController : NetworkBehaviour
     {
         get
         {
-            if(_manager != null) { return _manager; }
+            if (_manager != null) { return _manager; }
             return _manager = MyNetworkManager.singleton as MyNetworkManager;
         }
 
@@ -24,43 +24,40 @@ public class PlayerObjectController : NetworkBehaviour
 
     public override void OnStartAuthority()
     {
-        //base.OnStartAuthority();
         CmdSetPlayerName(SteamFriends.GetPersonaName());
         gameObject.name = "LocalGamePlayer";
-        LobbyController.Intance.FindLocalPlayer();
-        LobbyController.Intance.UpdateLobbyName();
+        LobbyController.Instance.FindLocalPlayer();
+        LobbyController.Instance.UpdateLobbyName();
     }
 
     public override void OnStartClient()
     {
-        //base.OnStartClient();
         Manager.GamePlayers.Add(this);
-        LobbyController.Intance.UpdateLobbyName();
-        LobbyController.Intance.UpdatePlayerList();
+        LobbyController.Instance.UpdateLobbyName();
+        LobbyController.Instance.UpdatePlayerList();
     }
 
     public override void OnStopClient()
     {
-        //base.OnStopClient();
         Manager.GamePlayers.Remove(this);
-        LobbyController.Intance.UpdatePlayerList();
+        LobbyController.Instance.UpdatePlayerList();
     }
 
     [Command]
     private void CmdSetPlayerName(string playerName)
     {
-        this.PlayerNameUpdate(this.PlayerName, playerName);
+        this.PlayerName = playerName;
     }
 
     public void PlayerNameUpdate(string OldValue, string NewValue)
     {
-        if(isServer)
+        if (isServer)
         {
             this.PlayerName = NewValue;
         }
-        if(isClient)
+        if (isClient)
         {
-            LobbyController.Intance.UpdatePlayerList();
+            LobbyController.Instance.UpdatePlayerList();
         }
     }
 

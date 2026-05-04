@@ -14,6 +14,11 @@ public class PlayerListItem : MonoBehaviour
 
     protected Callback<AvatarImageLoaded_t> ImageLoaded;
 
+    private void Start()
+    {
+        ImageLoaded = Callback<AvatarImageLoaded_t>.Create(OnImageLoaded);
+    }
+
     public void SetPlayerValues()
     {
         PlayerNameText.text = PlayerName;
@@ -31,13 +36,9 @@ public class PlayerListItem : MonoBehaviour
 
     private void OnImageLoaded(AvatarImageLoaded_t callback)
     {
-        if(callback.m_steamID.m_SteamID != PlayerSteamId)
+        if(callback.m_steamID.m_SteamID == PlayerSteamId)
         {
             PlayerIcon.texture = GetSteamImageAsTexture(callback.m_iImage);
-        }
-        else
-        {
-            return;
         }
     }
 
