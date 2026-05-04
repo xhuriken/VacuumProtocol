@@ -28,6 +28,9 @@ public class PlayerPhysicsMovement : NetworkBehaviour
     [Header("Look Settings")]
     [SerializeField] private Transform _cameraTransform;
     [SerializeField] private float _sensitivity = 0.15f;
+    
+    private PlayerModelConfiguration _modelConfig;
+
 
     private Rigidbody _rb;
     public Rigidbody Rb => _rb;
@@ -50,6 +53,8 @@ public class PlayerPhysicsMovement : NetworkBehaviour
     public override void OnStartLocalPlayer()
     {
         _rb = GetComponent<Rigidbody>();
+        _modelConfig = GetComponent<PlayerModelConfiguration>();
+
 
         // Rigidbody setup for snappier feel
         _rb.useGravity = true;
@@ -89,13 +94,20 @@ public class PlayerPhysicsMovement : NetworkBehaviour
 
         _cameraPitch -= _lookInput.y * _sensitivity;
         _cameraPitch = Mathf.Clamp(_cameraPitch, -85f, 85f);
-        _cameraTransform.localRotation = Quaternion.Euler(_cameraPitch, 0, 0);
+        
+        Quaternion baseRotation = _modelConfig != null ? _modelConfig.RotationOffset : Quaternion.identity;
+        _cameraTransform.localRotation = baseRotation * Quaternion.Euler(_cameraPitch, 0, 0);
     }
 
     private void ApplyMovementPhysics()
     {
         bool isGrounded = Mathf.Abs(_rb.linearVelocity.y) < 0.05f;
-        Vector3 moveDirection = transform.right * _moveInput.x + transform.forward * _moveInput.y;
+        
+        Vector3 forward = _modelConfig != null ? _modelConfig.GetCorrectedForward(transform) : transform.forward;
+        Vector3 right = _modelConfig != null ? _modelConfig.GetCorrectedRight(transform) : transform.right;
+        
+        Vector3 moveDirection = right * _moveInput.x + forward * _moveInput.y;
+
 
         float currentMaxSpeed = _isSprinting ? _maxSpeed * _sprintMultiplier : _maxSpeed;
 

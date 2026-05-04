@@ -14,9 +14,10 @@ public class WheelSteering : NetworkBehaviour
 
     private PlayerPhysicsMovement _playerMovement;
     private Rigidbody _rb;
+    private List<Quaternion> _initialRotations = new List<Quaternion>();
 
     /// <summary>
-    /// Initialize references for the local player.
+    /// Initialize references and store initial rotations.
     /// </summary>
     public override void OnStartLocalPlayer()
     {
@@ -26,11 +27,19 @@ public class WheelSteering : NetworkBehaviour
         {
             _rb = _playerMovement.GetComponent<Rigidbody>();
         }
+
+        // Store the initial rotation of each wheel to use it as the "zero" point
+        _initialRotations.Clear();
+        foreach (Transform wheel in _wheels)
+        {
+            if (wheel != null)
+                _initialRotations.Add(wheel.localRotation);
+        }
     }
 
     private void Update()
     {
-        if (!isLocalPlayer || _rb == null)
+        if (!isLocalPlayer || _rb == null || _initialRotations.Count == 0)
         {
             return;
         }
@@ -39,33 +48,33 @@ public class WheelSteering : NetworkBehaviour
     }
 
     /// <summary>
-    /// Calculates the target Y rotation and applies it while keeping X and Z intact.
+    /// Calculates the target rotation relative to the initial orientation.
     /// </summary>
     private void RotateWheelsToMovementDirection()
     {
         Vector3 velocity = _rb.linearVelocity;
         velocity.y = 0;
 
-        // Stop processing if the robot is nearly still
         if (velocity.magnitude < _minVelocityThreshold)
         {
             return;
         }
 
-        // Convert world velocity to local direction
-        Vector3 localDirection = transform.InverseTransformDirection(velocity.normalized);
+        // Convert world velocity to local direction relative to the ROOT player (not the potentially flipped model)
+        Vector3 localDirection = _playerMovement.transform.InverseTransformDirection(velocity.normalized);
+        
+        // Target steering rotation
+        Quaternion steeringRotation = Quaternion.LookRotation(localDirection, Vector3.up);
 
-        // Get the Y angle we need to face the movement
-        float targetY = Quaternion.LookRotation(localDirection).eulerAngles.y;
-
-        foreach (Transform wheel in _wheels)
+        for (int i = 0; i < _wheels.Count; i++)
         {
-            // Simple logic: Get current angles, replace Y, and Slerp to it
-            Vector3 currentAngles = wheel.localEulerAngles;
-            Quaternion targetRotation = Quaternion.Euler(currentAngles.x, targetY, currentAngles.z);
+            if (_wheels[i] == null) continue;
 
-            wheel.localRotation = Quaternion.Slerp(
-                wheel.localRotation,
+            // Apply steering relative to the initial "zero" rotation of the wheel
+            Quaternion targetRotation = _initialRotations[i] * steeringRotation;
+
+            _wheels[i].localRotation = Quaternion.Slerp(
+                _wheels[i].localRotation,
                 targetRotation,
                 _steeringSpeed * Time.deltaTime
             );

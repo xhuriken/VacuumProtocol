@@ -17,6 +17,13 @@ public class PlayerViewRange : NetworkBehaviour
     [SerializeField] private LayerMask _obstacleLayer;
     [Header("References")]
     [SerializeField] private Transform _viewReference;
+    
+    private PlayerModelConfiguration _modelConfig;
+
+    private Vector3 ViewForward => _modelConfig != null 
+        ? _modelConfig.GetCorrectedForward(_viewReference) 
+        : _viewReference.forward;
+
 
     [SerializeField] private readonly List<IEntity> _detectedEntities = new List<IEntity>();
     [SerializeField] private IEntity _highestPriorityEntity;
@@ -24,7 +31,13 @@ public class PlayerViewRange : NetworkBehaviour
     /// Accesseur pour l'entité prioritaire actuelle.
     /// </summary>
     public IEntity HighestPriorityEntity => _highestPriorityEntity;
+    private void Start()
+    {
+        _modelConfig = GetComponentInParent<PlayerModelConfiguration>();
+    }
+
     private void Update()
+
     {
         DetectEntities();
     }
@@ -47,7 +60,7 @@ public class PlayerViewRange : NetworkBehaviour
             Vector3 directionToTarget = (target.transform.position - _viewReference.position).normalized;
 
             // Cone check
-            if (Vector3.Angle(_viewReference.forward, directionToTarget) < _viewAngle / 2f)
+            if (Vector3.Angle(ViewForward, directionToTarget) < _viewAngle / 2f)
             {
                 float distanceToTarget = Vector3.Distance(_viewReference.position, target.transform.position);
 
@@ -87,16 +100,15 @@ public class PlayerViewRange : NetworkBehaviour
         _highestPriorityEntity = bestEntity;
     }
 
-    /// <summary>
-    /// Dessine le cône de vision dans l'éditeur pour le debug.
-    /// </summary>
+
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(_viewReference.position, _viewDistance);
 
-        Vector3 leftBoundary = Quaternion.Euler(0, -_viewAngle / 2f, 0) * _viewReference.forward;
-        Vector3 rightBoundary = Quaternion.Euler(0, _viewAngle / 2f, 0) * _viewReference.forward;
+        Vector3 forward = ViewForward;
+        Vector3 leftBoundary = Quaternion.AngleAxis(-_viewAngle / 2f, _viewReference.up) * forward;
+        Vector3 rightBoundary = Quaternion.AngleAxis(_viewAngle / 2f, _viewReference.up) * forward;
 
         Gizmos.color = Color.red;
         Gizmos.DrawRay(_viewReference.position, leftBoundary * _viewDistance);
