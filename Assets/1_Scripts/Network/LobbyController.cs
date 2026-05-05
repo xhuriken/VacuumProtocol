@@ -52,6 +52,11 @@ public class LobbyController : MonoBehaviour
         LocalPlayerController.ChangeReady();
     }
 
+    public void StartGame()
+    {
+        LocalPlayerController.CanStartGame("SteamTest");
+    }
+
     public void UpdateButton()
     {
         if (LocalPlayerController.Ready)

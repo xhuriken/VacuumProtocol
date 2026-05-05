@@ -8,7 +8,26 @@ public class MyNetworkManager : NetworkManager
 {
 
     [SerializeField] private PlayerObjectController _playerPrefab;
+    [SerializeField] private GameObject _gamePlayerPrefab;
     public List<PlayerObjectController> GamePlayers { get; } = new List<PlayerObjectController>();
+
+    public override void OnServerSceneChanged(string sceneName)
+    {
+        if (sceneName.StartsWith("SteamTest")) // Using StartsWith in case of variations
+        {
+            // We need a temporary list because ReplacePlayerForConnection might affect the original list
+            List<PlayerObjectController> playersToReplace = new List<PlayerObjectController>(GamePlayers);
+
+            foreach (var lobbyPlayer in playersToReplace)
+            {
+                GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab);
+                
+                // Mirror logic: Replace the Lobby Player object with the Game Player object
+                // for this specific connection. The old object is destroyed automatically.
+                NetworkServer.ReplacePlayerForConnection(lobbyPlayer.connectionToClient, gamePlayerInstance);
+            }
+        }
+    }
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {

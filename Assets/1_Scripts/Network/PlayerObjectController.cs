@@ -49,6 +49,20 @@ public class PlayerObjectController : NetworkBehaviour
         }
     }
 
+    public void CanStartGame(string sceneName)
+    {
+        if (isOwned)
+        {
+            CmdStartGame(sceneName);
+        }
+    }
+
+    [Command]
+    public void CmdStartGame(string sceneName)
+    {
+        Manager.ServerChangeScene(sceneName);
+    }
+
     public override void OnStartAuthority()
     {
         CmdSetPlayerName(SteamFriends.GetPersonaName());
