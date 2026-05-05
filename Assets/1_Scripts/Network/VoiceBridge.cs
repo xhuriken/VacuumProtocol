@@ -30,17 +30,22 @@ public class VoiceBridge : MonoBehaviour
             if (output is StreamedAudioSourceOutput audioOutput) {
                 uint netId = (uint)id;
                 
-                float timeout = 5f;
+                float timeout = 10f;
                 GameObject targetRobot = null;
                 Debug.Log($"[Voice] Trying to link audio for peer ID: {id}. Searching for robot with ConnectionId: {id}...");
 
                 while(targetRobot == null && timeout > 0){
                     foreach (var identity in NetworkClient.spawned.Values) {
+                        // On cherche d'abord le Robot (Jeu)
                         if (identity.TryGetComponent(out PlayerPhysicsMovement movement)) {
-                            // LOG DE DEBUG : On va voir TOUT ce que le client détecte
-                            Debug.Log($"[Voice Debug] Scanning object: {identity.name}, netId: {identity.netId}, ConnectionId: {movement.ConnectionId} (Looking for: {id})");
-
                             if (movement.ConnectionId == id) {
+                                targetRobot = identity.gameObject;
+                                break;
+                            }
+                        }
+                        // Sinon on cherche le PlayerController (Lobby)
+                        else if (identity.TryGetComponent(out PlayerObjectController lobbyPlayer)) {
+                            if (lobbyPlayer.ConnectionId == id) {
                                 targetRobot = identity.gameObject;
                                 break;
                             }
@@ -53,21 +58,24 @@ public class VoiceBridge : MonoBehaviour
                     }
                 }
 
+                var source = audioOutput.GetComponent<AudioSource>();
                 if (targetRobot != null) {
                     audioOutput.transform.SetParent(targetRobot.transform);
                     audioOutput.transform.localPosition = Vector3.up; 
 
-                    var source = audioOutput.GetComponent<AudioSource>();
                     if (source != null) {
-                        source.spatialBlend = 1.0f; 
+                        source.spatialBlend = 1.0f; // 3D
                         source.minDistance = 1f;
                         source.maxDistance = 30f;
-                        source.rolloffMode = AudioRolloffMode.Linear;
                     }
-                    Debug.Log($"[Voice] SUCCESS! Peer {id} linked to robot {targetRobot.name} (netId: {targetRobot.GetComponent<NetworkIdentity>().netId})");
+                    Debug.Log($"[Voice] SUCCESS! Peer {id} linked to {targetRobot.name}");
                 }
                 else {
-                    Debug.LogError($"[Voice] FAILED to find robot for peer {id} after timeout. (Searched for ConnectionId {id})");
+                    // FALLBACK : Si on ne trouve rien, on laisse en 2D pour pouvoir parler quand même
+                    if (source != null) {
+                        source.spatialBlend = 0f; // 2D (Global)
+                    }
+                    Debug.LogWarning($"[Voice] Fallback to 2D for peer {id} (No robot found)");
                 }
             }
         }
