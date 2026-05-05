@@ -30,6 +30,12 @@ public class MyNetworkManager : NetworkManager
             // Spawn the actual game player (Mecha)
             GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab);
             
+            // Set the connection ID for voice mapping
+            if (gamePlayerInstance.TryGetComponent(out PlayerPhysicsMovement movement))
+            {
+                movement.ConnectionId = conn.connectionId;
+            }
+
             // This replaces the old player object with the new mecha for this connection
             NetworkServer.AddPlayerForConnection(conn, gamePlayerInstance);
             Debug.Log($"[MyNetwork] Game Player (Mecha) Added in {sceneName} for connection {conn.connectionId}");

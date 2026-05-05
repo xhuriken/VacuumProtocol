@@ -34,11 +34,20 @@ public class VoiceBridge : MonoBehaviour
                 GameObject targetRobot = null;
                 
                 while(targetRobot == null && timeout > 0){
-                    if (NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity identity))
-                        targetRobot = identity.gameObject;
+                    // We look through all spawned objects to find the one with the matching ConnectionId
+                    foreach (var identity in NetworkClient.spawned.Values) {
+                        if (identity.TryGetComponent(out PlayerPhysicsMovement movement)) {
+                            if (movement.ConnectionId == id) {
+                                targetRobot = identity.gameObject;
+                                break;
+                            }
+                        }
+                    }
                     
-                    timeout -= 0.1f;
-                    yield return new WaitForSeconds(0.1f);
+                    if (targetRobot == null) {
+                        timeout -= 0.1f;
+                        yield return new WaitForSeconds(0.1f);
+                    }
                 }
 
                 if (targetRobot != null) {

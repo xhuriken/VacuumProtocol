@@ -10,6 +10,8 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CapsuleCollider))]
 public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
 {
+    [SyncVar] public int ConnectionId = -1;
+
     [Header("Movement Constants")]
     [SerializeField] private float _accelerationForce = 150f; // High force for "heavy" feel
     [SerializeField] private float _maxSpeed = 10f;
