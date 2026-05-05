@@ -44,8 +44,8 @@ public class Eye : NetworkBehaviour
     {
         if (_playerViewRange != null && _playerViewRange.HighestPriorityEntity != null)
         {
-            Transform targetTransform = _playerViewRange.HighestPriorityEntity.gameObject.transform;
-            Vector3 directionToTarget = targetTransform.position - transform.position;
+            Transform targetPoint = _playerViewRange.HighestPriorityEntity.LookAtPoint;
+            Vector3 directionToTarget = targetPoint.position - transform.position;
 
             if (directionToTarget.sqrMagnitude > 0.001f)
             {
@@ -57,7 +57,7 @@ public class Eye : NetworkBehaviour
                 // what now faces the target.
                 _targetLocalRotation = Quaternion.Inverse(transform.parent.rotation) * worldLookRot * _initialLocalRotation;
                 
-                if (_showDebugLogs) Debug.Log($"<color=magenta>[Eye] Looking at:</color> {targetTransform.name}, TargetLocalRot: {_targetLocalRotation.eulerAngles}");
+                if (_showDebugLogs) Debug.Log($"<color=magenta>[Eye] Looking at:</color> {targetPoint.name}, TargetLocalRot: {_targetLocalRotation.eulerAngles}");
             }
         }
         else

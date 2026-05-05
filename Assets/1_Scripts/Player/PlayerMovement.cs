@@ -35,18 +35,49 @@ public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
 
     public string Name { get; set; } = "Unit";
     public int PriorityLevel { get; set; } = 1;
+    public Transform LookAtPoint => _cameraTransform != null ? _cameraTransform : transform;
 
     private Vector2 _moveInput;
     private Vector2 _lookInput;
     private float _cameraPitch;
     private bool _isSprinting;
 
+    private void Awake()
+    {
+        // CRITICAL: Disable PlayerInput immediately on Awake.
+        // This prevents remote player clones from "stealing" the keyboard/mouse devices
+        // during instantiation before Mirror can assign authority.
+        PlayerInput input = GetComponent<PlayerInput>();
+        if (input != null) input.enabled = false;
+    }
+
     private void Start()
     {
+        // We handle cleanup in Start, but we'll use OnStartLocalPlayer to re-enable 
+        // essential components for the owner to avoid race conditions.
         if (!isLocalPlayer)
         {
-            GetComponentInChildren<Camera>().gameObject.SetActive(false);
+            CleanupRemotePlayer();
         }
+    }
+
+    private void CleanupRemotePlayer()
+    {
+        // Disable components that should only exist for the local player
+        Camera cam = GetComponentInChildren<Camera>();
+        if (cam != null)
+        {
+            cam.gameObject.SetActive(false);
+            AudioListener listener = cam.GetComponent<AudioListener>();
+            if (listener != null) listener.enabled = false;
+        }
+
+        PlayerInput input = GetComponent<PlayerInput>();
+        if (input != null) input.enabled = false;
+
+        // Set to kinematic to follow NetworkTransform smoothly without local physics interference
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
     }
 
     /// <summary>
@@ -56,23 +87,45 @@ public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
     {
         _rb = GetComponent<Rigidbody>();
 
-
-        // Rigidbody setup for snappier feel
-        _rb.useGravity = true;
-        _rb.freezeRotation = true;
-        _rb.interpolation = RigidbodyInterpolation.Interpolate;
-        _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-        // Drag handles the deceleration
-        _rb.linearDamping = _decelerationDamping;
-
-        if (_cameraTransform == null)
+        // --- LOCAL PLAYER SETUP ---
+        // Force-enable components in case they were disabled by Start() race conditions
+        Camera cam = GetComponentInChildren<Camera>();
+        if (cam != null)
         {
-            _cameraTransform = GetComponentInChildren<Camera>().transform;
+            cam.gameObject.SetActive(true);
+            AudioListener listener = cam.GetComponent<AudioListener>();
+            if (listener != null) listener.enabled = true;
         }
 
+        PlayerInput input = GetComponent<PlayerInput>();
+        if (input != null)
+        {
+            input.enabled = true;
+            input.ActivateInput(); // Force the InputSystem to start listening for this instance
+        }
+
+        // Ensure physics are active for the controller
+        if (_rb != null)
+        {
+            _rb.useGravity = true;
+            _rb.freezeRotation = true;
+            _rb.interpolation = RigidbodyInterpolation.Interpolate;
+            _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            _rb.isKinematic = false;
+            _rb.linearDamping = _decelerationDamping;
+        }
+
+        if (_cameraTransform == null && cam != null)
+        {
+            _cameraTransform = cam.transform;
+        }
+
+        if (_showDebugLogs) Debug.Log($"<color=green>[Player] Local Player Initialized: {netId}</color>");
         Cursor.lockState = CursorLockMode.Locked;
     }
+
+    [Header("Debug")]
+    [SerializeField] private bool _showDebugLogs = true;
 
     private void Update()
     {
@@ -149,11 +202,31 @@ public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
     }
 
     #region Input Events
-    public void OnMove(InputAction.CallbackContext context) => _moveInput = context.ReadValue<Vector2>();
-    public void OnLook(InputAction.CallbackContext context) => _lookInput = context.ReadValue<Vector2>();
-    public void OnSprint(InputAction.CallbackContext context) => _isSprinting = context.ReadValueAsButton();
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        if (!isLocalPlayer) return;
+        _moveInput = context.ReadValue<Vector2>();
+        
+        if (_showDebugLogs && _moveInput.magnitude > 0) 
+            Debug.Log($"[Input] Move Input detected: {_moveInput} on player {netId}");
+    }
+
+    public void OnLook(InputAction.CallbackContext context)
+    {
+        if (!isLocalPlayer) return;
+        _lookInput = context.ReadValue<Vector2>();
+    }
+
+    public void OnSprint(InputAction.CallbackContext context)
+    {
+        if (!isLocalPlayer) return;
+        _isSprinting = context.ReadValueAsButton();
+    }
+
     public void OnJump(InputAction.CallbackContext context)
     {
+        if (!isLocalPlayer) return;
+
         if (context.performed && Mathf.Abs(_rb.linearVelocity.y) < 0.05f)
         {
             _rb.AddForce(Vector3.up * _jumpImpulse, ForceMode.Impulse);

@@ -26,6 +26,21 @@ public class PlayerViewRange : NetworkBehaviour
     /// </summary>
     public IEntity HighestPriorityEntity => _highestPriorityEntity;
 
+    private void Start()
+    {
+        // Disable by default if not local player, but we'll re-enable in OnStartLocalPlayer 
+        // to handle Mirror's initialization timing.
+        if (!isLocalPlayer)
+        {
+            enabled = false;
+        }
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        enabled = true;
+    }
+
     private void Update()
     {
         DetectEntities();
