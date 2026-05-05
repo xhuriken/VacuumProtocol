@@ -3,81 +3,70 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Rotates wheels on the Y axis based on movement direction while preserving X and Z rotations.
+/// Controls wheel orientation based on movement direction.
+/// Wheels pivot on the Y-axis to face the direction of travel, similar to office chair casters.
 /// </summary>
 public class WheelSteering : NetworkBehaviour
 {
+    [Header("References")]
+    [SerializeField, Tooltip("List of wheel transforms/bones to orient.")]
+    private List<Transform> _wheels = new List<Transform>();
+
     [Header("Settings")]
-    [SerializeField] private List<Transform> _wheels = new List<Transform>();
-    [SerializeField] private float _steeringSpeed = 10f;
-    [SerializeField] private float _minVelocityThreshold = 0.1f;
+    [SerializeField, Tooltip("How fast the wheels rotate to face the movement direction.")]
+    private float _steeringSpeed = 10f;
 
-    private PlayerPhysicsMovement _playerMovement;
+    [SerializeField, Tooltip("Minimum velocity to trigger orientation update.")]
+    private float _minVelocityThreshold = 0.1f;
+
+    [SerializeField]
+    private float baseOffset = 180f;
+
     private Rigidbody _rb;
-    private List<Quaternion> _initialRotations = new List<Quaternion>();
 
-    /// <summary>
-    /// Initialize references and store initial rotations.
-    /// </summary>
-    public override void OnStartLocalPlayer()
+    private void Start()
     {
-        _playerMovement = GetComponentInParent<PlayerPhysicsMovement>();
-
-        if (_playerMovement != null)
-        {
-            _rb = _playerMovement.GetComponent<Rigidbody>();
-        }
-
-        // Store the initial rotation of each wheel to use it as the "zero" point
-        _initialRotations.Clear();
-        foreach (Transform wheel in _wheels)
-        {
-            if (wheel != null)
-                _initialRotations.Add(wheel.localRotation);
-        }
+        // Cache Rigidbody for all clients to allow synced visuals if velocity is networked
+        _rb = GetComponentInParent<Rigidbody>();
     }
 
     private void Update()
     {
-        if (!isLocalPlayer || _rb == null || _initialRotations.Count == 0)
-        {
-            return;
-        }
+        // We update the orientation based on the Rigidbody velocity.
+        // This works for the local player and potentially for remote players if velocity is synced.
+        if (_rb == null) return;
 
-        RotateWheelsToMovementDirection();
+        UpdateWheelOrientation();
     }
 
-    /// <summary>
-    /// Calculates the target rotation relative to the initial orientation.
-    /// </summary>
-    private void RotateWheelsToMovementDirection()
+    private void UpdateWheelOrientation()
     {
         Vector3 velocity = _rb.linearVelocity;
-        velocity.y = 0;
+        velocity.y = 0; // Project movement on the horizontal plane
 
-        if (velocity.magnitude < _minVelocityThreshold)
-        {
+        // Skip update if moving too slowly to determine a reliable direction
+        if (velocity.sqrMagnitude < _minVelocityThreshold * _minVelocityThreshold)
             return;
-        }
 
-        // Convert world velocity to local direction relative to the ROOT player (not the potentially flipped model)
-        Vector3 localDirection = _playerMovement.transform.InverseTransformDirection(velocity.normalized);
-        
-        // Target steering rotation
-        Quaternion steeringRotation = Quaternion.LookRotation(localDirection, Vector3.up);
+        // 1. Determine the target world rotation (Forward = Movement direction)
+        Quaternion targetWorldRot = Quaternion.LookRotation(velocity.normalized, Vector3.up);
 
-        for (int i = 0; i < _wheels.Count; i++)
+        foreach (Transform wheel in _wheels)
         {
-            if (_wheels[i] == null) continue;
+            if (wheel == null) continue;
 
-            // Apply steering relative to the initial "zero" rotation of the wheel
-            Quaternion targetRotation = _initialRotations[i] * steeringRotation;
+            // 2. Convert the world target to local space relative to the wheel's parent.
+            // This ensures the orientation is correct regardless of the player's body rotation.
+            Quaternion targetLocalRot = Quaternion.Inverse(wheel.parent.rotation) * targetWorldRot;
 
-            _wheels[i].localRotation = Quaternion.Slerp(
-                _wheels[i].localRotation,
-                targetRotation,
-                _steeringSpeed * Time.deltaTime
-            );
+            // 3. Handle the Y-axis pivot only (office chair behavior)
+            // We use LerpAngle to ensure smooth rotation and handle the 360-degree wrap correctly.
+            float currentY = wheel.localEulerAngles.y;
+            float targetY = targetLocalRot.eulerAngles.y - baseOffset;
+            float smoothedY = Mathf.LerpAngle(currentY, targetY, _steeringSpeed * Time.deltaTime);
+
+            // 4. Apply the new Y rotation while preserving the bone's original X and Z offsets.
+            wheel.localEulerAngles = new Vector3(wheel.localEulerAngles.x, smoothedY, wheel.localEulerAngles.z);
         }
     }
 }

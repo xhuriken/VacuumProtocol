@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(CapsuleCollider))]
-public class PlayerPhysicsMovement : NetworkBehaviour
+public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
 {
     [Header("Movement Constants")]
     [SerializeField] private float _accelerationForce = 150f; // High force for "heavy" feel
@@ -28,11 +28,14 @@ public class PlayerPhysicsMovement : NetworkBehaviour
     [Header("Look Settings")]
     [SerializeField] private Transform _cameraTransform;
     [SerializeField] private float _sensitivity = 0.15f;
-    [SerializeField] private bool _flipCamera = false;
 
 
     private Rigidbody _rb;
     public Rigidbody Rb => _rb;
+
+    public string Name { get; set; } = "Unit";
+    public int PriorityLevel { get; set; } = 1;
+
     private Vector2 _moveInput;
     private Vector2 _lookInput;
     private float _cameraPitch;
@@ -92,9 +95,7 @@ public class PlayerPhysicsMovement : NetworkBehaviour
 
         _cameraPitch -= _lookInput.y * _sensitivity;
         _cameraPitch = Mathf.Clamp(_cameraPitch, -85f, 85f);
-        
-        float yRotation = _flipCamera ? 180f : 0f;
-        _cameraTransform.localRotation = Quaternion.Euler(_cameraPitch, yRotation, 0);
+        _cameraTransform.localRotation = Quaternion.Euler(_cameraPitch, 0, 0);
     }
 
     private void ApplyMovementPhysics()

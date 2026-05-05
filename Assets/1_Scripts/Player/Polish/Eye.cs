@@ -1,34 +1,82 @@
 using Mirror;
-using Unity.VisualScripting;
 using UnityEngine;
 
 /// <summary>
-/// This script is on an sphere (an eye)
-/// If something are in range of the visibility on the player, the eye will look at it. (Danger entity level parametter) // local
-/// Just sync the roration of the eye.
+/// Controls eye orientation using Quaternions to avoid Euler-related axis issues.
+/// Uses the initial editor rotation as the reference for "looking straight ahead".
 /// </summary>
 public class Eye : NetworkBehaviour
 {
-    [SerializeField] private PlayerViewRange _playerViewRange;
+    [Header("References")]
+    [SerializeField, Tooltip("Reference to the script detecting targets.")]
+    private PlayerViewRange _playerViewRange;
 
-    [SerializeField] private float _rotationSpeed = 5f;
+    [Header("Settings")]
+    [SerializeField, Tooltip("How fast the eye follows the target.")]
+    private float _rotationSpeed = 8f;
 
-    private Quaternion _targetRotation = Quaternion.identity;
+    [SerializeField] private bool _showDebugLogs = true;
+
+    private Quaternion _initialLocalRotation;
+    private Quaternion _targetLocalRotation;
+
+    private void Start()
+    {
+        // Store the initial rotation as our "looking forward" reference.
+        // This makes the script bone-orientation agnostic.
+        _initialLocalRotation = transform.localRotation;
+        _targetLocalRotation = _initialLocalRotation;
+    }
 
     private void Update()
     {
-        if(!isLocalPlayer) return;
+        // Only the local player calculates their own eye movement for responsiveness.
+        if (!isLocalPlayer) return;
 
-        if (_playerViewRange.HighestPriorityEntity != null)
+        CalculateTargetRotation();
+        ApplyRotation();
+    }
+
+    /// <summary>
+    /// Determines the rotation needed to look at the highest priority target.
+    /// </summary>
+    private void CalculateTargetRotation()
+    {
+        if (_playerViewRange != null && _playerViewRange.HighestPriorityEntity != null)
         {
-            Vector3 directionToTarget = _playerViewRange.HighestPriorityEntity.gameObject.transform.position - transform.position;
-            _targetRotation = Quaternion.LookRotation(directionToTarget);
+            Transform targetTransform = _playerViewRange.HighestPriorityEntity.gameObject.transform;
+            Vector3 directionToTarget = targetTransform.position - transform.position;
+
+            if (directionToTarget.sqrMagnitude > 0.001f)
+            {
+                // 1. Calculate the world rotation that faces the target.
+                Quaternion worldLookRot = Quaternion.LookRotation(directionToTarget.normalized, Vector3.up);
+
+                // 2. Convert to local rotation and apply the initial offset.
+                // This ensures that whatever direction the bone was facing at Start is 
+                // what now faces the target.
+                _targetLocalRotation = Quaternion.Inverse(transform.parent.rotation) * worldLookRot * _initialLocalRotation;
+                
+                if (_showDebugLogs) Debug.Log($"<color=magenta>[Eye] Looking at:</color> {targetTransform.name}, TargetLocalRot: {_targetLocalRotation.eulerAngles}");
+            }
         }
         else
         {
-            // If no entity is detected, reset the target rotation to the PLAYER forward direction (or any default orientation you prefer).
-            _targetRotation = transform.parent.rotation;
+            if (_showDebugLogs && _targetLocalRotation != _initialLocalRotation) Debug.Log("<color=magenta>[Eye] Resetting to forward.</color>");
+            // Reset to the original forward-facing position.
+            _targetLocalRotation = _initialLocalRotation;
         }
-        transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * _rotationSpeed);
+    }
+
+    /// <summary>
+    /// Smoothly rotates the eye towards the target rotation.
+    /// </summary>
+    private void ApplyRotation()
+    {
+        transform.localRotation = Quaternion.Slerp(
+            transform.localRotation,
+            _targetLocalRotation,
+            Time.deltaTime * _rotationSpeed
+        );
     }
 }

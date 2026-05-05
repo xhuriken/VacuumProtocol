@@ -17,9 +17,7 @@ public class PlayerViewRange : NetworkBehaviour
     [SerializeField] private LayerMask _obstacleLayer;
     [Header("References")]
     [SerializeField] private Transform _viewReference;
-    [SerializeField] private bool _flipForward = false;
-
-    private Vector3 CurrentForward => _flipForward ? -_viewReference.forward : _viewReference.forward;
+    [SerializeField] private bool _showDebugLogs = true;
 
     [SerializeField] private readonly List<IEntity> _detectedEntities = new List<IEntity>();
     [SerializeField] private IEntity _highestPriorityEntity;
@@ -48,10 +46,13 @@ public class PlayerViewRange : NetworkBehaviour
 
         foreach (Collider target in targetsInRadius)
         {
+            if (_showDebugLogs) Debug.Log($"<color=cyan>[ViewRange]</color> Checking {target.name}...");
+
             Vector3 directionToTarget = (target.transform.position - _viewReference.position).normalized;
 
             // Cone check
-            if (Vector3.Angle(CurrentForward, directionToTarget) < _viewAngle / 2f)
+            float angle = Vector3.Angle(_viewReference.forward, directionToTarget);
+            if (angle < _viewAngle / 2f)
             {
                 float distanceToTarget = Vector3.Distance(_viewReference.position, target.transform.position);
 
@@ -61,11 +62,18 @@ public class PlayerViewRange : NetworkBehaviour
                     if (target.TryGetComponent(out IEntity entity))
                     {
                         if (entity.gameObject == this.gameObject) continue;
-                        Debug.Log($"Entity found : {entity.Name}, Prio : {entity.PriorityLevel}");
-                        // Stock here in a list of founded, and sort by priority.
+                        if (_showDebugLogs) Debug.Log($"<color=green>[ViewRange] Entity Accepted:</color> {entity.Name}, Prio: {entity.PriorityLevel}");
                         _detectedEntities.Add(entity);
                     }
                 }
+                else if (_showDebugLogs)
+                {
+                    Debug.Log($"<color=red>[ViewRange] Entity {target.name} Rejected:</color> Obstacle in the way.");
+                }
+            }
+            else if (_showDebugLogs)
+            {
+                Debug.Log($"<color=orange>[ViewRange] Entity {target.name} Rejected:</color> Outside FOV (Angle: {angle} > {_viewAngle / 2f}).");
             }
         }
         UpdatePriority();
@@ -89,6 +97,10 @@ public class PlayerViewRange : NetworkBehaviour
         }
 
         _highestPriorityEntity = bestEntity;
+        if (_showDebugLogs && _highestPriorityEntity != null)
+        {
+            Debug.Log($"<color=yellow>[ViewRange] Target locked on:</color> {_highestPriorityEntity.Name}");
+        }
     }
 
 
@@ -99,7 +111,7 @@ public class PlayerViewRange : NetworkBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(_viewReference.position, _viewDistance);
 
-        Vector3 forward = CurrentForward;
+        Vector3 forward = _viewReference.forward;
         Vector3 leftBoundary = Quaternion.AngleAxis(-_viewAngle / 2f, _viewReference.up) * forward;
         Vector3 rightBoundary = Quaternion.AngleAxis(_viewAngle / 2f, _viewReference.up) * forward;
 
