@@ -798,6 +798,8 @@ GameObject:
   - component: {fileID: 1264806490}
   - component: {fileID: 1264806492}
   - component: {fileID: 1264806491}
+  - component: {fileID: 1264806494}
+  - component: {fileID: 1264806493}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -910,6 +912,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aeced04cf041ec8489b4405e59a0ef50, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+--- !u!114 &1264806493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264806485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36c32fe4689f23541bda2885265f4a17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+--- !u!114 &1264806494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264806485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0dec1d2df214b44f8cb106b071695ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Adrenak.UniVoice.Samples::Adrenak.UniVoice.Samples.UniVoiceMirrorSetupSample
+  useRNNoise4UnityIfAvailable: 1
+  useConcentusEncodeAndDecode: 1
+  useVad: 1
 --- !u!1 &1443564706
 GameObject:
   m_ObjectHideFlags: 0

@@ -47,6 +47,20 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
-  }
+    "com.unity.modules.xr": "1.0.0",
+    "com.adrenak.univoice": "4.12.0"
+  },
+  "scopedRegistries": [
+    {
+      "name": "npmjs",
+      "url": "https://registry.npmjs.org",
+      "scopes": [
+        "com.npmjs",
+        "com.adrenak.univoice",
+        "com.adrenak.brw",
+        "com.adrenak.unimic",
+        "com.adrenak.concentus-unity"
+      ]
+    }
+  ]
 }
