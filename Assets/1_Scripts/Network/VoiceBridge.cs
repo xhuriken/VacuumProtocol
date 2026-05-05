@@ -64,9 +64,9 @@ public class VoiceBridge : MonoBehaviour
                     audioOutput.transform.localPosition = Vector3.up; 
 
                     if (source != null) {
-                        source.spatialBlend = 1.0f; // 3D
+                        source.spatialBlend = 0f; // TEST EN 2D (GLOBAL)
                         source.minDistance = 1f;
-                        source.maxDistance = 30f;
+                        source.maxDistance = 500f;
                     }
                     Debug.Log($"[Voice] SUCCESS! Peer {id} linked to {targetRobot.name}");
                 }

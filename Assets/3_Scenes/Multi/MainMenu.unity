@@ -939,7 +939,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Adrenak.UniVoice.Samples::Adrenak.UniVoice.Samples.UniVoiceMirrorSetupSample
   useRNNoise4UnityIfAvailable: 1
   useConcentusEncodeAndDecode: 1
-  useVad: 1
+  useVad: 0
 --- !u!114 &1264806495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -952,7 +952,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0d7b9d2fb98876498e11d384067eef7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MicVolumeLogger
-  _enableLogging: 1
+  _enableLogging: 0
 --- !u!1 &1443564706
 GameObject:
   m_ObjectHideFlags: 0
