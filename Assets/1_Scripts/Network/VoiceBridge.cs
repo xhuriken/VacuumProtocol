@@ -37,8 +37,8 @@ public class VoiceBridge : MonoBehaviour
                 while(targetRobot == null && timeout > 0){
                     foreach (var identity in NetworkClient.spawned.Values) {
                         if (identity.TryGetComponent(out PlayerPhysicsMovement movement)) {
-                            // On log tous les candidats pour débugger les IDs
-                            // Debug.Log($"[Voice Debug] Candidate: {identity.name}, netId: {identity.netId}, ConnectionId: {movement.ConnectionId}");
+                            // LOG DE DEBUG : On va voir TOUT ce que le client détecte
+                            Debug.Log($"[Voice Debug] Scanning object: {identity.name}, netId: {identity.netId}, ConnectionId: {movement.ConnectionId} (Looking for: {id})");
 
                             if (movement.ConnectionId == id) {
                                 targetRobot = identity.gameObject;
@@ -48,8 +48,8 @@ public class VoiceBridge : MonoBehaviour
                     }
                     
                     if (targetRobot == null) {
-                        timeout -= 0.2f;
-                        yield return new WaitForSeconds(0.2f);
+                        timeout -= 0.5f;
+                        yield return new WaitForSeconds(0.5f);
                     }
                 }
 
