@@ -1,7 +1,6 @@
 using UnityEngine;
 using Mirror;
 using Adrenak.UniVoice; // Pour IAudioOutput
-using Adrenak.UniVoice.Samples;
 using Adrenak.UniVoice.Outputs;
 using System.Collections;
 
@@ -12,10 +11,10 @@ public class VoiceBridge : MonoBehaviour
     }
 
     private IEnumerator SetupBridge() {
-        while (UniVoiceMirrorSetupSample.ClientSession == null) yield return null;
+        while (CustomUniVoiceSetup.ClientSession == null) yield return null;
 
         // On s'abonne à l'événement du client réseau
-        UniVoiceMirrorSetupSample.ClientSession.Client.OnPeerJoined += id => {
+        CustomUniVoiceSetup.ClientSession.Client.OnPeerJoined += id => {
             StartCoroutine(LinkAudioToRobot(id));
         };
     }
@@ -23,7 +22,7 @@ public class VoiceBridge : MonoBehaviour
     private IEnumerator LinkAudioToRobot(int id) {
         yield return new WaitForEndOfFrame();
 
-        var session = UniVoiceMirrorSetupSample.ClientSession;
+        var session = CustomUniVoiceSetup.ClientSession;
         
         // On récupère la sortie (IAudioOutput est dans Adrenak.UniVoice)
         if (session.PeerOutputs.TryGetValue(id, out IAudioOutput output)) {
@@ -64,9 +63,9 @@ public class VoiceBridge : MonoBehaviour
                     audioOutput.transform.localPosition = Vector3.up; 
 
                     if (source != null) {
-                        source.spatialBlend = 0f; // TEST EN 2D (GLOBAL)
+                        source.spatialBlend = 1.0f; // 3D
                         source.minDistance = 1f;
-                        source.maxDistance = 500f;
+                        source.maxDistance = 30f;
                     }
                     Debug.Log($"[Voice] SUCCESS! Peer {id} linked to {targetRobot.name}");
                 }

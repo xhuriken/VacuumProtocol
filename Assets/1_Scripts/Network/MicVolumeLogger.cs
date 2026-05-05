@@ -1,6 +1,5 @@
 using UnityEngine;
 using Adrenak.UniVoice;
-using Adrenak.UniVoice.Samples;
 
 public class MicVolumeLogger : MonoBehaviour
 {
@@ -16,10 +15,10 @@ public class MicVolumeLogger : MonoBehaviour
         string devices = string.Join(", ", Microphone.devices);
         Debug.Log($"[Voice Debug] Available Microphones: {devices}");
 
-        while (UniVoiceMirrorSetupSample.ClientSession == null) yield return null;
+        while (CustomUniVoiceSetup.ClientSession == null) yield return null;
         
         // UniVoice 4.x utilise OnFrameReady avec un objet AudioFrame
-        UniVoiceMirrorSetupSample.ClientSession.Input.OnFrameReady += frame => {
+        CustomUniVoiceSetup.ClientSession.Input.OnFrameReady += frame => {
             if (!_enableLogging || frame.samples == null) return;
 
             float peak = 0;
