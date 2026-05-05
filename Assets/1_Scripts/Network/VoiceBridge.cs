@@ -32,11 +32,14 @@ public class VoiceBridge : MonoBehaviour
                 
                 float timeout = 5f;
                 GameObject targetRobot = null;
-                
+                Debug.Log($"[Voice] Trying to link audio for peer ID: {id}. Searching for robot with ConnectionId: {id}...");
+
                 while(targetRobot == null && timeout > 0){
-                    // We look through all spawned objects to find the one with the matching ConnectionId
                     foreach (var identity in NetworkClient.spawned.Values) {
                         if (identity.TryGetComponent(out PlayerPhysicsMovement movement)) {
+                            // On log tous les candidats pour débugger les IDs
+                            // Debug.Log($"[Voice Debug] Candidate: {identity.name}, netId: {identity.netId}, ConnectionId: {movement.ConnectionId}");
+
                             if (movement.ConnectionId == id) {
                                 targetRobot = identity.gameObject;
                                 break;
@@ -45,26 +48,26 @@ public class VoiceBridge : MonoBehaviour
                     }
                     
                     if (targetRobot == null) {
-                        timeout -= 0.1f;
-                        yield return new WaitForSeconds(0.1f);
+                        timeout -= 0.2f;
+                        yield return new WaitForSeconds(0.2f);
                     }
                 }
 
                 if (targetRobot != null) {
-                    // TECHNIQUE : On déplace l'objet de voix d'UniVoice SUR le robot
-                    // Pour que le son le suive dans l'espace 3D
                     audioOutput.transform.SetParent(targetRobot.transform);
-                    audioOutput.transform.localPosition = Vector3.up; // Un peu au dessus du robot
+                    audioOutput.transform.localPosition = Vector3.up; 
 
-                    // On configure l'AudioSource interne pour qu'il soit en 3D
                     var source = audioOutput.GetComponent<AudioSource>();
                     if (source != null) {
-                        source.spatialBlend = 1.0f; // 100% 3D
+                        source.spatialBlend = 1.0f; 
                         source.minDistance = 1f;
                         source.maxDistance = 30f;
                         source.rolloffMode = AudioRolloffMode.Linear;
                     }
-                    Debug.Log($"[Voice] Success! Voice object parented to {targetRobot.name}");
+                    Debug.Log($"[Voice] SUCCESS! Peer {id} linked to robot {targetRobot.name} (netId: {targetRobot.GetComponent<NetworkIdentity>().netId})");
+                }
+                else {
+                    Debug.LogError($"[Voice] FAILED to find robot for peer {id} after timeout. (Searched for ConnectionId {id})");
                 }
             }
         }

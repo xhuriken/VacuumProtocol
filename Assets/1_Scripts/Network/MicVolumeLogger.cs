@@ -12,6 +12,10 @@ public class MicVolumeLogger : MonoBehaviour
     }
 
     private System.Collections.IEnumerator SetupLogger() {
+        // Liste des micros dispo pour aider l'utilisateur
+        string devices = string.Join(", ", Microphone.devices);
+        Debug.Log($"[Voice Debug] Available Microphones: {devices}");
+
         while (UniVoiceMirrorSetupSample.ClientSession == null) yield return null;
         
         // UniVoice 4.x utilise OnFrameReady avec un objet AudioFrame
@@ -19,13 +23,13 @@ public class MicVolumeLogger : MonoBehaviour
             if (!_enableLogging || frame.samples == null) return;
 
             float peak = 0;
-            // On convertit les bytes (PCM 16-bit) en volume pour le log
-            for (int i = 0; i < frame.samples.Length; i += 2) {
-                if (i + 1 >= frame.samples.Length) break;
+            // On teste si les données sont en 32-bit float (4 bytes par échantillon)
+            // car le Samson C03U à 48kHz utilise souvent ce format dans Unity.
+            for (int i = 0; i < frame.samples.Length; i += 4) {
+                if (i + 3 >= frame.samples.Length) break;
                 
-                // Conversion 2 bytes -> short (16-bit)
-                short sample = System.BitConverter.ToInt16(frame.samples, i);
-                float abs = Mathf.Abs(sample / 32768f);
+                float sample = System.BitConverter.ToSingle(frame.samples, i);
+                float abs = Mathf.Abs(sample);
                 if (abs > peak) peak = abs;
             }
             _lastPeak = peak;
