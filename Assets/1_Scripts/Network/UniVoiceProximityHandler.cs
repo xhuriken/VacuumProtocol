@@ -72,17 +72,27 @@ public class UniVoiceProximityHandler : MonoBehaviour
         }
 
         if (targetPlayer != null) {
-            // Attach the AudioSource to the player!
-            output.transform.SetParent(targetPlayer.transform);
-            output.transform.localPosition = Vector3.up * 1.5f; // Position at head level
-
-            // Enable 3D Sound
-            audioSource.spatialBlend = 1f; // 100% 3D
+            // DO NOT use SetParent! If the player is destroyed (scene change), 
+            // the AudioSource would be destroyed too, causing a UniVoice crash.
+            // Instead, we just move the output object to the player's position.
+            
+            audioSource.spatialBlend = 1f; 
             audioSource.rolloffMode = AudioRolloffMode.Linear;
             audioSource.minDistance = minDistance;
             audioSource.maxDistance = maxDistance;
 
-            Debug.Log($"<color=cyan>[UniVoice Proximity]</color> Linked Peer {id} to {targetPlayer.name} (3D Audio Active)");
+            Debug.Log($"<color=cyan>[UniVoice Proximity]</color> Started following Peer {id} ({targetPlayer.name})");
+
+            while (targetPlayer != null && output != null) {
+                output.transform.position = targetPlayer.transform.position + Vector3.up * 1.5f;
+                yield return null;
+            }
+
+            // If we lose the player, we can reset to 2D or just let it be
+            if (output != null) {
+                audioSource.spatialBlend = 0f; 
+                Debug.Log($"[UniVoice Proximity] Lost player for Peer {id}, resetting to 2D.");
+            }
         }
         else {
             Debug.LogWarning($"[UniVoice Proximity] Could not find player object for Peer {id} after 10s. Staying in 2D.");

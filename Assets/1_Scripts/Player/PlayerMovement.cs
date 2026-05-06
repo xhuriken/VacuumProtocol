@@ -206,7 +206,7 @@ public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
     #region Input Events
     public void OnMove(InputAction.CallbackContext context)
     {
-        if (!isLocalPlayer) return;
+        if (this == null || !isLocalPlayer) return;
         _moveInput = context.ReadValue<Vector2>();
         
         if (_showDebugLogs && _moveInput.magnitude > 0) 
@@ -215,7 +215,7 @@ public class PlayerPhysicsMovement : NetworkBehaviour, IEntity
 
     public void OnLook(InputAction.CallbackContext context)
     {
-        if (!isLocalPlayer) return;
+        if (this == null || !isLocalPlayer) return;
         _lookInput = context.ReadValue<Vector2>();
     }
 

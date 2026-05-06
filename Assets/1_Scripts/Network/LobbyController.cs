@@ -175,8 +175,10 @@ public class LobbyController : MonoBehaviour
     {
         foreach (PlayerObjectController player in Manager.GamePlayers)
         {
+            if (player == null) continue;
             foreach (PlayerListItem PlayerListItemScript in PlayerListItems)
             {
+                if (PlayerListItemScript == null) continue;
                 if (PlayerListItemScript.ConnectionId == player.ConnectionId)
                 {
                     PlayerListItemScript.PlayerName = player.PlayerName;
@@ -198,7 +200,8 @@ public class LobbyController : MonoBehaviour
 
         foreach (PlayerListItem playerListItem in PlayerListItems)
         {
-            if (!Manager.GamePlayers.Any(b => b.ConnectionId == playerListItem.ConnectionId))
+            if (playerListItem == null) continue;
+            if (!Manager.GamePlayers.Any(b => b != null && b.ConnectionId == playerListItem.ConnectionId))
             {
                 playerListItemsToRemove.Add(playerListItem);
             }
@@ -208,10 +211,13 @@ public class LobbyController : MonoBehaviour
         {
             foreach (PlayerListItem playerListItem in playerListItemsToRemove)
             {
+                if (playerListItem == null) continue;
                 GameObject ObjectToRemove = playerListItem.gameObject;
                 PlayerListItems.Remove(playerListItem);
-                Destroy(ObjectToRemove);
-                ObjectToRemove = null;
+                if (ObjectToRemove != null)
+                {
+                    Destroy(ObjectToRemove);
+                }
             }
         }
     }
