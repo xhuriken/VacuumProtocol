@@ -1,6 +1,6 @@
-using UnityEngine;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using UnityEngine;
 
 /// <summary>
 /// Automates the creation of a procedural softbody-like chain of Rigidbodies and ConfigurableJoints.
@@ -11,10 +11,12 @@ public class ProceduralTubePhysics : MonoBehaviour
     [BoxGroup("General Settings")]
     [Range(0.01f, 10f)]
     public float segmentMass = 0.5f;
-    
+
+
     [BoxGroup("General Settings")]
     public float linearDamping = 1f;
-    
+
+
     [BoxGroup("General Settings")]
     public float angularDamping = 5f;
 
@@ -54,13 +56,16 @@ public class ProceduralTubePhysics : MonoBehaviour
         foreach (var rb in rbs)
         {
             if (rb.gameObject == gameObject) continue;
-            
+
+
             UnityEngine.ConfigurableJoint joint = rb.GetComponent<UnityEngine.ConfigurableJoint>();
             if (joint) DestroyImmediate(joint);
-            
+
+
             UnityEngine.CapsuleCollider col = rb.GetComponent<UnityEngine.CapsuleCollider>();
             if (col) DestroyImmediate(col);
-            
+
+
             DestroyImmediate(rb);
         }
     }
@@ -81,14 +86,16 @@ public class ProceduralTubePhysics : MonoBehaviour
             rb.angularDamping = angularDamping;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            
+
             // Improve physics accuracy for this specific segment
+
             rb.solverIterations = 20;
             rb.solverVelocityIterations = 10;
 
             // Add and configure the Collider
             UnityEngine.CapsuleCollider col = current.gameObject.AddComponent<UnityEngine.CapsuleCollider>();
-            
+
+
             float maxScale = Mathf.Max(current.lossyScale.x, Mathf.Max(current.lossyScale.y, current.lossyScale.z));
             col.radius = colliderRadius / (maxScale > 0 ? maxScale : 1f);
 
@@ -99,7 +106,8 @@ public class ProceduralTubePhysics : MonoBehaviour
                 Transform child = current.GetChild(0);
                 Vector3 localChildPos = current.InverseTransformPoint(child.position);
                 float localDist = localChildPos.magnitude;
-                
+
+
                 col.height = localDist;
                 col.center = localChildPos * 0.5f;
 
@@ -120,7 +128,8 @@ public class ProceduralTubePhysics : MonoBehaviour
             // Add and configure the Configurable Joint
             UnityEngine.ConfigurableJoint joint = current.gameObject.AddComponent<UnityEngine.ConfigurableJoint>();
             joint.connectedBody = parentRb;
-            
+
+
             joint.xMotion = ConfigurableJointMotion.Locked;
             joint.yMotion = ConfigurableJointMotion.Locked;
             joint.zMotion = ConfigurableJointMotion.Locked;
@@ -138,8 +147,9 @@ public class ProceduralTubePhysics : MonoBehaviour
             joint.angularZLimit = limit;
 
             joint.rotationDriveMode = RotationDriveMode.Slerp;
-            
+
             // Apply higher stiffness to the tip segment to keep the arm stable
+
             float finalStiffness = isLast ? stiffness * tipStiffnessMultiplier : stiffness;
 
             JointDrive slerpDrive = new JointDrive
@@ -171,5 +181,4 @@ public class ProceduralTubePhysics : MonoBehaviour
             SetupRecursive(current.GetChild(i), parentRb);
         }
     }
-}
 }

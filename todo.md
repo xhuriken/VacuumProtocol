@@ -7,6 +7,8 @@
 - [x] Create initial `documentation/` folder and feature-specific `.md` files.
 - [x] Update global developer rules in Antigravity.
 
-## Next Feature: (Waiting for user request)
-- [ ] Define next objective.
-- [ ] Update documentation accordingly.
+## Next Feature: Control Refactor & Vacuum Aspiration
+- [x] Refactor `PlayerPhysicsMovement` into modular components (`PlayerInputHandler`, `PlayerMovement`, `PlayerLook`, `PlayerJump`).
+- [x] Implement `PlayerVacuumController` triggered by Dual Click.
+- [x] Implement `VacuumAudioController` with modulated parameters (Freq, Resonance, etc.).
+- [x] Update documentation to reflect new component architecture.

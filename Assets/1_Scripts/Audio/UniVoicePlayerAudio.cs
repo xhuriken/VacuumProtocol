@@ -13,7 +13,7 @@ public class UniVoicePlayerAudio : NetworkBehaviour
     public override void OnStartClient()
     {
         // Cache the connection ID from the player's movement or controller component
-        if (TryGetComponent(out PlayerPhysicsMovement m)) _cachedId = m.ConnectionId;
+        if (TryGetComponent(out PlayerController m)) _cachedId = m.ConnectionId;
         else if (TryGetComponent(out PlayerObjectController c)) _cachedId = c.ConnectionId;
     }
 

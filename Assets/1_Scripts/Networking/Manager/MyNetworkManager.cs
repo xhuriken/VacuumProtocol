@@ -40,11 +40,11 @@ public class MyNetworkManager : NetworkManager
         {
             // Spawn the actual game player (Mecha)
             GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab);
-            
+
             // Link the connection ID for voice synchronization
-            if (gamePlayerInstance.TryGetComponent(out PlayerPhysicsMovement movement))
+            if (gamePlayerInstance.TryGetComponent(out PlayerController controller))
             {
-                movement.ConnectionId = conn.connectionId;
+                controller.ConnectionId = conn.connectionId;
             }
 
             // Assign the new mecha object as the player's primary object

@@ -1,7 +1,7 @@
-using Mirror;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mirror;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -54,7 +54,7 @@ public class PlayerViewRange : NetworkBehaviour
     private void DetectEntities()
     {
         if (!isLocalPlayer || _viewReference == null) return;
-        
+
         // Reset list for the current frame
         _detectedEntities.Clear();
         _highestPriorityEntity = null;
@@ -81,7 +81,7 @@ public class PlayerViewRange : NetworkBehaviour
                     {
                         // Don't detect ourselves
                         if (entity.gameObject == this.gameObject) continue;
-                        
+
                         if (_showDebugLogs) Debug.Log($"<color=green>[ViewRange] Entity Accepted:</color> {entity.Name}, Prio: {entity.PriorityLevel}");
                         _detectedEntities.Add(entity);
                     }
@@ -143,5 +143,4 @@ public class PlayerViewRange : NetworkBehaviour
         Gizmos.DrawRay(_viewReference.position, leftBoundary * _viewDistance);
         Gizmos.DrawRay(_viewReference.position, rightBoundary * _viewDistance);
     }
-}
 }

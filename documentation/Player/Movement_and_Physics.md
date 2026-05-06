@@ -1,31 +1,25 @@
 # Movement and Physics
 
-This feature handles the physical movement of the robot character, designed for a "heavy yet responsive" feel.
+The player movement system has been refactored into modular components to improve maintainability and allow for more complex interactions.
 
-## Principle
-Movement is entirely **Rigidbody-based** to allow for realistic interactions with the environment. It uses high acceleration forces and custom gravity multipliers to create a snappy movement style while maintaining the feeling of mass.
+## Architecture
+The system follows a **Component-Based** design:
+1. **PlayerInputHandler**: The single point of entry for Unity Input System callbacks. It exposes input state (Move, Look, Jump, Sprint, Arms) to other components.
+2. **PlayerMovementComponent**: Handles horizontal Rigidbody physics, acceleration, and speed clamping.
+3. **PlayerLookComponent**: Handles mouse-look for both the camera (pitch) and the robot body (yaw).
+4. **PlayerJumpComponent**: Handles vertical impulses and applies custom gravity multipliers for a snappy feel.
+5. **PlayerController**: The core component that manages networking lifecycle, camera activation, and shared player state (like `ConnectionId`).
+
+## Vacuum Aspiration
+A new "Aspiration" feature is triggered by holding both **Left Arm** (Mouse Left) and **Right Arm** (Mouse Right) buttons.
+- **Logic**: Managed by `PlayerVacuumController`.
+- **Audio**: Controlled by `VacuumAudioController`, featuring customizable parameters for frequency and filtering to give each player a unique sound.
 
 ## Related Files
-- `Assets/1_Scripts/Player/Controller/PlayerMovement.cs`: The core physics-based FPS controller.
-
----
-
-## File Details
-
-### PlayerPhysicsMovement.cs
-**Context:** Attached to the main Gameplay Player prefab (Mecha).
-**Usage:** Only active for the local player. Remote clones have their physics disabled or set to kinematic.
-
-#### Variables
-- `_accelerationForce`: The force applied when moving. High value (150+) for weight.
-- `_maxSpeed`: Horizontal speed limit.
-- `_gravityMultiplier`: Increases gravity during descent (snappy jumping).
-- `_decelerationDamping`: Linear damping for quick stops.
-- `ConnectionId`: Used to link this object to networking/audio systems.
-
-#### Functions
-- `OnStartLocalPlayer()`: Enables the local camera, input system, and physics interpolation.
-- `FixedUpdate()`: Applies movement forces and custom gravity.
-- `ApplyMovementPhysics()`: Calculates the direction based on input and applies `AddForce`. Clamps velocity to `_maxSpeed`.
-- `ApplyCustomGravity()`: Adds extra downward force if the robot is falling.
-- `OnMove()` / `OnLook()` / `OnJump()`: Callbacks from the Unity Input System.
+- `Assets/1_Scripts/Player/Controller/PlayerController.cs`
+- `Assets/1_Scripts/Player/Controller/PlayerInputHandler.cs`
+- `Assets/1_Scripts/Player/Controller/PlayerMovementComponent.cs`
+- `Assets/1_Scripts/Player/Controller/PlayerLookComponent.cs`
+- `Assets/1_Scripts/Player/Controller/PlayerJumpComponent.cs`
+- `Assets/1_Scripts/Player/Controller/PlayerVacuumController.cs`
+- `Assets/1_Scripts/Audio/VacuumAudioController.cs`
