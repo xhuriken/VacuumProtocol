@@ -2059,9 +2059,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VacuumAudioController
   _audioSource: {fileID: 7581000329753458709}
   _lowPassFilter: {fileID: 4546216201233503031}
+  MaxVolume: 0.6
+  FadeInDuration: 0.1
+  FadeOutDuration: 0.2
+  FadeCurve: 3
   BasePitch: 1
   FilterCutoff: 5000
   Resonance: 1
+  PinkNoiseVolume: 0.5
+  RobotToneMix: 0.5
+  BaseFrequency: 120
+  UseBabbleMode: 1
+  LfoSpeed: 15
+  LfoIntensity: 0.5
+  AlwaysPlay: 1
 --- !u!169 &4546216201233503031
 AudioLowPassFilter:
   m_ObjectHideFlags: 0
