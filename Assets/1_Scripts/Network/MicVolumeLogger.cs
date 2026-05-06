@@ -37,15 +37,9 @@ public class MicVolumeLogger : MonoBehaviour
     }
 
     void Update() {
-        if (_enableLogging && Time.frameCount % 30 == 0) {
-            int currentId = -1;
-            if (UniVoiceMirrorSetupSample.ClientSession != null)
-                currentId = UniVoiceMirrorSetupSample.ClientSession.Client.ID;
-
-            if (_lastPeak > 0.001f)
-                Debug.Log($"[Voice Debug] Mic Volume Peak: {(_lastPeak * 100).ToString("F2")}% | My UniVoice ID: {currentId}");
-            else
-                Debug.Log($"[Voice Debug] Mic is silent. | My UniVoice ID: {currentId}");
+        if (_enableLogging && Time.frameCount % 60 == 0) {
+            if (_lastPeak > 0.005f)
+                Debug.Log($"[Voice Debug] Mic Volume Peak: {(_lastPeak * 100).ToString("F2")}%");
         }
     }
 }

@@ -62,6 +62,7 @@ namespace Adrenak.UniVoice.Samples
                 }
             }
 
+            /*
             // Server-side debug: Log all connected clients (only on Host/Server)
             if (Mirror.NetworkServer.active && Time.frameCount % 60 == 0)
             {
@@ -70,6 +71,7 @@ namespace Adrenak.UniVoice.Samples
                     Debug.Log($"<color=orange>[UniVoice Server]</color> Connected Clients IDs: {string.Join(", ", ms.ClientIDs)}");
                 }
             }
+            */
         }
 
         bool Setup()

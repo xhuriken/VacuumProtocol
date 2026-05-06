@@ -800,6 +800,7 @@ GameObject:
   - component: {fileID: 1264806491}
   - component: {fileID: 1264806495}
   - component: {fileID: 1264806496}
+  - component: {fileID: 1264806497}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -939,6 +940,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Adrenak.UniVoice.Samples.UniVoiceMirrorSetupSample
   useConcentusEncodeAndDecode: 1
   useVad: 1
+--- !u!114 &1264806497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264806485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 305e541ebda17684fae80e343c0116e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UniVoiceProximityHandler
+  minDistance: 1
+  maxDistance: 30
 --- !u!1 &1443564706
 GameObject:
   m_ObjectHideFlags: 0
