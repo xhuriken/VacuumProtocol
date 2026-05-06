@@ -798,9 +798,10 @@ GameObject:
   - component: {fileID: 1264806490}
   - component: {fileID: 1264806492}
   - component: {fileID: 1264806491}
-  - component: {fileID: 1264806496}
   - component: {fileID: 1264806493}
   - component: {fileID: 1264806495}
+  - component: {fileID: 1264806497}
+  - component: {fileID: 1264806496}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -946,6 +947,20 @@ MonoBehaviour:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1264806485}
   m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f3b6484fb5950d4bbdb4c8eba101bd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Adrenak.UniVoice.Samples.UniVoiceMirrorSetupSample
+  useConcentusEncodeAndDecode: 1
+  useVad: 1
+--- !u!114 &1264806497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264806485}
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d0dec1d2df214b44f8cb106b071695ce, type: 3}
   m_Name: 
