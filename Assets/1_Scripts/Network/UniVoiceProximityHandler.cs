@@ -85,6 +85,12 @@ public class UniVoiceProximityHandler : MonoBehaviour
 
             while (targetPlayer != null && output != null) {
                 output.transform.position = targetPlayer.transform.position + Vector3.up * 1.5f;
+                
+                // Logic to switch between 2D (Lobby) and 3D (Game)
+                // If we are in "SteamTest", use 3D. Otherwise (Lobby), use 2D.
+                bool isInGame = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "SteamTest";
+                audioSource.spatialBlend = isInGame ? 1f : 0f;
+
                 yield return null;
             }
 
