@@ -155,6 +155,7 @@ GameObject:
   - component: {fileID: 7412146708353341128}
   - component: {fileID: 8426188015464047091}
   - component: {fileID: 393021952163988311}
+  - component: {fileID: 1147134402607895567}
   m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
@@ -512,6 +513,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 251a8f4079196ff4882bfde883f843c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Collectible
+--- !u!114 &1147134402607895567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5677088349807538119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 964d6b716c2907c4e84e827560505c11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UniVoicePlayerAudio
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  minDistance: 1
+  maxDistance: 30
+  gameSceneName: SteamTest
 --- !u!1001 &3366907947144998948
 PrefabInstance:
   m_ObjectHideFlags: 0
