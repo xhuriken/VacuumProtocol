@@ -711,6 +711,18 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
+    - target: {fileID: 6190915956649590825, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 6190915956649590825, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6190915956649590825, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.6
+      objectReference: {fileID: 0}
     - target: {fileID: 6588449510037502826, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       propertyPath: m_Layer
       value: 7
@@ -894,6 +906,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8782172062577712993, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8828346042749416528}
+    - targetCorrespondingSourceObject: {fileID: -5388890120116837066, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5151946448602049108}
     - targetCorrespondingSourceObject: {fileID: -7371955452940464859, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2057027633119923834}
@@ -1489,6 +1504,29 @@ CapsuleCollider:
   m_Height: 0.13
   m_Direction: 1
   m_Center: {x: 0, y: 0.075, z: 0}
+--- !u!1 &1985937956679357714 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -5388890120116837066, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+  m_PrefabInstance: {fileID: 3366907947144998948}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5151946448602049108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1985937956679357714}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0d7b9d2fb98876498e11d384067eef7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MicVolumeLogger
+  _minScale: {x: 0.4, y: 1, z: 0.4}
+  _maxScale: {x: 1.5, y: 1, z: 1.5}
+  _sensitivity: 5
+  _smoothSpeed: 15
+  _playerInput: {fileID: 5542343617569512994}
+  _enableLogging: 0
 --- !u!1 &2022398947834100853 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3650354212203793489, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
@@ -2072,7 +2110,7 @@ MonoBehaviour:
   UseBabbleMode: 1
   LfoSpeed: 15
   LfoIntensity: 0.5
-  AlwaysPlay: 1
+  AlwaysPlay: 0
 --- !u!169 &4546216201233503031
 AudioLowPassFilter:
   m_ObjectHideFlags: 0

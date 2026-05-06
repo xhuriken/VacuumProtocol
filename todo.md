@@ -12,3 +12,8 @@
 - [x] Implement `PlayerVacuumController` triggered by Dual Click.
 - [x] Implement `VacuumAudioController` with modulated parameters (Freq, Resonance, etc.).
 - [x] Update documentation to reflect new component architecture.
+
+## Feature: Voice Visuals & Audio Enhancements
+- [x] Create Tomodachi "Babble" mode for VacuumAudioController.
+- [x] Refactor `MicVolumeLogger` to animate local player mouth scale.
+- [x] Implement vacuum bypass to force max mouth scale during aspiration.
