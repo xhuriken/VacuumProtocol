@@ -8,30 +8,38 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Controls the lobby UI, manages the player list, and handles the game start logic.
+/// </summary>
 public class LobbyController : MonoBehaviour
 {
+    /// <summary>
+    /// Singleton instance of the LobbyController.
+    /// </summary>
     public static LobbyController Instance;
 
-    //Ui Elements
+    [Header("UI Elements")]
     public TextMeshProUGUI LobbyNameText;
 
-    //Player Data
+    [Header("Player Data")]
     public GameObject PlayerListViewContent;
     public GameObject PlayerListItemPrefab;
     public GameObject LocalPlayerObject;
 
-    //Other Data
+    [Header("Lobby State")]
     public ulong CurrentLobbyId;
     public bool PlayerItemCreated = false;
     private List<PlayerListItem> PlayerListItems = new List<PlayerListItem>();
     public PlayerObjectController LocalPlayerController;
 
-    //Ready
+    [Header("Ready System")]
     public Button StartGameButton;
     public TextMeshProUGUI ReadyButtonText;
 
-    //Manger
     private MyNetworkManager _manager;
+    /// <summary>
+    /// Accessor for the custom Network Manager.
+    /// </summary>
     private MyNetworkManager Manager
     {
         get
@@ -39,7 +47,6 @@ public class LobbyController : MonoBehaviour
             if (_manager != null) { return _manager; }
             return _manager = MyNetworkManager.singleton as MyNetworkManager;
         }
-
     }
 
     private void Awake()
@@ -47,16 +54,25 @@ public class LobbyController : MonoBehaviour
         if (Instance == null) Instance = this;
     }
 
+    /// <summary>
+    /// Toggles the ready state of the local player.
+    /// </summary>
     public void ReadyPlayer()
     {
         LocalPlayerController.ChangeReady();
     }
 
+    /// <summary>
+    /// Starts the game for all connected players.
+    /// </summary>
     public void StartGame()
     {
         LocalPlayerController.CanStartGame("SteamTest");
     }
 
+    /// <summary>
+    /// Updates the visual state of the ready button based on the local player's status.
+    /// </summary>
     public void UpdateButton()
     {
         if (LocalPlayerController.Ready)
@@ -71,6 +87,9 @@ public class LobbyController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Checks if all players are ready. Enables the start button if the host.
+    /// </summary>
     public void CheckIfAllReady()
     {
         bool allReady = false;
@@ -89,6 +108,7 @@ public class LobbyController : MonoBehaviour
 
         if (allReady)
         {
+            // Only the host (Player 1) can start the game
             if (LocalPlayerController.PlayerId == 1)
             {
                 StartGameButton.interactable = true;
@@ -104,28 +124,38 @@ public class LobbyController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Fetches and updates the lobby name from Steam data.
+    /// </summary>
     public void UpdateLobbyName()
     {
         CurrentLobbyId = Manager.GetComponent<SteamLobby>().CurrentLobbyId;
         LobbyNameText.text = SteamMatchmaking.GetLobbyData(new CSteamID(CurrentLobbyId), "name");
     }
 
+    /// <summary>
+    /// Orchestrates the synchronization of the player list UI.
+    /// </summary>
     public void UpdatePlayerList()
     {
-        if (!PlayerItemCreated) { CreateHostPlayerItem(); }//host
-        if (PlayerListItems.Count < Manager.GamePlayers.Count) { CreateClientPlayerItem(); }//client
-        if (PlayerListItems.Count > Manager.GamePlayers.Count) { RemovePlayerItem(); }//player left
-        if (PlayerListItems.Count == Manager.GamePlayers.Count) { UpdatePlayerItem(); }
-
+        if (!PlayerItemCreated) { CreateHostPlayerItem(); } // Initial creation for host
+        if (PlayerListItems.Count < Manager.GamePlayers.Count) { CreateClientPlayerItem(); } // Add new clients
+        if (PlayerListItems.Count > Manager.GamePlayers.Count) { RemovePlayerItem(); } // Handle player disconnection
+        if (PlayerListItems.Count == Manager.GamePlayers.Count) { UpdatePlayerItem(); } // Update existing items
     }
 
+    /// <summary>
+    /// Finds and assigns the local player object in the scene.
+    /// </summary>
     public void FindLocalPlayer()
     {
         LocalPlayerObject = GameObject.Find("LocalGamePlayer");
         LocalPlayerController = LocalPlayerObject.GetComponent<PlayerObjectController>();
     }
 
-    // host only
+    /// <summary>
+    /// Creates UI items for all players currently in the manager (Host logic).
+    /// </summary>
     public void CreateHostPlayerItem()
     {
         foreach (PlayerObjectController player in Manager.GamePlayers)
@@ -147,7 +177,9 @@ public class LobbyController : MonoBehaviour
         PlayerItemCreated = true;
     }
 
-    //client only
+    /// <summary>
+    /// Creates UI items for players not yet represented in the UI (Client logic).
+    /// </summary>
     public void CreateClientPlayerItem()
     {
         foreach (PlayerObjectController player in Manager.GamePlayers)
@@ -171,6 +203,9 @@ public class LobbyController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates the data displayed in existing player list UI items.
+    /// </summary>
     public void UpdatePlayerItem()
     {
         foreach (PlayerObjectController player in Manager.GamePlayers)
@@ -194,6 +229,9 @@ public class LobbyController : MonoBehaviour
         CheckIfAllReady();
     }
 
+    /// <summary>
+    /// Removes UI items for players who have left the lobby.
+    /// </summary>
     public void RemovePlayerItem()
     {
         List<PlayerListItem> playerListItemsToRemove = new List<PlayerListItem>();

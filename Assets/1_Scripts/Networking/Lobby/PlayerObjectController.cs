@@ -2,10 +2,12 @@ using Mirror;
 using Steamworks;
 using UnityEngine;
 
+/// <summary>
+/// Manages networked player data and actions within the lobby environment.
+/// </summary>
 public class PlayerObjectController : NetworkBehaviour
 {
-
-    //Player Data
+    [Header("Networked Player Data")]
     [SyncVar] public int ConnectionId;
     [SyncVar] public int PlayerId;
     [SyncVar] public ulong PlayerSteamId;
@@ -13,7 +15,6 @@ public class PlayerObjectController : NetworkBehaviour
     [SyncVar(hook = nameof(PlayerReadyUpdate))] public bool Ready;
 
     private MyNetworkManager _manager;
-
     private MyNetworkManager Manager
     {
         get
@@ -23,6 +24,9 @@ public class PlayerObjectController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Hook called when the Ready status is synchronized across the network.
+    /// </summary>
     public void PlayerReadyUpdate(bool OldValue, bool NewValue)
     {
         if (isServer)
@@ -35,12 +39,18 @@ public class PlayerObjectController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Command to toggle the ready status on the server.
+    /// </summary>
     [Command]
     private void CmdSetPlayerReady()
     {
         this.PlayerReadyUpdate(this.Ready, !this.Ready);
     }
 
+    /// <summary>
+    /// Initiates a ready status change for the local player.
+    /// </summary>
     public void ChangeReady()
     {
         if (isOwned)
@@ -49,6 +59,10 @@ public class PlayerObjectController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Requests the server to start the game.
+    /// </summary>
+    /// <param name="sceneName">The name of the scene to load.</param>
     public void CanStartGame(string sceneName)
     {
         if (isOwned)
@@ -57,6 +71,9 @@ public class PlayerObjectController : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Command to trigger a scene change on the server.
+    /// </summary>
     [Command]
     public void CmdStartGame(string sceneName)
     {
@@ -84,12 +101,18 @@ public class PlayerObjectController : NetworkBehaviour
         LobbyController.Instance.UpdatePlayerList();
     }
 
+    /// <summary>
+    /// Command to set the player name on the server.
+    /// </summary>
     [Command]
     private void CmdSetPlayerName(string playerName)
     {
         this.PlayerName = playerName;
     }
 
+    /// <summary>
+    /// Hook called when the PlayerName is synchronized across the network.
+    /// </summary>
     public void PlayerNameUpdate(string OldValue, string NewValue)
     {
         if (isServer)
@@ -101,5 +124,4 @@ public class PlayerObjectController : NetworkBehaviour
             LobbyController.Instance.UpdatePlayerList();
         }
     }
-
 }

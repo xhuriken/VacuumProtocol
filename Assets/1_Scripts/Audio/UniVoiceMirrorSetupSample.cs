@@ -8,28 +8,28 @@ using UnityEngine;
 namespace Adrenak.UniVoice.Samples
 {
     /// <summary>
-    /// To get this setup sample to work, ensure that you have done the following:
-    /// - Import Mirror and add the UNIVOICE_NETWORK_MIRROR compilation symbol to your project
-    /// - If you want to use RNNoise filter, import RNNoise4Unity into your project and add UNIVOICE_FILTER_RNNOISE4UNITY
-    /// - Add this component to the first scene of your Unity project
+    /// Handles the initialization and lifecycle of UniVoice with Mirror networking.
+    /// Setup instructions:
+    /// - Import Mirror and add 'UNIVOICE_NETWORK_MIRROR' to compilation symbols.
+    /// - (Optional) Import RNNoise4Unity and add 'UNIVOICE_FILTER_RNNOISE4UNITY' for noise suppression.
+    /// - Place this component in the first scene of your project.
     /// </summary>
     public class UniVoiceMirrorSetupSample : MonoBehaviour
     {
         const string TAG = "[BasicUniVoiceSetupSample]";
 
         /// <summary>
-        /// Whether UniVoice has been setup successfully. This field will return true if the setup was successful.
-        /// It runs on both server and client.
+        /// Indicates if UniVoice has been initialized successfully.
         /// </summary>
         public static bool HasSetUp { get; private set; }
 
         /// <summary>
-        /// The server object.
+        /// Global reference to the UniVoice audio server.
         /// </summary>
         public static IAudioServer<int> AudioServer { get; private set; }
 
         /// <summary>
-        /// The client session.
+        /// Global reference to the UniVoice client session.
         /// </summary>
         public static ClientSession<int> ClientSession { get; private set; }
 
@@ -48,7 +48,8 @@ namespace Adrenak.UniVoice.Samples
 
         void Update()
         {
-            // Fix for Host ID being stuck at -1 (common with Steamworks/FizzySteamworks)
+            // Mirror/Steamworks Fix: Sometimes the Host ID is incorrectly set to -1.
+            // We force it to 0 to ensure local audio processing works correctly.
             if (Mirror.NetworkServer.active && Mirror.NetworkClient.active)
             {
                 if (ClientSession != null && ClientSession.Client != null && ClientSession.Client.ID == -1)
@@ -61,19 +62,12 @@ namespace Adrenak.UniVoice.Samples
                     }
                 }
             }
-
-            /*
-            // Server-side debug: Log all connected clients (only on Host/Server)
-            if (Mirror.NetworkServer.active && Time.frameCount % 60 == 0)
-            {
-                if (AudioServer is Adrenak.UniVoice.Networks.MirrorServer ms)
-                {
-                    Debug.Log($"<color=orange>[UniVoice Server]</color> Connected Clients IDs: {string.Join(", ", ms.ClientIDs)}");
-                }
-            }
-            */
         }
 
+        /// <summary>
+        /// Orchestrates the setup of both server and client components.
+        /// </summary>
+        /// <returns>True if setup succeeded.</returns>
         bool Setup()
         {
             Debug.Log($"[{TAG}] Trying to setup UniVoice");
@@ -97,10 +91,13 @@ namespace Adrenak.UniVoice.Samples
             if (!failed)
                 Debug.Log($"[{TAG}] UniVoice successfully setup!");
 
-
             return !failed;
         }
 
+        /// <summary>
+        /// Initializes the Mirror-specific audio server.
+        /// </summary>
+        /// <returns>True if successful.</returns>
         bool SetupAudioServer()
         {
 #if MIRROR || UNIVOICE_NETWORK_MIRROR
@@ -123,6 +120,10 @@ namespace Adrenak.UniVoice.Samples
 #endif
         }
 
+        /// <summary>
+        /// Initializes the Mirror-specific audio client session, microphone, and filters.
+        /// </summary>
+        /// <returns>True if successful.</returns>
         bool SetupClientSession()
         {
 #if MIRROR || UNIVOICE_NETWORK_MIRROR
@@ -170,7 +171,7 @@ namespace Adrenak.UniVoice.Samples
 
             ClientSession = new ClientSession<int>(client, input, outputFactory);
 
-            // --- DEBUG LOGS ---
+            // Debug logs for session events
             ClientSession.Client.OnJoined += (id, peers) =>
             {
                 Debug.Log($"<color=green>[UniVoice Debug]</color> Local Client Initialized! My ID: {id}. Peers already here: {string.Join(", ", peers)}");
@@ -183,18 +184,18 @@ namespace Adrenak.UniVoice.Samples
 
             ClientSession.Client.OnReceivedPeerAudioFrame += (id, frame) =>
             {
-                // Log every 200 frames received to avoid spamming but confirm reception
+                // Log frame reception periodically to verify network traffic
                 if (Time.frameCount % 200 == 0)
                     Debug.Log($"<color=cyan>[UniVoice Debug]</color> Receiving audio from Peer {id} ({frame.samples.Length} bytes)");
             };
-            // -------------------
 
-
+            // Voice Activity Detection filter
             if (useVad)
             {
                 ClientSession.InputFilters.Add(new SimpleVadFilter(new SimpleVad()));
             }
 
+            // Opus encoding/decoding using Concentus
             if (useConcentusEncodeAndDecode)
             {
                 ClientSession.InputFilters.Add(new ConcentusEncodeFilter());

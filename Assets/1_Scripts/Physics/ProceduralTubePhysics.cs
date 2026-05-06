@@ -2,6 +2,10 @@ using UnityEngine;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 
+/// <summary>
+/// Automates the creation of a procedural softbody-like chain of Rigidbodies and ConfigurableJoints.
+/// Useful for tubes, arms, or flexible robotic appendages.
+/// </summary>
 public class ProceduralTubePhysics : MonoBehaviour
 {
     [BoxGroup("General Settings")]
@@ -19,7 +23,7 @@ public class ProceduralTubePhysics : MonoBehaviour
     [BoxGroup("Joint Settings (Softbody Feel)")]
     public float damping = 10f;
     [BoxGroup("Joint Settings (Softbody Feel)")]
-    [Tooltip("Multiplier for the stiffness of the last segment (the hand) to make it more stable.")]
+    [Tooltip("Multiplier for the stiffness of the last segment (the hand/tip) to make it more stable.")]
     public float tipStiffnessMultiplier = 2f;
     [BoxGroup("Joint Settings (Softbody Feel)")]
     [Range(0, 180)]
@@ -28,6 +32,9 @@ public class ProceduralTubePhysics : MonoBehaviour
     [BoxGroup("Collider Settings")]
     public float colliderRadius = 0.05f;
 
+    /// <summary>
+    /// Clears existing components and sets up the procedural physics chain from this transform downwards.
+    /// </summary>
     [HorizontalGroup("Actions")]
     [Button(ButtonSizes.Large), GUIColor(0.4f, 0.8f, 0.4f)]
     public void Setup()
@@ -36,6 +43,9 @@ public class ProceduralTubePhysics : MonoBehaviour
         SetupRecursive(transform, null);
     }
 
+    /// <summary>
+    /// Removes all Rigidbody, ConfigurableJoint, and CapsuleCollider components from child objects.
+    /// </summary>
     [HorizontalGroup("Actions")]
     [Button(ButtonSizes.Large), GUIColor(0.8f, 0.4f, 0.4f)]
     public void Clear()
@@ -55,11 +65,16 @@ public class ProceduralTubePhysics : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Recursively traverses the hierarchy to add and configure physics components.
+    /// </summary>
+    /// <param name="current">The current transform being processed.</param>
+    /// <param name="parentRb">The Rigidbody of the parent object to connect the joint to.</param>
     private void SetupRecursive(Transform current, UnityEngine.Rigidbody parentRb)
     {
         if (current != transform)
         {
-            // Add Rigidbody
+            // Add and configure the Rigidbody
             UnityEngine.Rigidbody rb = current.gameObject.AddComponent<UnityEngine.Rigidbody>();
             rb.mass = segmentMass;
             rb.linearDamping = linearDamping;
@@ -67,11 +82,11 @@ public class ProceduralTubePhysics : MonoBehaviour
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
             
-            // Améliore la précision de la physique pour ce segment
+            // Improve physics accuracy for this specific segment
             rb.solverIterations = 20;
             rb.solverVelocityIterations = 10;
 
-            // Add Collider
+            // Add and configure the Collider
             UnityEngine.CapsuleCollider col = current.gameObject.AddComponent<UnityEngine.CapsuleCollider>();
             
             float maxScale = Mathf.Max(current.lossyScale.x, Mathf.Max(current.lossyScale.y, current.lossyScale.z));
@@ -102,7 +117,7 @@ public class ProceduralTubePhysics : MonoBehaviour
                 col.center = Vector3.zero;
             }
 
-            // Add Joint
+            // Add and configure the Configurable Joint
             UnityEngine.ConfigurableJoint joint = current.gameObject.AddComponent<UnityEngine.ConfigurableJoint>();
             joint.connectedBody = parentRb;
             
@@ -124,7 +139,7 @@ public class ProceduralTubePhysics : MonoBehaviour
 
             joint.rotationDriveMode = RotationDriveMode.Slerp;
             
-            // Applique un multiplicateur si c'est le dernier segment pour stabiliser le bout du bras
+            // Apply higher stiffness to the tip segment to keep the arm stable
             float finalStiffness = isLast ? stiffness * tipStiffnessMultiplier : stiffness;
 
             JointDrive slerpDrive = new JointDrive
@@ -143,15 +158,18 @@ public class ProceduralTubePhysics : MonoBehaviour
         }
         else
         {
+            // Root object is usually kinematic to anchor the procedural arm
             UnityEngine.Rigidbody rootRb = current.GetComponent<UnityEngine.Rigidbody>();
             if (!rootRb) rootRb = current.gameObject.AddComponent<UnityEngine.Rigidbody>();
             rootRb.isKinematic = true;
             parentRb = rootRb;
         }
 
+        // Continue processing children
         for (int i = 0; i < current.childCount; i++)
         {
             SetupRecursive(current.GetChild(i), parentRb);
         }
     }
+}
 }

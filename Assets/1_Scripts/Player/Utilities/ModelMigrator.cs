@@ -3,25 +3,33 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Reflection;
 
+/// <summary>
+/// Helper utility to migrate components and references from an old 3D model hierarchy to a new one.
+/// Useful when replacing character models while keeping script references and custom objects intact.
+/// </summary>
 public class ModelMigrator : MonoBehaviour
 {
     [Title("Migration Setup")]
-    [Required, Tooltip("L'ancien modèle (ex: unit_vacuum) actuellement dans le Player")]
+    [Required, Tooltip("The old model currently inside the Player hierarchy.")]
     public GameObject oldModel;
     
-    [Required, Tooltip("Le nouveau modèle (Prefab ou objet de scène)")]
+    [Required, Tooltip("The new model (Prefab or scene object) to migrate to.")]
     public GameObject newModel;
 
+    /// <summary>
+    /// Executes the migration process by instantiating the new model, transferring components, 
+    /// moving manual objects, and updating script references.
+    /// </summary>
     [Button(ButtonSizes.Large), GUIColor(0, 1, 0)]
     public void PerfectMigration()
     {
         if (oldModel == null || newModel == null) return;
 
-        Debug.Log("<color=green><b>--- Début de la Migration Parfaite ---</b></color>");
+        Debug.Log("<color=green><b>--- Starting Perfect Migration ---</b></color>");
 
         GameObject instantiatedModel = newModel;
 
-        // 1. Si le nouveau modèle est un Prefab dans les dossiers, on l'instancie proprement
+        // 1. If the new model is a Prefab asset, instantiate it properly in the scene
         #if UNITY_EDITOR
         if (UnityEditor.PrefabUtility.IsPartOfPrefabAsset(newModel))
         {
@@ -29,20 +37,20 @@ public class ModelMigrator : MonoBehaviour
         }
         #endif
 
-        // 2. On place le nouveau modèle au même endroit que l'ancien root
+        // 2. Position the new model at the same root transform as the old one
         instantiatedModel.transform.SetParent(transform);
         instantiatedModel.transform.localPosition = oldModel.transform.localPosition;
         instantiatedModel.transform.localRotation = oldModel.transform.localRotation;
         instantiatedModel.transform.localScale = oldModel.transform.localScale;
 
-        // 3. Mapper tous les nouveaux nodes par nom
+        // 3. Map all nodes in the new model by their name for easy lookup
         Dictionary<string, Transform> newNodes = new Dictionary<string, Transform>();
         foreach (Transform t in instantiatedModel.GetComponentsInChildren<Transform>(true))
         {
             if (!newNodes.ContainsKey(t.name)) newNodes.Add(t.name, t);
         }
 
-        // 4. Parcourir l'ancienne hiérarchie
+        // 4. Traverse the old hierarchy to find components and custom objects to migrate
         Transform[] oldTransforms = oldModel.GetComponentsInChildren<Transform>(true);
         
         foreach (Transform oldT in oldTransforms)
@@ -51,16 +59,15 @@ public class ModelMigrator : MonoBehaviour
 
             if (newNodes.TryGetValue(oldT.name, out Transform newT))
             {
-                // A. Transférer les composants (scripts, colliders, etc.)
-                // NOTE: On ne touche pas au Transform ici !
+                // A. Transfer non-structural components (scripts, colliders, etc.)
                 TransferComponents(oldT.gameObject, newT.gameObject);
 
-                // B. Déménager les objets "Unity-Only" (ex: Caméra, Lights)
+                // B. Move "Unity-Only" objects (Cameras, Lights, etc.) that don't exist in the new model's source
                 List<Transform> childrenToMove = new List<Transform>();
                 for (int i = 0; i < oldT.childCount; i++)
                 {
                     Transform child = oldT.GetChild(i);
-                    // Si cet enfant n'existe pas dans le nouveau modèle, c'est un objet manuel
+                    // If this child is NOT part of the new model's name map, it's a manual addition
                     if (!newNodes.ContainsKey(child.name))
                     {
                         childrenToMove.Add(child);
@@ -70,24 +77,27 @@ public class ModelMigrator : MonoBehaviour
                 foreach (Transform child in childrenToMove)
                 {
                     child.SetParent(newT);
-                    Debug.Log($"<color=cyan>Déménagement : {child.name} déplacé vers {newT.name}</color>");
+                    Debug.Log($"<color=cyan>[Migration] Moving: {child.name} relocated to {newT.name}</color>");
                 }
             }
         }
 
-        // 5. Mettre à jour toutes les références dans les scripts du Player
+        // 5. Update all script references in the Player hierarchy to point to the new nodes
         UpdateAllReferencesInPlayer(newNodes);
 
-        // 6. Finalisation
+        // 6. Cleanup
         oldModel.SetActive(false);
-        Debug.Log("<color=green><b>--- Migration terminée avec succès ! ---</b></color>");
+        Debug.Log("<color=green><b>--- Migration completed successfully! ---</b></color>");
     }
 
+    /// <summary>
+    /// Copies components from a source object to a destination object, avoiding core structural components.
+    /// </summary>
     private void TransferComponents(GameObject source, GameObject destination)
     {
         foreach (var comp in source.GetComponents<Component>())
         {
-            // On ignore ABSOLUMENT tout ce qui touche à la structure du nouveau modèle
+            // Ignore structural components belonging to the 3D model itself
             if (comp is Transform || comp is SkinnedMeshRenderer || comp is MeshFilter || comp is MeshRenderer || comp is Animator)
                 continue;
 
@@ -100,6 +110,9 @@ public class ModelMigrator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Scans all scripts on the Player and updates Transform/GameObject fields to point to the new model.
+    /// </summary>
     private void UpdateAllReferencesInPlayer(Dictionary<string, Transform> mapping)
     {
         MonoBehaviour[] allScripts = GetComponentsInChildren<MonoBehaviour>(true);
