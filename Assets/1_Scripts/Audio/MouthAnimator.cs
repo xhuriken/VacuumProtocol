@@ -41,8 +41,16 @@ public class MouthAnimator : NetworkBehaviour
         else
         {
             // Get the connection ID to identify this peer in UniVoice
-            if (TryGetComponent(out PlayerController m)) _peerId = m.ConnectionId;
-            else if (GetComponentInParent<PlayerController>()) _peerId = GetComponentInParent<PlayerController>().ConnectionId;
+            if (TryGetComponent(out PlayerController m)) 
+                _peerId = m.ConnectionId;
+            else if (GetComponentInParent<PlayerController>()) 
+                _peerId = GetComponentInParent<PlayerController>().ConnectionId;
+            else if (TryGetComponent(out PlayerObjectController c)) 
+                _peerId = c.ConnectionId;
+            else if (GetComponentInParent<PlayerObjectController>()) 
+                _peerId = GetComponentInParent<PlayerObjectController>().ConnectionId;
+
+            if (_peerId == -1) Debug.LogWarning($"[MouthAnimator] Could not find ConnectionId on {gameObject.name} or parents.");
         }
     }
 
@@ -89,7 +97,7 @@ public class MouthAnimator : NetworkBehaviour
                 }
             }
 
-            if (_remoteVoiceSource != null && _remoteVoiceSource.isPlaying)
+            if (_remoteVoiceSource != null)
             {
                 _remoteVoiceSource.GetOutputData(_sampleBuffer, 0);
                 float peak = 0;
