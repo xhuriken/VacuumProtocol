@@ -1525,12 +1525,12 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _mouthTransform: {fileID: 8886487938504978445}
-  _minScale: {x: 0.4, y: 1, z: 0.6}
+  _minScale: {x: 0.4, y: 1, z: 0.4}
   _maxScale: {x: 1.5, y: 1.5, z: 1.5}
   _sensitivity: 5
   _smoothSpeed: 30
-  _remoteVoiceSource: {fileID: 7581000329753458709}
   _vacuumController: {fileID: 5901156586144294310}
+  _enableDebugLogs: 1
 --- !u!1 &2022398947834100853 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3650354212203793489, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
@@ -2101,19 +2101,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VacuumAudioController
   _audioSource: {fileID: 7581000329753458709}
   _lowPassFilter: {fileID: 4546216201233503031}
-  MaxVolume: 0.6
+  MaxVolume: 0.3
   FadeInDuration: 0.1
   FadeOutDuration: 0.2
   FadeCurve: 3
-  BasePitch: 1
-  FilterCutoff: 5000
-  Resonance: 1
-  PinkNoiseVolume: 0.5
-  RobotToneMix: 0.5
-  BaseFrequency: 120
-  UseBabbleMode: 1
-  LfoSpeed: 15
-  LfoIntensity: 0.5
+  BasePitch: 0.25
+  FilterCutoff: 3983
+  Resonance: 1.38
+  PinkNoiseVolume: 0.414
+  RobotToneMix: 0.685
+  BaseFrequency: 314
+  UseBabbleMode: 0
+  LfoSpeed: 41.8
+  LfoIntensity: 0.35
   AlwaysPlay: 0
 --- !u!169 &4546216201233503031
 AudioLowPassFilter:

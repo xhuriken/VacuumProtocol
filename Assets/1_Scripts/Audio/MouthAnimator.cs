@@ -1,7 +1,7 @@
-using UnityEngine;
-using Mirror;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.Samples;
+using Mirror;
+using UnityEngine;
 
 /// <summary>
 /// Animates the character's mouth scale based on voice volume.
@@ -16,10 +16,11 @@ public class MouthAnimator : NetworkBehaviour
     [SerializeField] private float _sensitivity = 5f;
     [SerializeField] private float _smoothSpeed = 15f;
 
-    [Header("References")]
-    [Tooltip("Leave empty to auto-find from UniVoice.")]
-    [SerializeField] private AudioSource _remoteVoiceSource;
+    [Tooltip("Optional: The vacuum controller to sync mouth opening. Auto-found if empty.")]
     [SerializeField] private PlayerVacuumController _vacuumController;
+
+    // Hidden because it's assigned dynamically at runtime from UniVoice
+    private AudioSource _remoteVoiceSource;
 
     [Header("Debug")]
     [SerializeField] private bool _enableDebugLogs = false;
@@ -46,13 +47,17 @@ public class MouthAnimator : NetworkBehaviour
     private void TryFindPeerId()
     {
         // Try to find the ConnectionId on this object or parents
-        if (TryGetComponent(out PlayerController m) && m.ConnectionId != -1) 
+        if (TryGetComponent(out PlayerController m) && m.ConnectionId != -1)
+
             _peerId = m.ConnectionId;
-        else if (GetComponentInParent<PlayerController>() != null && GetComponentInParent<PlayerController>().ConnectionId != -1) 
+        else if (GetComponentInParent<PlayerController>() != null && GetComponentInParent<PlayerController>().ConnectionId != -1)
+
             _peerId = GetComponentInParent<PlayerController>().ConnectionId;
-        else if (TryGetComponent(out PlayerObjectController c) && c.ConnectionId != -1) 
+        else if (TryGetComponent(out PlayerObjectController c) && c.ConnectionId != -1)
+
             _peerId = c.ConnectionId;
-        else if (GetComponentInParent<PlayerObjectController>() != null && GetComponentInParent<PlayerObjectController>().ConnectionId != -1) 
+        else if (GetComponentInParent<PlayerObjectController>() != null && GetComponentInParent<PlayerObjectController>().ConnectionId != -1)
+
             _peerId = GetComponentInParent<PlayerObjectController>().ConnectionId;
 
         if (_peerId != -1 && _enableDebugLogs)
@@ -100,15 +105,23 @@ public class MouthAnimator : NetworkBehaviour
                 TryFindPeerId();
             }
 
-            // For remote players, ensure we have the correct AudioSource from UniVoice
-            if (_remoteVoiceSource == null && _peerId != -1 && UniVoiceMirrorSetupSample.ClientSession != null)
+            // For remote players, we MUST find the UniVoice AudioSource.
+            // Even if one was assigned in the inspector, it's likely the vacuum source, not the voice.
+            if (_peerId != -1 && UniVoiceMirrorSetupSample.ClientSession != null)
             {
                 if (UniVoiceMirrorSetupSample.ClientSession.PeerOutputs.TryGetValue(_peerId, out var output))
                 {
                     if (output is Adrenak.UniVoice.Outputs.StreamedAudioSourceOutput streamedOutput)
                     {
-                        _remoteVoiceSource = streamedOutput.Stream.UnityAudioSource;
-                        if (_enableDebugLogs) Debug.Log($"<color=cyan>[MouthAnimator]</color> Linked AudioSource for Peer {_peerId}");
+                        AudioSource uniVoiceSource = streamedOutput.Stream.UnityAudioSource;
+
+                        // If we haven't linked it yet or it changed, update it
+
+                        if (_remoteVoiceSource != uniVoiceSource)
+                        {
+                            _remoteVoiceSource = uniVoiceSource;
+                            if (_enableDebugLogs) Debug.Log($"<color=cyan>[MouthAnimator]</color> Successfully linked to Peer {_peerId}'s actual VOICE source.");
+                        }
                     }
                 }
             }
