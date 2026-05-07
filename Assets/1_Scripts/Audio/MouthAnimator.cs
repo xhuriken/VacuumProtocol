@@ -21,6 +21,9 @@ public class MouthAnimator : NetworkBehaviour
     [SerializeField] private AudioSource _remoteVoiceSource;
     [SerializeField] private PlayerVacuumController _vacuumController;
 
+    [Header("Debug")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     private float _lastPeak = 0f;
     private float _currentVolume = 0f;
     private float[] _sampleBuffer = new float[256];
@@ -38,25 +41,31 @@ public class MouthAnimator : NetworkBehaviour
         {
             StartCoroutine(SetupLocalMicLogging());
         }
-        else
-        {
-            // Get the connection ID to identify this peer in UniVoice
-            if (TryGetComponent(out PlayerController m)) 
-                _peerId = m.ConnectionId;
-            else if (GetComponentInParent<PlayerController>()) 
-                _peerId = GetComponentInParent<PlayerController>().ConnectionId;
-            else if (TryGetComponent(out PlayerObjectController c)) 
-                _peerId = c.ConnectionId;
-            else if (GetComponentInParent<PlayerObjectController>()) 
-                _peerId = GetComponentInParent<PlayerObjectController>().ConnectionId;
+    }
 
-            if (_peerId == -1) Debug.LogWarning($"[MouthAnimator] Could not find ConnectionId on {gameObject.name} or parents.");
+    private void TryFindPeerId()
+    {
+        // Try to find the ConnectionId on this object or parents
+        if (TryGetComponent(out PlayerController m) && m.ConnectionId != -1) 
+            _peerId = m.ConnectionId;
+        else if (GetComponentInParent<PlayerController>() != null && GetComponentInParent<PlayerController>().ConnectionId != -1) 
+            _peerId = GetComponentInParent<PlayerController>().ConnectionId;
+        else if (TryGetComponent(out PlayerObjectController c) && c.ConnectionId != -1) 
+            _peerId = c.ConnectionId;
+        else if (GetComponentInParent<PlayerObjectController>() != null && GetComponentInParent<PlayerObjectController>().ConnectionId != -1) 
+            _peerId = GetComponentInParent<PlayerObjectController>().ConnectionId;
+
+        if (_peerId != -1 && _enableDebugLogs)
+        {
+            Debug.Log($"<color=orange>[MouthAnimator]</color> Successfully found PeerID: {_peerId} for {gameObject.name}");
         }
     }
 
     private System.Collections.IEnumerator SetupLocalMicLogging()
     {
         while (UniVoiceMirrorSetupSample.ClientSession == null) yield return null;
+
+        if (_enableDebugLogs) Debug.Log("<color=green>[MouthAnimator]</color> Subscribed to Local Mic events.");
 
         UniVoiceMirrorSetupSample.ClientSession.Input.OnFrameReady += frame =>
         {
@@ -85,6 +94,12 @@ public class MouthAnimator : NetworkBehaviour
         }
         else
         {
+            // Try to find PeerID if we don't have it yet
+            if (_peerId == -1)
+            {
+                TryFindPeerId();
+            }
+
             // For remote players, ensure we have the correct AudioSource from UniVoice
             if (_remoteVoiceSource == null && _peerId != -1 && UniVoiceMirrorSetupSample.ClientSession != null)
             {
@@ -93,6 +108,7 @@ public class MouthAnimator : NetworkBehaviour
                     if (output is Adrenak.UniVoice.Outputs.StreamedAudioSourceOutput streamedOutput)
                     {
                         _remoteVoiceSource = streamedOutput.Stream.UnityAudioSource;
+                        if (_enableDebugLogs) Debug.Log($"<color=cyan>[MouthAnimator]</color> Linked AudioSource for Peer {_peerId}");
                     }
                 }
             }
@@ -107,6 +123,11 @@ public class MouthAnimator : NetworkBehaviour
                     if (abs > peak) peak = abs;
                 }
                 targetVolume = Mathf.Clamp01(peak * _sensitivity);
+
+                if (_enableDebugLogs && peak > 0.001f && Time.frameCount % 60 == 0)
+                {
+                    Debug.Log($"[MouthAnimator] Peer {_peerId} speaking. Peak: {peak:F4} -> Target Vol: {targetVolume:F2}");
+                }
             }
         }
 

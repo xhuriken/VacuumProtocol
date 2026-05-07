@@ -49,6 +49,7 @@ The system integrates **UniVoice** with Mirror. It captures microphone input, en
 - `_remoteVoiceSource`: The AudioSource used for remote voice playback.
 - `_vacuumController`: Reference to `PlayerVacuumController` for the vacuum bypass.
 - `_sensitivity`: Multiplier for voice-to-scale mapping.
+- `_enableDebugLogs`: Toggle for detailed console logging of ID finding and audio detection.
 
 #### Functions
 - `SetupLocalMicLogging()`: Coroutine that subscribes to local microphone frames if `isLocalPlayer` is true.
