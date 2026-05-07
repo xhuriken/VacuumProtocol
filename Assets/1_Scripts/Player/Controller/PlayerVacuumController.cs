@@ -13,6 +13,11 @@ using UnityEngine;
         [SyncVar(hook = nameof(OnVacuumStateChanged))]
         private bool _isVacuuming;
 
+        /// <summary>
+        /// Public access to the vacuuming state (synced over network).
+        /// </summary>
+        public bool IsVacuuming => _isVacuuming;
+
         private PlayerInputHandler _input;
 
         private void Awake()

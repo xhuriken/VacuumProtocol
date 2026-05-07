@@ -8,7 +8,7 @@ The system integrates **UniVoice** with Mirror. It captures microphone input, en
 ## Related Files
 - `Assets/1_Scripts/Audio/UniVoiceMirrorSetupSample.cs`: Configures the UniVoice server and client.
 - `Assets/1_Scripts/Audio/UniVoicePlayerAudio.cs`: Synchronizes the voice audio source with the player object's position.
-- `Assets/1_Scripts/Audio/MicVolumeLogger.cs`: Debug utility to monitor microphone input levels.
+- `Assets/1_Scripts/Audio/MouthAnimator.cs`: Animates the player's mouth based on voice volume (local/remote) and vacuum state.
 
 ---
 
@@ -40,14 +40,20 @@ The system integrates **UniVoice** with Mirror. It captures microphone input, en
 - `OnStartClient()`: Retrieves the connection ID to match this object with its corresponding UniVoice peer.
 - `Update()`: Finds the audio output source for the player and moves its `transform.position` to follow the player's model with a 1.5m vertical offset.
 
-### MicVolumeLogger.cs
-**Context:** Optional debug object.
-**Usage:** Logs the current microphone peak volume to the console.
+### MouthAnimator.cs
+**Context:** Attached to the Player prefab (specifically on the Mouth object).
+**Usage:** Synchronizes mouth scaling with voice volume for both local and remote players.
 
 #### Variables
-- `_enableLogging`: Boolean toggle.
-- `_lastPeak`: Stores the highest volume sample from the last audio frame.
+- `_mouthTransform`: The transform to scale.
+- `_remoteVoiceSource`: The AudioSource used for remote voice playback.
+- `_vacuumController`: Reference to `PlayerVacuumController` for the vacuum bypass.
+- `_sensitivity`: Multiplier for voice-to-scale mapping.
 
 #### Functions
-- `SetupLogger()`: Coroutine that subscribes to the UniVoice input frame events.
-- `Update()`: Prints the volume percentage to the console every 60 frames if sound is detected.
+- `SetupLocalMicLogging()`: Coroutine that subscribes to local microphone frames if `isLocalPlayer` is true.
+- `Update()`: 
+    - If local: uses mic peak data.
+    - If remote: uses `AudioSource.GetOutputData` to calculate peak volume.
+    - Applies vacuum bypass (forces max scale if vacuuming).
+    - Interpolates scale for smooth animation.

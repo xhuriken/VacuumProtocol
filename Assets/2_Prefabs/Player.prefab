@@ -908,7 +908,7 @@ PrefabInstance:
       addedObject: {fileID: 8828346042749416528}
     - targetCorrespondingSourceObject: {fileID: -5388890120116837066, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5151946448602049108}
+      addedObject: {fileID: 4568596084180888373}
     - targetCorrespondingSourceObject: {fileID: -7371955452940464859, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2057027633119923834}
@@ -1509,7 +1509,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: -5388890120116837066, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
   m_PrefabInstance: {fileID: 3366907947144998948}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5151946448602049108
+--- !u!114 &4568596084180888373
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1518,15 +1518,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 1985937956679357714}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c0d7b9d2fb98876498e11d384067eef7, type: 3}
+  m_Script: {fileID: 11500000, guid: 19923ef57d0744340ad4d892ce84222a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MicVolumeLogger
-  _minScale: {x: 0.4, y: 1, z: 0.4}
-  _maxScale: {x: 1.5, y: 1, z: 1.5}
+  m_EditorClassIdentifier: Assembly-CSharp::MouthAnimator
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _mouthTransform: {fileID: 8886487938504978445}
+  _minScale: {x: 0.4, y: 1, z: 0.6}
+  _maxScale: {x: 1.5, y: 1.5, z: 1.5}
   _sensitivity: 5
-  _smoothSpeed: 15
-  _playerInput: {fileID: 5542343617569512994}
-  _enableLogging: 0
+  _smoothSpeed: 30
+  _remoteVoiceSource: {fileID: 7581000329753458709}
+  _vacuumController: {fileID: 5901156586144294310}
 --- !u!1 &2022398947834100853 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3650354212203793489, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
@@ -5072,6 +5076,11 @@ MonoBehaviour:
 --- !u!4 &8632243322127379907 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -2778075141573730841, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+  m_PrefabInstance: {fileID: 3366907947144998948}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8886487938504978445 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6190915956649590825, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
   m_PrefabInstance: {fileID: 3366907947144998948}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &9008217146308808467 stripped
