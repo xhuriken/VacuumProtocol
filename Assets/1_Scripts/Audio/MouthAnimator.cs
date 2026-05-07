@@ -17,20 +17,32 @@ public class MouthAnimator : NetworkBehaviour
     [SerializeField] private float _smoothSpeed = 15f;
 
     [Header("References")]
+    [Tooltip("Leave empty to auto-find from UniVoice.")]
     [SerializeField] private AudioSource _remoteVoiceSource;
     [SerializeField] private PlayerVacuumController _vacuumController;
 
     private float _lastPeak = 0f;
     private float _currentVolume = 0f;
     private float[] _sampleBuffer = new float[256];
+    private int _peerId = -1;
 
-    private void Start()
+    private void Awake()
     {
         if (_mouthTransform == null) _mouthTransform = transform;
-        
+        if (_vacuumController == null) _vacuumController = GetComponentInParent<PlayerVacuumController>();
+    }
+
+    public override void OnStartClient()
+    {
         if (isLocalPlayer)
         {
             StartCoroutine(SetupLocalMicLogging());
+        }
+        else
+        {
+            // Get the connection ID to identify this peer in UniVoice
+            if (TryGetComponent(out PlayerController m)) _peerId = m.ConnectionId;
+            else if (GetComponentInParent<PlayerController>()) _peerId = GetComponentInParent<PlayerController>().ConnectionId;
         }
     }
 
@@ -43,7 +55,6 @@ public class MouthAnimator : NetworkBehaviour
             if (frame.samples == null) return;
 
             float peak = 0;
-            // UniVoice samples are usually bytes that need conversion
             for (int i = 0; i < frame.samples.Length; i += 4)
             {
                 if (i + 3 >= frame.samples.Length) break;
@@ -64,20 +75,34 @@ public class MouthAnimator : NetworkBehaviour
         {
             targetVolume = Mathf.Clamp01(_lastPeak * _sensitivity);
         }
-        else if (_remoteVoiceSource != null && _remoteVoiceSource.isPlaying)
+        else
         {
-            // For remote players, read from their AudioSource
-            _remoteVoiceSource.GetOutputData(_sampleBuffer, 0);
-            float peak = 0;
-            foreach (var sample in _sampleBuffer)
+            // For remote players, ensure we have the correct AudioSource from UniVoice
+            if (_remoteVoiceSource == null && _peerId != -1 && UniVoiceMirrorSetupSample.ClientSession != null)
             {
-                float abs = Mathf.Abs(sample);
-                if (abs > peak) peak = abs;
+                if (UniVoiceMirrorSetupSample.ClientSession.PeerOutputs.TryGetValue(_peerId, out var output))
+                {
+                    if (output is Adrenak.UniVoice.Outputs.StreamedAudioSourceOutput streamedOutput)
+                    {
+                        _remoteVoiceSource = streamedOutput.Stream.UnityAudioSource;
+                    }
+                }
             }
-            targetVolume = Mathf.Clamp01(peak * _sensitivity);
+
+            if (_remoteVoiceSource != null && _remoteVoiceSource.isPlaying)
+            {
+                _remoteVoiceSource.GetOutputData(_sampleBuffer, 0);
+                float peak = 0;
+                foreach (var sample in _sampleBuffer)
+                {
+                    float abs = Mathf.Abs(sample);
+                    if (abs > peak) peak = abs;
+                }
+                targetVolume = Mathf.Clamp01(peak * _sensitivity);
+            }
         }
 
-        // 2. Bypass: Force mouth open if vacuuming (synced via SyncVar)
+        // 2. Bypass: Force mouth open if vacuuming
         if (_vacuumController != null && _vacuumController.IsVacuuming)
         {
             targetVolume = 1f;

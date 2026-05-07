@@ -2196,7 +2196,7 @@ MonoBehaviour:
   syncInterval: 0
   _playerViewRange: {fileID: 7402342095547253661}
   _rotationSpeed: 8
-  _showDebugLogs: 1
+  _showDebugLogs: 0
 --- !u!1 &4011419162982477791 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -7416649539948929029, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
@@ -3457,7 +3457,7 @@ MonoBehaviour:
   syncInterval: 0
   _playerViewRange: {fileID: 7402342095547253661}
   _rotationSpeed: 8
-  _showDebugLogs: 1
+  _showDebugLogs: 0
 --- !u!1 &6301748043664340917 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -446447327731497071, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}

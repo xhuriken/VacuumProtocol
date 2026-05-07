@@ -10,5 +10,5 @@
 - [x] Implement `isLocalPlayer` logic to switch between Microphone Input and AudioSource Output.
 - [x] Use `AudioSource.GetOutputData()` for remote players to sync mouth with heard audio.
 - [x] Expose `IsVacuuming` in `PlayerVacuumController` and use it for the bypass on all clients.
-- [ ] Update the Player prefab with the new `MouthAnimator` script.
+- [x] Update the Player prefab with the new `MouthAnimator` script.
 - [x] Document the script in the `documentation/` folder.
