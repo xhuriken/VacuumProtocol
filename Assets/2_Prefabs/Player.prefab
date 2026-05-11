@@ -502,6 +502,7 @@ MonoBehaviour:
   syncInterval: 0
   ConnectionId: -1
   _showDebugLogs: 1
+  _lookAtPoint: {fileID: 7350101298894895284}
 --- !u!114 &5542343617569512994
 MonoBehaviour:
   m_ObjectHideFlags: 0
