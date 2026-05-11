@@ -13,11 +13,18 @@ public class MouthAnimator : NetworkBehaviour
     [SerializeField] private Transform _mouthTransform;
     [SerializeField] private Vector3 _minScale = Vector3.one;
     [SerializeField] private Vector3 _maxScale = new Vector3(1.5f, 1.5f, 1.5f);
-    [SerializeField] private float _sensitivity = 5f;
+    [SerializeField] private float _sensitivity = 15f;
     [SerializeField] private float _smoothSpeed = 15f;
 
     [Tooltip("Optional: The vacuum controller to sync mouth opening. Auto-found if empty.")]
     [SerializeField] private PlayerVacuumController _vacuumController;
+
+    [Tooltip("Optional: The audio controller, used for the lobby preview dummy.")]
+    [SerializeField] private VacuumAudioController _vacuumAudioController;
+
+    [Header("Preview Settings")]
+    [Tooltip("Check this ONLY on your Lobby Dummy prefab so it knows to listen to your mic without needing network authority!")]
+    public bool IsLobbyPreviewDummy = false;
 
     // Hidden because it's assigned dynamically at runtime from UniVoice
     private AudioSource _remoteVoiceSource;
@@ -34,11 +41,21 @@ public class MouthAnimator : NetworkBehaviour
     {
         if (_mouthTransform == null) _mouthTransform = transform;
         if (_vacuumController == null) _vacuumController = GetComponentInParent<PlayerVacuumController>();
+        if (_vacuumAudioController == null) _vacuumAudioController = GetComponentInParent<VacuumAudioController>();
+    }
+
+    private void Start()
+    {
+        // If it's a dummy, we don't wait for OnStartClient. Start listening immediately.
+        if (IsLobbyPreviewDummy)
+        {
+            StartCoroutine(SetupLocalMicLogging());
+        }
     }
 
     public override void OnStartClient()
     {
-        if (isLocalPlayer)
+        if (isLocalPlayer && !IsLobbyPreviewDummy)
         {
             StartCoroutine(SetupLocalMicLogging());
         }
@@ -93,7 +110,7 @@ public class MouthAnimator : NetworkBehaviour
         float targetVolume = 0f;
 
         // 1. Get volume from the appropriate source
-        if (isLocalPlayer)
+        if (isLocalPlayer || IsLobbyPreviewDummy)
         {
             targetVolume = Mathf.Clamp01(_lastPeak * _sensitivity);
         }
@@ -145,7 +162,10 @@ public class MouthAnimator : NetworkBehaviour
         }
 
         // 2. Bypass: Force mouth open if vacuuming
-        if (_vacuumController != null && _vacuumController.IsVacuuming)
+        bool isVacuumingGame = (_vacuumController != null && _vacuumController.IsVacuuming);
+        bool isVacuumingLobby = (_vacuumAudioController != null && _vacuumAudioController.IsActive);
+
+        if (isVacuumingGame || isVacuumingLobby)
         {
             targetVolume = 1f;
         }

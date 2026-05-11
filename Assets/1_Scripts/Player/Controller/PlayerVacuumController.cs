@@ -11,7 +11,7 @@ using UnityEngine;
         [SerializeField] private VacuumAudioController _audioController;
         
         [SyncVar(hook = nameof(OnVacuumStateChanged))]
-        private bool _isVacuuming;
+        private bool _isVacuuming = false;
 
         /// <summary>
         /// Public access to the vacuuming state (synced over network).

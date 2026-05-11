@@ -2,83 +2,69 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// Manages the vacuum sound effects with a fun, modulated robot synth voice mixed with pink noise.
-/// Features a "Tomodachi / Animalese" babble mode for organic, funny vocalization.
+/// Manages the vacuum sound effects using a pre-rendered Audio Clip.
 /// </summary>
+public enum MusicalNote
+{
+    C = 0, CSharp = 1, D = 2, DSharp = 3, E = 4, F = 5,
+    FSharp = 6, G = 7, GSharp = 8, A = 9, ASharp = 10, B = 11
+}
+
 [RequireComponent(typeof(AudioSource))]
 public class VacuumAudioController : MonoBehaviour
 {
     [Header("Audio Source References")]
+    [Tooltip("Put your Vital sound here (exported WITH its own LFO if you want). It must be set to loop.")]
     [SerializeField] private AudioSource _audioSource;
-    [SerializeField] private AudioLowPassFilter _lowPassFilter;
 
     [Header("Audio Dynamics (DOTween)")]
     [Range(0f, 1f)] public float MaxVolume = 0.6f;
-    public float FadeInDuration = 0.1f;
+    public float FadeInDuration = 0.05f;
     public float FadeOutDuration = 0.2f;
-    public Ease FadeCurve = Ease.OutSine;
+    public Ease FadeCurve = Ease.OutQuad;
 
-    [Header("Modulation Settings (Lobby)")]
+    [Header("Musical Pitching")]
+    [Tooltip("Base pitch multiplier (1 = Original DO/C from Vital)")]
     [Range(0.1f, 3.0f)] public float BasePitch = 1.0f;
-    [Range(500f, 20000f)] public float FilterCutoff = 3500f;
-    [Range(1.0f, 10.0f)] public float Resonance = 1.0f;
 
-    [Header("Air Noise Settings")]
-    [Range(0f, 1f)] public float PinkNoiseVolume = 0.5f;
 
-    [Header("Robot Synth Settings")]
-    [Range(0f, 1f)] public float RobotToneMix = 0.5f; // Mix between air noise and robot buzz
-    [Range(10f, 1000f)] public float BaseFrequency = 120f; // The base note of the motor
+    [Tooltip("Choose the root note you want this vacuum to play!")]
+    public MusicalNote RootNote = MusicalNote.C;
 
-    [Header("LFO / Babble Settings")]
-    public bool UseBabbleMode = true; // Random jumping pitch like Tomodachi/Animal Crossing
-    [Range(0.1f, 50f)] public float LfoSpeed = 15f; // How fast it changes notes or wobbles
-    [Range(0f, 1f)] public float LfoIntensity = 0.5f; // Pitch variation range
-
-    [Header("Debug")]
-    public bool AlwaysPlay = false; // Forces the sound to play continuously
+    [Tooltip("Allows shifting pitch dynamically by exact semitones during gameplay to resolve chords")]
+    public int SemitoneShift = 0;
 
 
     private bool _isActive = false;
-    private System.Random _rand = new System.Random();
+    public bool IsActive => _isActive;
+
     private Tween _volumeTween;
     private Tween _pitchTween;
-
-    // Audio thread safe variables
-    private volatile float _currentPitch = 1f;
-    private double _sampleRate;
-    private double _phase;
-    private double _phase2; // Used for organic detune
-    private double _lfoPhase;
-    private float _babbleTarget = 0f;
-    private float _currentBabble = 0f;
-
-    // Pink noise variables
-    private float b0, b1, b2, b3, b4, b5, b6;
 
     private void Awake()
     {
         if (_audioSource == null) _audioSource = GetComponent<AudioSource>();
-        if (_lowPassFilter == null) _lowPassFilter = GetComponent<AudioLowPassFilter>();
 
-        if (_lowPassFilter == null)
-        {
-            _lowPassFilter = gameObject.AddComponent<AudioLowPassFilter>();
-        }
-
-        _sampleRate = AudioSettings.outputSampleRate;
-        if (_sampleRate == 0) _sampleRate = 48000;
+        // We no longer force 3D spatialBlend here so you can set it to 2D in the Lobby!
 
         _audioSource.loop = true;
         _audioSource.playOnAwake = false;
+
+
         _audioSource.volume = 0f;
-        _audioSource.Stop();
+    }
+
+    private void Start()
+    {
+        if (!_audioSource.isPlaying)
+        {
+            _audioSource.Play();
+        }
     }
 
     public void SetVacuumState(bool active)
     {
-        if (AlwaysPlay) active = true;
-
+        Debug.Log($"[VacuumAudio] SetVacuumState({active}). IsPlaying={_audioSource.isPlaying}, CurrentVol={_audioSource.volume}");
         if (active == _isActive) return;
         _isActive = active;
 
@@ -87,118 +73,71 @@ public class VacuumAudioController : MonoBehaviour
 
         if (active)
         {
+            // Safety catch: if it stopped for any reason, force it to play again!
             if (!_audioSource.isPlaying) _audioSource.Play();
 
-            _volumeTween = _audioSource.DOFade(MaxVolume, FadeInDuration).SetEase(FadeCurve);
+            _volumeTween = _audioSource.DOFade(MaxVolume, FadeInDuration).SetEase(FadeCurve).SetUpdate(true);
 
-            if (_audioSource.pitch < BasePitch * 0.5f) _audioSource.pitch = BasePitch * 0.5f;
-            _pitchTween = _audioSource.DOPitch(BasePitch, FadeInDuration).SetEase(FadeCurve);
+            float targetPitch = GetCurrentTargetPitch();
+            if (_audioSource.pitch < targetPitch * 0.5f) _audioSource.pitch = targetPitch * 0.5f;
+            _pitchTween = _audioSource.DOPitch(targetPitch, FadeInDuration).SetEase(FadeCurve).SetUpdate(true);
         }
         else
         {
-            _volumeTween = _audioSource.DOFade(0f, FadeOutDuration).SetEase(FadeCurve)
-                .OnComplete(() => _audioSource.Stop());
+            // On ne fait plus Stop(), on laisse tourner en silence
+            _volumeTween = _audioSource.DOFade(0f, FadeOutDuration).SetEase(FadeCurve).SetUpdate(true);
 
-            _pitchTween = _audioSource.DOPitch(BasePitch * 0.3f, FadeOutDuration).SetEase(Ease.OutQuad);
+            _pitchTween = _audioSource.DOPitch(GetCurrentTargetPitch() * 0.3f, FadeOutDuration).SetEase(FadeCurve).SetUpdate(true);
         }
     }
 
-    private void Update()
+    /// <summary>
+    /// Update the note offset dynamically from outside scripts to resolve chords!
+    /// </summary>
+    public void SetNoteOffset(int semitones)
     {
-        if (AlwaysPlay && !_isActive)
+        SemitoneShift = semitones;
+        if (_isActive)
         {
-            SetVacuumState(true);
+            _pitchTween?.Kill();
+            _pitchTween = _audioSource.DOPitch(GetCurrentTargetPitch(), 0.1f).SetEase(Ease.InOutSine).SetUpdate(true);
         }
-
-        _lowPassFilter.cutoffFrequency = FilterCutoff;
-        _lowPassFilter.lowpassResonanceQ = Resonance;
-        
-        // Cache the pitch for the audio thread
-        _currentPitch = _audioSource.pitch;
     }
 
-    public void UpdateParameters(float pitch, float cutoff, float resonance)
+    /// <summary>
+    /// Future method for the Lobby Radio Buttons to change the root note.
+    /// </summary>
+    public void SetRootNote(MusicalNote newRootNote)
     {
-        BasePitch = pitch;
-        FilterCutoff = cutoff;
-        Resonance = resonance;
-    }
-
-    private void OnAudioFilterRead(float[] data, int channels)
-    {
-        // Cache variables to avoid thread locking issues
-        float lfoSpeed = LfoSpeed;
-        float lfoIntensity = LfoIntensity;
-        float baseFreq = BaseFrequency;
-        float toneMix = RobotToneMix;
-        float currentPitch = _currentPitch;
-        float pinkVol = PinkNoiseVolume;
-        bool babble = UseBabbleMode;
-
-        int sampleFrames = data.Length / channels;
-
-        for (int i = 0; i < sampleFrames; i++)
+        RootNote = newRootNote;
+        if (_isActive)
         {
-            // 1. Generate LFO (Sine Wave for wobbling, or Sample&Hold for Babble)
-            _lfoPhase += lfoSpeed / _sampleRate;
-            float lfoValue = 0f;
+            _pitchTween?.Kill();
+            _pitchTween = _audioSource.DOPitch(GetCurrentTargetPitch(), 0.1f).SetEase(Ease.InOutSine).SetUpdate(true);
+        }
+    }
 
-            if (babble)
-            {
-                if (_lfoPhase > 1.0)
-                {
-                    _lfoPhase -= 1.0;
-                    _babbleTarget = (float)(_rand.NextDouble() * 2.0 - 1.0); // Pick a new random note
-                }
-                // Smoothly slide to the new pitch (portamento effect)
-                _currentBabble = Mathf.Lerp(_currentBabble, _babbleTarget, 100f / (float)_sampleRate);
-                lfoValue = _currentBabble;
-            }
-            else
-            {
-                if (_lfoPhase > 1.0) _lfoPhase -= 1.0;
-                lfoValue = Mathf.Sin((float)(_lfoPhase * System.Math.PI * 2.0));
-            }
+    private float GetCurrentTargetPitch()
+    {
+        int totalSemitones = (int)RootNote + SemitoneShift;
+        return GetMusicalPitch(BasePitch, totalSemitones);
+    }
 
-            // 2. Modulate Frequency
-            float targetFreq = baseFreq * currentPitch;
-            // Exponential pitch modulation sounds much more natural for voice ranges
-            targetFreq *= Mathf.Pow(2f, lfoValue * lfoIntensity); 
+    /// <summary>
+    /// Calculates the exact pitch multiplier needed for musical semitone shifts.
+    /// </summary>
+    public static float GetMusicalPitch(float basePitch, int semitones)
+    {
+        // The constant 1.059463094359f is the 12th root of 2.
+        return basePitch * Mathf.Pow(1.059463094359f, semitones);
+    }
 
-            // 3. Generate Organic Voice Tone (Triangle + Detuned Sawtooth = Thick Chorus)
-            _phase += targetFreq / _sampleRate;
-            if (_phase > 1.0) _phase -= 1.0;
-
-            _phase2 += (targetFreq * 1.015f) / _sampleRate; // 1.5% detune
-            if (_phase2 > 1.0) _phase2 -= 1.0;
-            
-            // Triangle wave (smoother, acts like vocal cords)
-            float tri = (float)(_phase < 0.5 ? _phase * 4.0 - 1.0 : 3.0 - _phase * 4.0);
-            // Sawtooth wave (adds that raspy mechanical buzz)
-            float saw = (float)(_phase2 * 2.0 - 1.0);
-            
-            float robotTone = (tri * 0.7f) + (saw * 0.3f);
-
-            // 4. Generate Pink Noise (Air rush)
-            float white = (float)(_rand.NextDouble() * 2.0 - 1.0);
-            b0 = 0.99886f * b0 + white * 0.0555179f;
-            b1 = 0.99332f * b1 + white * 0.0750759f;
-            b2 = 0.96900f * b2 + white * 0.1538520f;
-            b3 = 0.86650f * b3 + white * 0.3104856f;
-            b4 = 0.55000f * b4 + white * 0.5329522f;
-            b5 = -0.7616f * b5 - white * 0.0168980f;
-            float pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362f;
-            b6 = white * 0.115926f;
-            pink *= 0.11f;
-
-            // 5. Mix everything together
-            float finalSample = Mathf.Lerp(pink * pinkVol, robotTone * 0.2f, toneMix);
-
-            // 6. Write to all channels (Stereo/Mono)
-            for (int c = 0; c < channels; c++)
-            {
-                data[i * channels + c] = finalSample;
-            }
+    // Allows live-testing the note change directly from the Unity Inspector
+    private void OnValidate()
+    {
+        if (Application.isPlaying && _isActive && _audioSource != null)
+        {
+            _audioSource.pitch = GetCurrentTargetPitch();
         }
     }
 }

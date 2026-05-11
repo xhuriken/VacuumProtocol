@@ -9,6 +9,7 @@ using UnityEngine;
 public class UniVoicePlayerAudio : NetworkBehaviour
 {
     private int _cachedId = -1;
+    private bool _hasConfiguredAudio = false;
 
     public override void OnStartClient()
     {
@@ -30,8 +31,17 @@ public class UniVoicePlayerAudio : NetworkBehaviour
             // Move the audio source to the player's position (slightly elevated for better voice source feel)
             audioSource.transform.position = transform.position + Vector3.up * 1.5f;
             
-            // Ensure the audio is set to full 3D spatialization
-            audioSource.spatialBlend = 1f;
+            // Configure the 3D audio settings only once to avoid overriding inspector tweaks and save performance
+            if (!_hasConfiguredAudio)
+            {
+                audioSource.spatialBlend = 1f;
+                // Linear Rolloff helps voices carry further without dropping off too steeply
+                audioSource.rolloffMode = AudioRolloffMode.Linear; 
+                audioSource.minDistance = 3f; // Full volume up to 3 meters
+                audioSource.maxDistance = 40f; // Silence after 40 meters
+                
+                _hasConfiguredAudio = true;
+            }
         }
     }
 }

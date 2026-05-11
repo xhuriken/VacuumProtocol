@@ -160,6 +160,7 @@ GameObject:
   - component: {fileID: 7259908114481259751}
   - component: {fileID: 5901156586144294310}
   - component: {fileID: 7402342095547253661}
+  - component: {fileID: 1399160777625800313}
   m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
@@ -627,6 +628,26 @@ MonoBehaviour:
     m_Bits: 256
   _viewReference: {fileID: 7350101298894895284}
   _showDebugLogs: 0
+--- !u!114 &1399160777625800313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5677088349807538119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 971a075d648430a4f994762ad5f575e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.Player.Visuals.PlayerCustomization
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _modelRenderer: {fileID: 1722000218209485527}
+  _vacuumAudio: {fileID: 3693871950326819900}
+  EnableDebugLogs: 1
+  PlayerColor: {r: 1, g: 1, b: 1, a: 1}
+  PlayerRootNote: 0
 --- !u!1001 &3366907947144998948
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1437,6 +1458,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -4949477695122937679, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
   m_PrefabInstance: {fileID: 3366907947144998948}
   m_PrefabAsset: {fileID: 0}
+--- !u!137 &1722000218209485527 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -5090071556113960205, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
+  m_PrefabInstance: {fileID: 3366907947144998948}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1824229372443752938 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5194517330359252530, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
@@ -1530,6 +1556,8 @@ MonoBehaviour:
   _sensitivity: 5
   _smoothSpeed: 30
   _vacuumController: {fileID: 5901156586144294310}
+  _vacuumAudioController: {fileID: 0}
+  IsLobbyPreviewDummy: 0
   _enableDebugLogs: 1
 --- !u!1 &2022398947834100853 stripped
 GameObject:
@@ -2001,11 +2029,11 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
-  m_PlayOnAwake: 1
+  m_Resource: {fileID: 8300000, guid: 34f9e17652d7f454fae5cd04f4095070, type: 3}
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -2099,22 +2127,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36c42284660df7b458e5b94014b5cc2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VacuumAudioController
-  _audioSource: {fileID: 7581000329753458709}
-  _lowPassFilter: {fileID: 4546216201233503031}
-  MaxVolume: 0.3
-  FadeInDuration: 0.1
+  _audioSource: {fileID: 0}
+  MaxVolume: 0.586
+  FadeInDuration: 0.2
   FadeOutDuration: 0.2
   FadeCurve: 3
-  BasePitch: 0.25
-  FilterCutoff: 3983
-  Resonance: 1.38
-  PinkNoiseVolume: 0.414
-  RobotToneMix: 0.685
-  BaseFrequency: 314
-  UseBabbleMode: 0
-  LfoSpeed: 41.8
-  LfoIntensity: 0.35
-  AlwaysPlay: 0
+  BasePitch: 0.58
+  RootNote: 7
+  SemitoneShift: 0
 --- !u!169 &4546216201233503031
 AudioLowPassFilter:
   m_ObjectHideFlags: 0
