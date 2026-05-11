@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 1311015464022113965}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0, y: 0.184, z: 0.04}
+  m_LocalPosition: {x: 0, y: 0.238, z: 0.04}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -151,7 +151,6 @@ GameObject:
   - component: {fileID: 903134063343002940}
   - component: {fileID: 7553234253307256519}
   - component: {fileID: 7412146708353341128}
-  - component: {fileID: 393021952163988311}
   - component: {fileID: 1147134402607895567}
   - component: {fileID: 8443901472193780179}
   - component: {fileID: 5542343617569512994}
@@ -471,18 +470,6 @@ MonoBehaviour:
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &393021952163988311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5677088349807538119}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 251a8f4079196ff4882bfde883f843c9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Collectible
 --- !u!114 &1147134402607895567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -619,7 +606,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _viewDistance: 10
-  _viewAngle: 45
+  _viewAngle: 100.59
   _entityLayer:
     serializedVersion: 2
     m_Bits: 128
@@ -645,6 +632,7 @@ MonoBehaviour:
   syncInterval: 0
   _modelRenderer: {fileID: 1722000218209485527}
   _vacuumAudio: {fileID: 3693871950326819900}
+  IsLobbyDummy: 0
   EnableDebugLogs: 1
   PlayerColor: {r: 1, g: 1, b: 1, a: 1}
   PlayerRootNote: 0
