@@ -18,7 +18,8 @@ The Lobby Customization System allows players to select their robot's color and 
 - **Features**:
   - Contains `[SyncVar]` properties for `PlayerColor` and `PlayerRootNote`.
   - Uses `OnStartLocalPlayer()` to automatically read `PlayerPrefs` upon spawning and syncs those values with the server using `[Command]`s.
-  - **Offline Fallback**: Contains safe wrapper methods (`RequestColorChange`, `RequestNoteChange`) that will instantly apply the visual/audio updates locally if the script detects it does not have network authority (e.g., when acting as an offline Dummy in the main menu).
+  - **`IsLobbyDummy` Flag**: When checked to `true` (specifically for the offline scene dummy), the script completely disconnects from Mirror's logic. It ignores all `SyncVar` hooks and bypasses `Command` sending, ensuring that local UI interactions do not synchronize to other connected clients in the lobby.
+  - **Offline Fallback**: Contains safe wrapper methods (`RequestColorChange`, `RequestNoteChange`) that instantly apply visual/audio updates locally if `IsLobbyDummy` is true or if it lacks network authority.
 
 ## Integrations
 

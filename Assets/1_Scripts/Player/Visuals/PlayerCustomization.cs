@@ -16,6 +16,10 @@ namespace VacuumProtocol.Player.Visuals
         [Tooltip("The audio controller for the vacuum sound.")]
         [SerializeField] private VacuumAudioController _vacuumAudio;
 
+        [Header("Preview Settings")]
+        [Tooltip("Check this ONLY on your Lobby Dummy prefab so it stays completely offline and local!")]
+        public bool IsLobbyDummy = false;
+
         [Header("Debug")]
         public bool EnableDebugLogs = true;
 
@@ -41,6 +45,8 @@ namespace VacuumProtocol.Player.Visuals
         public override void OnStartClient()
         {
             base.OnStartClient();
+            if (IsLobbyDummy) return;
+
             // Apply the current synced values to this client immediately upon joining
             ApplyColor(PlayerColor);
             ApplyNote(PlayerRootNote);
@@ -49,6 +55,8 @@ namespace VacuumProtocol.Player.Visuals
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
+            if (IsLobbyDummy) return;
+
             // As soon as our local player object spawns (Lobby OR Game), load from PlayerPrefs
             LoadSavedCustomization();
         }
@@ -86,12 +94,14 @@ namespace VacuumProtocol.Player.Visuals
 
         private void OnColorChanged(Color oldColor, Color newColor)
         {
+            if (IsLobbyDummy) return;
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] SyncVar Hook OnColorChanged triggered. New Color: {newColor}");
             ApplyColor(newColor);
         }
 
         private void OnNoteChanged(MusicalNote oldNote, MusicalNote newNote)
         {
+            if (IsLobbyDummy) return;
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] SyncVar Hook OnNoteChanged triggered. New Note: {newNote}");
             ApplyNote(newNote);
         }
@@ -127,15 +137,15 @@ namespace VacuumProtocol.Player.Visuals
 
         public void RequestColorChange(Color newColor)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestColorChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}");
-            if (isOwned)
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestColorChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
+            if (!IsLobbyDummy && isOwned)
             {
                 if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Sending CmdChangeColor to server.");
                 CmdChangeColor(newColor);
             }
             else
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] No network authority. Applying color locally (Preview Mode).");
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Applying color locally (Preview Mode or No Authority).");
                 PlayerColor = newColor;
                 ApplyColor(newColor);
             }
@@ -143,15 +153,15 @@ namespace VacuumProtocol.Player.Visuals
 
         public void RequestNoteChange(MusicalNote newNote)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestNoteChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}");
-            if (isOwned)
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestNoteChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
+            if (!IsLobbyDummy && isOwned)
             {
                 if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Sending CmdChangeNote to server.");
                 CmdChangeNote(newNote);
             }
             else
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] No network authority. Applying note locally (Preview Mode).");
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Applying note locally (Preview Mode or No Authority).");
                 PlayerRootNote = newNote;
                 ApplyNote(newNote);
             }
@@ -159,15 +169,15 @@ namespace VacuumProtocol.Player.Visuals
 
         public void RequestVacuumTest(bool isVacuuming)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVacuumTest called ({isVacuuming}). NetworkActive={NetworkClient.active}, isOwned={isOwned}");
-            if (isOwned)
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVacuumTest called ({isVacuuming}). NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
+            if (!IsLobbyDummy && isOwned)
             {
                 if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Sending CmdTestVacuum to server.");
                 CmdTestVacuum(isVacuuming);
             }
             else
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] No network authority. Applying vacuum test locally (Preview Mode).");
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Applying vacuum test locally (Preview Mode or No Authority).");
                 if (_vacuumAudio != null)
                 {
                     _vacuumAudio.SetVacuumState(isVacuuming);

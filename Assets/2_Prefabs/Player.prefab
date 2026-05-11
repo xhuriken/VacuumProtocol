@@ -546,7 +546,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _jumpImpulse: 12
+  _jumpImpulse: 30
   _gravityMultiplier: 3.5
 --- !u!114 &7035524177355793070
 MonoBehaviour:
@@ -563,9 +563,9 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _accelerationForce: 150
-  _maxSpeed: 10
-  _sprintMultiplier: 1.6
+  _accelerationForce: 80
+  _maxSpeed: 5
+  _sprintMultiplier: 2
   _airControlFactor: 0.3
   _decelerationDamping: 8
 --- !u!114 &7259908114481259751
