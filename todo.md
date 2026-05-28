@@ -20,3 +20,31 @@
 - [x] Support offline local previews (no network authority) in the main menu for immediate visual feedback.
 - [x] Update `MouthAnimator` to support Lobby Preview dummies reading local mic instantly.
 - [x] Update `VacuumAudioController` to use `.SetUpdate(true)` for DOTween to bypass lobby paused time scales.
+- [x] Implement `UIColorsPalettes.cs` for 16-button layout with DOTween animations and client-side Hex color selection.
+- [x] Refactor `UIColorsPalettes.cs` to use editable Unity `Color` array, implement Odin `[Button]` generator for a 16-color quantized gradient, and convert color to Hex at runtime.
+
+## Architecture & Guidance: Custom Shape Buttons
+- [x] Analyze pointer events (hover, leave, click) for non-standard UI GameObjects with custom Shapes.
+- [x] Provide a comprehensive, high-quality, production-ready solution utilizing an invisible raycast target and EventSystem handlers.
+- [x] Document the technical architecture in the development log and explain how to wire the custom Shape properties (like scale, position, and colors) using DOTween.
+
+## Current Feature: Custom Vector Shape UI Toolkit (Freya Holmér Shapes)
+- [x] Create `UICustomButtonBase.cs` to retrieve and expose standard UGUI pointer events as a reusable toolkit.
+- [x] Create `MouseManager.cs` using the Unity New Input System to safely track mouse screen coordinates.
+- [x] Create `ColorButtonUI.cs` inheriting from `UICustomButtonBase` with dual `Shapes.Rectangle` properties (Outline, Plain).
+- [x] Implement DOTween-driven outline width/height responsive morph animations (base 75, multiplier scales).
+- [x] Move magnetic proximity vector mathematics directly into `ColorButtonUI.cs` for pristine KISS design.
+- [x] Smoothly translate the local offset of the plain inner shape based on mouse proximity.
+- [x] Refactor `UIColorsPalettes.cs` to color and bind to custom `ColorButtonUI` instances.
+- [x] Add automated transparent Graphic/Image safety-net generators and diagnostic logging systems to guarantee EventSystem operation.
+- [x] Support Camera.main projection inside proximity checks to ensure perfect world-space coordinates alignment.
+- [x] Implement smooth local auto-centering snap translation of plain inner shape on hover enter, and resume drift on leave.
+- [x] Apply comprehensive KISS refactoring to simplify equations and drop redundant epsilon bounds comparisons.
+
+
+
+
+
+
+
+
