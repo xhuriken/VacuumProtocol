@@ -1,5 +1,30 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-4668139961502945956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf5fb26b3dcf83b43be11b9e7f8ec4af, type: 3}
+  m_Name: RetroShader
+  m_EditorClassIdentifier: Assembly-CSharp::Cyan.Blit
+  m_Active: 1
+  settings:
+    injectionPoint: 550
+    requirements: 0
+    globalTextures: []
+    dstType: 0
+    showInSceneView: 1
+    dstGlobalTexture: _BlitPassTexture
+    colorFormat: 0
+    format: 4
+    bindDepthStencilBuffer: 0
+    blitMaterial: {fileID: 2100000, guid: 8991d3304cbcd614b8a81c49dcbb9a5f, type: 2}
+    blitPassIndex: 0
 --- !u!114 &-3206481363051912464
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -40,7 +65,9 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
   - {fileID: -3206481363051912464}
-  m_RendererFeatureMap: ad6b866f10d7b46c
+  - {fileID: -4668139961502945956}
+  - {fileID: 1086557216445927388}
+  m_RendererFeatureMap: ad6b866f10d7b46c5cadcf18706f37bfdc8f6512083a140f8e6e0c0a519d553c
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -69,6 +96,26 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &1086557216445927388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: FullScreenPassRendererFeature
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 0
+  injectionPoint: 600
+  fetchColorBuffer: 1
+  requirements: 1
+  passMaterial: {fileID: 2100000, guid: 8991d3304cbcd614b8a81c49dcbb9a5f, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -235,12 +235,13 @@ public class ColorButtonUI : UICustomButtonBase
             if (!_hasLoggedDiagnosticHeader)
             {
                 _hasLoggedDiagnosticHeader = true;
-                Debug.LogWarning($"[UI Diagnostic] Cursor Screen Position: {mousePos}. Raycast hit NOTHING! \n" +
-                                 "Check list:\n" +
-                                 "1. Does your Canvas contain a 'Graphic Raycaster' component?\n" +
-                                 "2. If Canvas is World Space, is the Main Camera assigned to its 'Event Camera' field?\n" +
-                                 "3. Are your buttons' RectTransform dimensions set correctly (width/height > 0)? Currently transparent hits are generated dynamically.\n" +
-                                 "4. If New Input System is active, has the EventSystem been upgraded to 'InputSystemUIInputModule'?");
+            //     Debug.LogWarning($"[UI Diagnostic] Cursor Screen Position: {mousePos}. Raycast hit NOTHING! \n" +
+            //                      "Check list:\n" +
+            //                      "1. Does your Canvas contain a 'Graphic Raycaster' component?\n" +
+            //                      "2. If Canvas is World Space, is the Main Camera assigned to its 'Event Camera' field?\n" +
+            //                      "3. Are your buttons' RectTransform dimensions set correctly (width/height > 0)? Currently transparent hits are generated dynamically.\n" +
+            //                      "4. If New Input System is active, has the EventSystem been upgraded to 'InputSystemUIInputModule'?");
+            // 
             }
         }
 

@@ -1,5 +1,9 @@
 {
   "dependencies": {
+    "com.adrenak.brw": "1.2.0",
+    "com.adrenak.concentus-unity": "1.0.1",
+    "com.adrenak.unimic": "3.4.0",
+    "com.adrenak.univoice": "4.12.0",
     "com.antigravity.ide": "https://github.com/billythekidz/UnityAntigravityIDE.git",
     "com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net",
     "com.unity.ai.navigation": "2.0.10",
@@ -9,6 +13,7 @@
     "com.unity.inputsystem": "1.18.0",
     "com.unity.multiplayer.center": "1.0.1",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.postprocessing": "3.5.4",
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.10",
@@ -47,11 +52,7 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.adrenak.brw": "1.2.0",
-    "com.adrenak.unimic": "3.4.0",
-    "com.adrenak.concentus-unity": "1.0.1",
-    "com.adrenak.univoice": "4.12.0"
+    "com.unity.modules.xr": "1.0.0"
   },
   "scopedRegistries": [
     {
