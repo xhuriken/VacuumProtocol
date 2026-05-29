@@ -33,12 +33,41 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// </summary>
     public Button.ButtonClickedEvent onPointerUp = new Button.ButtonClickedEvent();
 
+    [Header("Interactable State")]
+    [SerializeField]
+    private bool _interactable = true;
+
     private bool _isHovered = false;
 
     /// <summary>
     /// Gets whether the pointer is currently hovering over the button bounds.
     /// </summary>
     public bool IsHovered => _isHovered;
+
+    /// <summary>
+    /// Gets or sets whether this button is interactable. Modifying this triggers the virtual OnInteractableChanged hook.
+    /// </summary>
+    public bool Interactable
+    {
+        get => _interactable;
+        set
+        {
+            if (_interactable != value)
+            {
+                _interactable = value;
+                OnInteractableChanged(value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Virtual lifecycle hook triggered when the button's interactability changes.
+    /// </summary>
+    /// <param name="isInteractable">The new interactability state.</param>
+    protected virtual void OnInteractableChanged(bool isInteractable)
+    {
+        // Custom transitions can be defined by subclasses
+    }
 
     /// <summary>
     /// Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.
@@ -76,6 +105,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerEnter(PointerEventData eventData)
     {
+        if (!_interactable) return;
         Debug.Log($"[UICustomButtonBase] OnPointerEnter triggered on '{gameObject.name}'");
         _isHovered = true;
         onPointerEnter.Invoke();
@@ -87,6 +117,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerExit(PointerEventData eventData)
     {
+        if (!_interactable) return;
         Debug.Log($"[UICustomButtonBase] OnPointerExit triggered on '{gameObject.name}'");
         _isHovered = false;
         onPointerExit.Invoke();
@@ -98,6 +129,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerDown(PointerEventData eventData)
     {
+        if (!_interactable) return;
         Debug.Log($"[UICustomButtonBase] OnPointerDown triggered on '{gameObject.name}'");
         onPointerDown.Invoke();
     }
@@ -108,6 +140,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerUp(PointerEventData eventData)
     {
+        if (!_interactable) return;
         Debug.Log($"[UICustomButtonBase] OnPointerUp triggered on '{gameObject.name}'");
         onPointerUp.Invoke();
     }
@@ -118,6 +151,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerClick(PointerEventData eventData)
     {
+        if (!_interactable) return;
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             Debug.Log($"[UICustomButtonBase] OnPointerClick (Left-Click) triggered on '{gameObject.name}'");

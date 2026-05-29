@@ -152,6 +152,7 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerEnter(PointerEventData eventData)
     {
+        if (!Interactable) return;
         base.OnPointerEnter(eventData);
         AnimateHoverEnter();
     }
@@ -162,6 +163,7 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerExit(PointerEventData eventData)
     {
+        if (!Interactable) return;
         base.OnPointerExit(eventData);
         AnimateHoverExit();
     }
@@ -172,6 +174,7 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerDown(PointerEventData eventData)
     {
+        if (!Interactable) return;
         base.OnPointerDown(eventData);
         if (eventData.button == PointerEventData.InputButton.Left)
         {
@@ -185,6 +188,7 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerUp(PointerEventData eventData)
     {
+        if (!Interactable) return;
         base.OnPointerUp(eventData);
         AnimateRelease();
     }
@@ -195,6 +199,7 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerClick(PointerEventData eventData)
     {
+        if (!Interactable) return;
         base.OnPointerClick(eventData);
     }
 
@@ -629,6 +634,128 @@ public class CustomTextButton : UICustomButtonBase
                     // Electric color pulse
                     _clickFlashSequence.Join(DOTween.To(() => child.Color, x => child.Color = x, Color.white, 0.02f).SetEase(Ease.OutQuad));
                     _clickFlashSequence.Append(DOTween.To(() => child.Color, x => child.Color = x, origColor, 0.10f).SetEase(Ease.OutCubic));
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Interactable State Transitions
+
+    /// <summary>
+    /// Overrides the interactability change callback to trigger custom fade-out and fade-in transitions.
+    /// </summary>
+    /// <param name="isInteractable">True if the button is now interactable, false otherwise.</param>
+    protected override void OnInteractableChanged(bool isInteractable)
+    {
+        base.OnInteractableChanged(isInteractable);
+        
+        // Terminate any active pointer motion tweens to prevent state mixing
+        KillActiveTweens();
+
+        // Animate elements to represent active or deactivated visuals
+        AnimateInteractableTransition(isInteractable);
+    }
+
+    /// <summary>
+    /// Animates the text, rect, and dots colors to greyed-out/semi-transparent values when disabled, 
+    /// and smoothly restores original colors when re-enabled.
+    /// </summary>
+    /// <param name="isInteractable">True if active, false if disabled.</param>
+    private void AnimateInteractableTransition(bool isInteractable)
+    {
+        float duration = 0.25f;
+
+        if (isInteractable)
+        {
+            // 1. Smoothly fade text back to its original white state
+            if (_buttonText != null)
+            {
+                _buttonText.DOColor(Color.white, duration).SetEase(Ease.OutQuad);
+            }
+
+            // 2. Smoothly restore Left Line color
+            if (_leftLine != null)
+            {
+                DOTween.To(() => _leftLine.Color, x => _leftLine.Color = x, _originalLineColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 3. Fade Rectangle back to its transparent default state
+            if (_rect != null)
+            {
+                Color targetRectColor = new Color(_originalRectColor.r, _originalRectColor.g, _originalRectColor.b, 0f);
+                DOTween.To(() => _rect.Color, x => _rect.Color = x, targetRectColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 4. Restore Main Disc color
+            if (_mainDisc != null)
+            {
+                DOTween.To(() => _mainDisc.Color, x => _mainDisc.Color = x, _originalMainDiscColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 5. Restore Child Discs colors
+            if (_childDiscs != null)
+            {
+                for (int i = 0; i < _childDiscs.Length; i++)
+                {
+                    if (_childDiscs[i] != null)
+                    {
+                        Disc child = _childDiscs[i];
+                        Color origColor = _originalChildColors[i];
+                        DOTween.To(() => child.Color, x => child.Color = x, origColor, duration)
+                            .SetEase(Ease.OutQuad);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Deactivated states: aesthetic translucent grey styles
+            Color disabledTextColor = new Color(0.5f, 0.5f, 0.5f, 0.4f);
+            Color disabledShapeColor = new Color(0.3f, 0.3f, 0.3f, 0.2f);
+
+            // 1. Fade out text
+            if (_buttonText != null)
+            {
+                _buttonText.DOColor(disabledTextColor, duration).SetEase(Ease.OutQuad);
+            }
+
+            // 2. Fade out Left Line
+            if (_leftLine != null)
+            {
+                DOTween.To(() => _leftLine.Color, x => _leftLine.Color = x, disabledShapeColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 3. Fade/Grey out Rectangle
+            if (_rect != null)
+            {
+                DOTween.To(() => _rect.Color, x => _rect.Color = x, disabledShapeColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 4. Fade out Main Disc
+            if (_mainDisc != null)
+            {
+                DOTween.To(() => _mainDisc.Color, x => _mainDisc.Color = x, disabledShapeColor, duration)
+                    .SetEase(Ease.OutQuad);
+            }
+
+            // 5. Fade out Child Discs
+            if (_childDiscs != null)
+            {
+                for (int i = 0; i < _childDiscs.Length; i++)
+                {
+                    if (_childDiscs[i] != null)
+                    {
+                        Disc child = _childDiscs[i];
+                        DOTween.To(() => child.Color, x => child.Color = x, disabledShapeColor, duration)
+                            .SetEase(Ease.OutQuad);
+                    }
                 }
             }
         }

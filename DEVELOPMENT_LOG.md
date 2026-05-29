@@ -115,6 +115,10 @@
 - **Structural Code Cleanup & Organization**:
   - Organized the entirety of `CustomTextButton.cs` into clear, easy-to-read, standard `#region` blocks (`Serialized Fields`, `Private Fields`, `Properties`, `Unity Lifecycle Callbacks`, `EventSystem Overrides`, `Caching Helpers`, `Core Tween Animations`, `Cleanup & Safety Guards`). 
   - Retained every single feature, duration, transition, and security precaution with 100% functional parity.
+- **Custom Button Interactable & Disabled Visual States**:
+  - **Base Integration (`UICustomButtonBase.cs`)**: Added an `Interactable` property (backing field `_interactable`) and a virtual `OnInteractableChanged(bool isInteractable)` callback hook. Blocked all EventSystem inputs (PointerEnter, PointerExit, PointerDown, PointerUp, PointerClick) dynamically when `Interactable` is false.
+  - **High-Fidelity Transitions (`CustomTextButton.cs`)**: Implemented `OnInteractableChanged` override. When disabled (`Interactable = false`), all active pointer tweens are killed and elements fade smoothly (in `0.25s`) to a gorgeous translucent grey look (text, dashed border, main/child discs). When re-enabled, they return dynamically to their respective cached idle configurations.
+  - **LobbyController Migration (`LobbyController.cs`)**: Refactored the `StartGameButton` field from `UnityEngine.UI.Button` to `UICustomButtonBase`, adapting its ready check states to utilize the premium custom transition system via the `.Interactable` property.
 
 
 

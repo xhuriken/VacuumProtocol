@@ -52,6 +52,10 @@
 - [x] Implement a continuous orbital 360° rotation loop on `Dots` and yoyo breathing sizes on children on hover enter, with smooth return to 0° alignment on exit.
 - [x] Hyper-accelerate click animations for extreme snappy feedback: rectangle scales in **0.03s** (to 1.15x), color blooms in **0.02s**, and child discs burst outward to **2.2x** in **0.03s**, snapping back in **0.12s**.
 - [x] Restructure and organize the entire `CustomTextButton.cs` script using standard `#region` blocks with 100% functional parity.
+- [x] Build robust `Interactable` property state management inside `UICustomButtonBase.cs` to dynamically control and block pointer event invocations when disabled.
+- [x] Implement smooth 0.25s translucent grey deactivated fade animations inside `CustomTextButton.cs` for text, rectangles, and disc shapes, with seamless re-enabling transition logic.
+- [x] Refactor `LobbyController.cs` to declare `StartGameButton` as a `UICustomButtonBase` instead of standard UGUI `Button`, integrating the custom deactivated state system.
+
 
 
 

@@ -33,7 +33,7 @@ public class LobbyController : MonoBehaviour
     public PlayerObjectController LocalPlayerController;
 
     [Header("Ready System")]
-    public Button StartGameButton;
+    public UICustomButtonBase StartGameButton;
     public TextMeshProUGUI ReadyButtonText;
 
     private MyNetworkManager _manager;
@@ -111,16 +111,16 @@ public class LobbyController : MonoBehaviour
             // Only the host (Player 1) can start the game
             if (LocalPlayerController.PlayerId == 1)
             {
-                StartGameButton.interactable = true;
+                StartGameButton.Interactable = true;
             }
             else
             {
-                StartGameButton.interactable = false;
+                StartGameButton.Interactable = false;
             }
         }
         else
         {
-            StartGameButton.interactable = false;
+            StartGameButton.Interactable = false;
         }
     }
 
