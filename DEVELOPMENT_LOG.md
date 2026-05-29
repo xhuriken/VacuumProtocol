@@ -83,6 +83,47 @@
 - **Dynamic Proximity Hover Disabling**: Modified the magnetic pull calculation to automatically bypass vector tracking when `IsHovered == true`. The inner `Plain` shape smoothly slides back and snaps perfectly into its original parent local coordinate center using spring-dampened `Vector3.Lerp` interpolation when hovered, resuming interactive drift once the cursor leaves the element collision bounds.
 - **KISS Math & Condition Cleanups**: Stripped redundant safety variables (`_magneticRadius > 0.001f`) since magnitude is naturally `>= 0` and standard comparisons organically bypass computation. Consolidated local variables to maximize readable, production-grade flow.
 
+### Bug Fixes
+- **Blit Script Compile Restores**: Resolved blocking compile errors in `Blit.cs` by commenting out non-standard decorative attributes (`[ShowIf]`, `[Indent]`). Removing these un-imported attributes immediately satisfies the C# compiler, restoring asset compilation and allowing `Blit` to register correctly as a ScriptableRendererFeature under the URP Forward+ settings inspector.
+
+## [2026-05-28] - Custom Text Button Toolkit Expansion
+
+### Feature Added
+- **CustomTextButton Subclassing**: Created `CustomTextButton.cs` inheriting directly from the foundational `UICustomButtonBase` class. Exposed serialized fields for `LeftLine` (Shapes.Line), `Rect` (Shapes.Rectangle), `Dots` (GameObject), and the button text (`TextMeshProUGUI`) with robust XML documentation. Implemented clean override event hooks (`OnPointerEnter`, `OnPointerExit`, `OnPointerDown`, `OnPointerUp`, `OnPointerClick`) to provide clear visual animation placeholders for future DOTween sequences.
+- **Holographic DOTween Animations**: Fully implemented premium, smooth custom vector animations inside `CustomTextButton.cs`. Designed an initial state where the Rect is invisible, LeftLine is visible, and Text is visible. Added hover tweens collapsing the LeftLine to zero and fading it out while the Rect fades in and slides 8 units to the right, and the Dots shift 20 units to the left. Relaunches the Febucci Text Animator typewriter dynamically on hover. Integrated a crisp punch scale and bright white scintillation shimmer sequence for pointer clicks. Integrated thorough `.DOKill()` active tween cancellation and automatic cleanups inside `OnDisable` to completely prevent execution overlaps or spam anomalies.
+
+### Bug Fixes
+- **SetKeepAlive Compilation Repair**: Resolved C# compilation error `CS1061` in `CustomTextButton.cs` by removing the invalid `.SetKeepAlive(true)` method call from the DOTween animation chain of `_dots.transform.DOLocalMove`. Active cancellation is fully covered by standard `.DOKill()` methods.
+- **Visual Upgrades & Holographic Flicker Click**: 
+  - **Leftward Rect Shift**: Corrected the translation of the `Rectangle` shape to slide to the LEFT (`-8f` units offset) instead of right on hover enter.
+  - **TextMeshPro Leftward Translation**: Added caching and animation of the `TextMeshProUGUI` transform, moving it 20 units to the left matching the `Dots` translation seamlessly.
+  - **Holographic Scintillation Flicker**: Redesigned the click scintillation visual effect from a boring fade into a gorgeous high-fidelity projection simulation: features a super-fast bright white bloom peak (0.04s), an instantaneous drop to complete transparency (0.07s), followed by a high-frequency flickering back-and-forth pattern settling smoothly into the normal hover color. Safe under spam-clicking due to instant sequence termination.
+- **Visual Fine-tuning & Press Action Triggers**:
+  - **Leftward Rect Translation (20 units)**: Enlarged the `Rectangle` offset to EXACTLY **-20 units** (`-20f`) on the X axis, ensuring a perfectly aligned translation along with the Text and the Dots.
+  - **Rectangle DashOffset Morphing**: Added high-fidelity tweening to the `Rectangle.DashOffset` (dashed offset), morphing it from **0.3 to 0.2** on hover enter and restoring it to **0.3** on hover exit, creating a premium sliding effect inside the dashed line.
+  - **Immediate Press Click (PointerDown)**: Mapped the visual holographic scintillation flicker to trigger immediately on **PointerDown** (press action) instead of PointerClick (release action) to deliver razor-sharp, instant tactile feedback.
+  - **Spam Click Scale Stabilization**: Replaced `DOPunchScale` entirely with an explicit `DOScale` sequence integrated inside `_clickFlashSequence`. `DOPunchScale` has internal caching bugs in DOTween when interrupted/killed repeatedly, which caused compounding scaling bugs. Using explicit `DOScale` targets (`_originalRectLocalScale * 1.08f` then returning to `_originalRectLocalScale`) completely resolves any potential scale aggregation and guarantees the rectangle returns to its exact scale even under extreme click spam.
+- **Dynamic Dots & Shockwave Animation (Discs)**:
+  - **Dynamic Setup**: Automatically queries the main `Disc` on the `Dots` GameObject, and any child `Disc` components under it. Caches their default sizes, colors, and positions.
+  - **Hover Enter (Playful Spin & Breathing)**: The parent `Dots` transform immediately starts a **continuous 360° rotation loop** (incremental Linear orbit) while the two child discs expand and start a **playful continuous breathing yoyo scale pulse (radii breathing between 1.35x and 1.6x)**. This creates a lively, high-tech orbital loader feel.
+  - **Hover Exit**: Smoothly interpolates radii, positions, and colors back to their exact cached default states, while gently rotating the parent `Dots` transform back to 0° alignment.
+  - **PointerDown Press (Snappy Shockwave Scintillation)**: Overhauled all durations for an ultra-fast, snappy impact:
+    - **Rectangle scale explosion** spikes to **1.15x** in just **0.03s**, snapping back in **0.12s**.
+    - **Color flash/bloom peak** triggers in **0.02s**, followed by a **0.04s** blackout and high-speed **0.015s** holographic flickers.
+    - **Dots shockwave** expands child discs to a dramatic **2.2x** size and **0.22 units outward burst** in **0.03s**, snapping back to home in **0.12s**.
+    - Complete, watertight protection against execution overlaps or scale aggregation.
+- **Structural Code Cleanup & Organization**:
+  - Organized the entirety of `CustomTextButton.cs` into clear, easy-to-read, standard `#region` blocks (`Serialized Fields`, `Private Fields`, `Properties`, `Unity Lifecycle Callbacks`, `EventSystem Overrides`, `Caching Helpers`, `Core Tween Animations`, `Cleanup & Safety Guards`). 
+  - Retained every single feature, duration, transition, and security precaution with 100% functional parity.
+
+
+
+
+
+
+
+
+
 
 
 

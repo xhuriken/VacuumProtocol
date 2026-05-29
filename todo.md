@@ -40,6 +40,27 @@
 - [x] Support Camera.main projection inside proximity checks to ensure perfect world-space coordinates alignment.
 - [x] Implement smooth local auto-centering snap translation of plain inner shape on hover enter, and resume drift on leave.
 - [x] Apply comprehensive KISS refactoring to simplify equations and drop redundant epsilon bounds comparisons.
+- [x] Solve compilation blocks in `Blit.cs` to allow registration of the ScriptableRendererFeature under URP.
+- [x] Create subclassed `CustomTextButton.cs` exposing LeftLine, Rect, Dots, and text components with complete override animation hooks.
+- [x] Implement smooth DOTween animations inside CustomTextButton for Line collapses, Rect fades, Dots translation, Febucci relaunching, click punches, white scintillation shimmers, and full anti-spam cancellation.
+- [x] Redesign click sequence to feature ultra-fast white bloom (0.04s), instant blackout (0.07s), and high-frequency holographic flickering return with total spam-clicking protection.
+- [x] Map leftward shift to Rectangle (-20f) and shift TextMeshPro -20f to the left alongside Dots.
+- [x] Animate Rectangle DashOffset morphing from 0.3 to 0.2 on hover enter, and back to 0.3 on hover exit.
+- [x] Reposition click scintillation effect to execute on PointerDown (instant press action) rather than release click.
+- [x] Prevent scale aggregation and stuck issues on spam-clicking by replacing `DOPunchScale` with an explicit `DOScale` target sequence inside the unified `_clickFlashSequence`.
+- [x] Query, cache, and animate parent `Disc` and child `Disc` components in the `Dots` hierarchy for a premium hover expansion and pointer down shockwave/scintillation burst.
+- [x] Implement a continuous orbital 360° rotation loop on `Dots` and yoyo breathing sizes on children on hover enter, with smooth return to 0° alignment on exit.
+- [x] Hyper-accelerate click animations for extreme snappy feedback: rectangle scales in **0.03s** (to 1.15x), color blooms in **0.02s**, and child discs burst outward to **2.2x** in **0.03s**, snapping back in **0.12s**.
+- [x] Restructure and organize the entire `CustomTextButton.cs` script using standard `#region` blocks with 100% functional parity.
+
+
+
+
+
+
+
+
+
 
 
 
