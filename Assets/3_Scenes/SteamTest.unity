@@ -560,6 +560,7 @@ GameObject:
   - component: {fileID: 1238627061}
   - component: {fileID: 1238627067}
   - component: {fileID: 1238627066}
+  - component: {fileID: 1238627068}
   m_Layer: 7
   m_Name: Entity
   m_TagString: Untagged
@@ -579,6 +580,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 251a8f4079196ff4882bfde883f843c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Collectible
+  _name: Cube
+  _priorityLevel: 2
+  _pullResistance: 1
 --- !u!65 &1238627062
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -723,6 +727,33 @@ MonoBehaviour:
   rotationSensitivity: 0.01
   positionPrecision: 0.01
   scalePrecision: 0.01
+--- !u!54 &1238627068
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1238627060}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &2006448681
 GameObject:
   m_ObjectHideFlags: 0

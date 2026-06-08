@@ -120,17 +120,137 @@
   - **High-Fidelity Transitions (`CustomTextButton.cs`)**: Implemented `OnInteractableChanged` override. When disabled (`Interactable = false`), all active pointer tweens are killed and elements fade smoothly (in `0.25s`) to a gorgeous translucent grey look (text, dashed border, main/child discs). When re-enabled, they return dynamically to their respective cached idle configurations.
   - **LobbyController Migration (`LobbyController.cs`)**: Refactored the `StartGameButton` field from `UnityEngine.UI.Button` to `UICustomButtonBase`, adapting its ready check states to utilize the premium custom transition system via the `.Interactable` property.
 
+## [2026-06-01] - One-Click URL Button Redirect
 
+### Feature Added
+- **One-Click URL Button Script (`OpenURLButton.cs`)**: Created a clean, robust, and highly reliable script designed to reside on a standard UGUI Button. It automatically binds to the button click event at Awake and runs the system browser redirect when clicked.
+- **Auto-Registration & Dynamic Setup**: Requires a `Button` component, automatically caching and linking listeners at runtime. This avoids manual Inspector click binding, providing a foolproof "one-click" configuration experience.
+- **Sanitized Redirects**: Performs robust string trimming (`_url.Trim()`) to remove leading/trailing carriage returns or spaces that frequently trigger system browser failure exceptions.
+- **Manual Hook Support**: Exposes a clean public method `OpenConfiguredURL()` so the component can still be manually bound to standard Unity events or custom script sequences if needed.
 
+### Code Modified/Added
 
+#### `Assets/1_Scripts/UI/OpenURLButton.cs`
+- **Class `OpenURLButton`**: Implements the automatic registration of listeners on a local standard `Button` component, sanitizes target URL values, triggers standard system browser execution, and implements strict memory logging / safety hooks.
 
+### Technical Justification & Details
+- **Foolproof Implementation (KISS)**: Designed for minimal configuration. Dropping the script onto a standard Button GameObject completely wires up the click handler with zero developer interaction needed.
+- **Garbage Collection & Memory Safety**: Implements standard listener registration in `Awake` and automated un-registration inside the `OnDestroy` callback to guarantee no lingering listener reference leaks when scenes are reloaded or objects are destroyed.
+- **Official API Redirects**: Utilizes `Application.OpenURL` to trigger system browser invocation. Detailed official references are available at [Unity Application.OpenURL Documentation](https://docs.unity3d.com/ScriptReference/Application.OpenURL.html).
 
+### Accessibility/Visibility Signature Checks
+- All property members and callbacks (`_url`, `_button`, `Awake()`, `OnDestroy()`, `OpenConfiguredURL()`, `HandleButtonClick()`) are explicitly declared with exact access visibility levels to satisfy compiler requirements and enforce strict standards.
 
+## [2026-06-01] - Physical Multiplayer Arm Reaching (Procedural Joints)
 
+### Feature Added
+- **Multiplayer Arm Physical Reaching Component (`PlayerArmsController.cs`)**: Created a high-quality player controller script designed to manage physical joint-based arm movements. When the left or right click is held, the corresponding arm reaches out in the look direction of the player's head, reverting organically back to a relaxed/gravity state upon release.
+- **Dynamic Hierarchy Traversal**: Automatically traverses child hierarchies of the Left and Right arm roots to locate the exact terminal node (hand or nozzle) of the physical chain.
+- **Auto-Calculated Max Reach**: Measures the cumulative length of each arm segment dynamically, ensuring perfect world-space reach mapping that matches any robotic appendage structure without manual adjustments.
+- **Physics Attraction (Forces & Torque)**: Computes dynamic spring-damping vector attraction forces (`AddForce`) and angular look-alignment torques (`AddTorque`) targeting the hand Rigidbody, achieving snappy, responsive, and organically stable reaching animations.
+- **Mirror Multiplayer Synchronization**: Syncs inputs via `[SyncVar]` properties and client-to-server `[Command]` methods. Physics forces are simulated locally on every client for all players, providing seamless lag-free animations on remote clones.
 
+### Code Modified/Added
 
+#### `Assets/1_Scripts/Player/Controller/PlayerArmsController.cs`
+- **Class `PlayerArmsController`**: Integrates with `PlayerInputHandler`, resolves target reach directions using localized looking components, dynamically traverses limbs to apply physics attractions to terminal nodes, and synchronizes status over Mirror.
 
+### Technical Justification & Details
+- **Procedural Joints Coexistence**: Leveraging Unity joints' native spring systems (`ProceduralTubePhysics`) allows remote/local clones to handle physical reactions (collisions, bending) automatically, making the rest-state collapse completely free and organic.
+- **Mass-Relative Forces**: Multiplies computed forces and torques by target Rigidbody mass (`handRb.mass`) to guarantee identical, scale-invariant reaching responsiveness regardless of player avatar sizing.
+- **Oscillation Mitigation (Damping)**: Implements precise damping coefficients for both linear and angular velocity curves to avoid high-frequency jitter during collision contact.
 
+### Accessibility/Visibility Signature Checks
+- Fully declared all access modifier levels (`private`, `public`, `protected`) across properties and methods to prevent compile blockages or reflection ambiguities in Mirror.
 
+## [2026-06-03] - Vacuum Suction Physics, Object Shrinking, and Player Inventory
 
+### Feature Added
+- **Vacuum Physics Suction Field (`VacuumSuctionZone.cs`)**: Created a trigger volume component placed on the Right Hand that applies progressive target attraction forces to any physics-enabled Rigidbody marked with the new component.
+- **Dynamic Proportional Shrinking**: Shrinks items in scale dynamically as they get closer to the nozzle tip using distance interpolation ratios. Restores the object's scale automatically if it escapes the field or if the vacuum is deactivated.
+- **Networked Player Inventory (`PlayerInventory.cs`)**: Added storage capacity tracking for absorbed items on the server. Deactivates GameObjects upon absorption and keeps the item count synchronized to clients via `[SyncVar]`.
+- **LIFO Spit/Launch Mechanics**: Allows spitting stored inventory items forward from the Left Hand tip nozzle (initial left click press). Restores their original scale and applies a strong physical impulse force to the object's Rigidbody.
+- **Unified Controller Orchestration (`PlayerVacuumController.cs`)**: Integrates inventory, arm extensions, and trigger zone activation under Mirror networking, with instant local-client deactivation for latency-free item pickup.
 
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Player/Controller/PlayerVacuumController.cs`
+- **Class `PlayerVacuumController`**: Rewritten to manage the Right-Hand trigger zone activation, monitor left click for projectile spits, and host `CmdAbsorbObject` / `CmdSpitItem` Commands.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerInventory.cs`
+- **Class `PlayerInventory`**: New class maintaining LIFO list of GameObjects on the server and synchronizing item count to clients.
+
+#### `Assets/1_Scripts/Physics/VacuumSuctionZone.cs`
+- **Class `VacuumSuctionZone`**: New class processing trigger overlaps, pull forces, visual shrinking, and notifying the controller of local absorption.
+
+#### `Assets/1_Scripts/Physics/VacuumableObject.cs`
+- **Class `VacuumableObject`**: New marker class containing original local scale and customizable resistance factors to suction force.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerArmsController.cs`
+- Exposed public read-only properties for hands (`LeftHand`, `RightHand`) and extension states (`IsLeftArmExtended`, `IsRightArmExtended`).
+
+### Technical Justification & Details
+- **Trigger Stay Physics**: Leverages `OnTriggerStay` inside Unity's physics loop to apply forces and calculate relative distance scaling factors dynamically.
+- **Visual Scale Restorations**: Prevents objects from permanently shrinking by tracking scale states in an active Dictionary and resetting them inside `OnTriggerExit` and `Update` (if vacuum is deactivated).
+- **LIFO Stack Mechanics**: Re-spits the most recently vacuumed item, allowing natural gameplay shooting feedback.
+
+### Accessibility/Visibility Signature Checks
+- Fully verified explicit access modifiers and XML comments for all new methods and fields.
+
+## [2026-06-08] - Merging VacuumableObject with Collectible
+
+### Technical Justification & Details
+- **Redundancy Reduction**: Rather than maintaining a separate `VacuumableObject` marker component alongside the `Collectible` component, all suction and physical parameters are merged directly into `Collectible`.
+- **Inheritance and Requirements**: `Collectible` now implements `IEntity` and requires a `Rigidbody` component, which aligns with both physical simulation and player vision focus targeting systems.
+- **Reference Updates**: References to `VacuumableObject` in `PlayerInventory` and `VacuumSuctionZone` have been migrated to `Collectible` to maintain full compilation consistency.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Gameplay/Collectible.cs`
+- **Class `Collectible`**: Merged the physics caching, original local scale, pull resistance settings, and `ResetScale()` methods into the existing class structure. Added XML summaries to both properties and methods.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerInventory.cs`
+- Updated the collection scale reset callback to query for the `Collectible` component.
+
+#### `Assets/1_Scripts/Physics/VacuumSuctionZone.cs`
+- Updated trigger stay lists, cache queries, and dictionary types to map `Collectible` components.
+
+### File Deletions
+- Deleted `Assets/1_Scripts/Physics/VacuumableObject.cs` and `Assets/1_Scripts/Physics/VacuumableObject.cs.meta`.
+
+### Accessibility/Visibility Signature Checks
+- Verified explicit access modifiers (`private`, `public`) and complete XML summaries on all newly introduced members within `Collectible`.
+
+## [2026-06-08] - Fixing Arm Extension and Mouth Vacuum Input Logic
+
+### Technical Justification & Details
+- **Hierarchy Search Fix**: The procedural arm reaching physics searches for the hand GameObject using a recursive child traversal (`FindLastChild`). When a child without a Rigidbody (such as `VacuumSuctionZone`'s trigger collider) was added under the hand, the search returned the child collider rather than the parent hand itself. Since the child has no `Rigidbody`, joint forces could not be applied, causing the arm to remain static. Updated `FindLastChild` to stop and return the deepest node that contains a `Rigidbody` component, falling back to the deepest child only if no Rigidbody is found in descendants.
+- **Mouth Vacuum Input Decoupling**: Restored the mouth animation/audio vacuum state to evaluate `_input.IsVacuuming` (which checks if both left and right mouse click inputs are active). This separates individual right-arm suction zone activations from mouth vacuum triggering.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Player/Controller/PlayerArmsController.cs`
+- **`FindLastChild`**: Updated recursive algorithm to track and return the deepest child node containing a `Rigidbody` component.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerVacuumController.cs`
+- **`Update`**: Decoupled vacuum state check from `_armsController.IsRightArmExtended` and restored it to check for `_input.IsVacuuming` (both keys pressed).
+
+## [2026-06-08] - Spit and Mouth Vacuum Constraints
+
+### Technical Justification & Details
+- **Mouth Vacuum Override**: When both clicks are pressed (`IsVacuuming`), only the mouth should perform vacuuming audio/visuals. The arms should not extend. To achieve this, the local input checks in `PlayerArmsController.Update` force the target arm extensions (`leftInput` and `rightInput`) to `false` when `_input.IsVacuuming` is true, ensuring both arms remain at rest during the mouth vacuum.
+- **Physical Extension Check for Spitting**: To improve shooting game feel, the projectile spit action must wait until the left arm is physically extended. Added `IsLeftHandExtendedPhysically` property to `PlayerArmsController` which calculates the distance from the left hand to the left arm root, requiring it to reach at least 80% of target extension.
+- **Blocked State Timeout Fallback**: If the player is standing close to a wall, physical constraints might prevent the arm from straight-extending. Added a 0.25-second timeout fallback since left-click press: if the arm does not reach 80% physical extension within 0.25s, it spits anyway to prevent lockup.
+- **Spit Force Reduction**: Lowered default `_spitForce` from 400f to 15f in `PlayerInventory.cs` to avoid extreme physics impulse launch velocities.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Player/Controller/PlayerArmsController.cs`
+- **`IsLeftHandExtendedPhysically`**: Public property returning true if the left hand has physically reached at least 80% of its target extension length.
+- **`Update`**: Forced arm extension inputs to false if `_input.IsVacuuming` is active.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerVacuumController.cs`
+- **`Update`**: Re-implemented spitting to check for physical extension (`_armsController.IsLeftHandExtendedPhysically`) or a 0.25s timeout after press, and disabled spitting when mouth vacuum is active.
+
+#### `Assets/1_Scripts/Player/Controller/PlayerInventory.cs`
+- Lowered default `_spitForce` to 15f.

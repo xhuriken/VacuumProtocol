@@ -56,20 +56,57 @@
 - [x] Implement smooth 0.25s translucent grey deactivated fade animations inside `CustomTextButton.cs` for text, rectangles, and disc shapes, with seamless re-enabling transition logic.
 - [x] Refactor `LobbyController.cs` to declare `StartGameButton` as a `UICustomButtonBase` instead of standard UGUI `Button`, integrating the custom deactivated state system.
 
+## Current Feature: One-Click URL Button Redirect
+- [x] Create `OpenURLButton.cs` in `Assets/1_Scripts/UI/` to handle opening browser URLs.
+- [x] Implement automatic caching and binding to standard UGUI `Button` components.
+- [x] Adhere to Microsoft CoreFX styling, explicit member visibilities, and full XML comments.
+- [x] Insert strategic `Debug.Log` for visual observability inside Unity.
+- [x] Update `DEVELOPMENT_LOG.md` with implementation details.
+- [x] Perform validation signature and compilation check on properties.
 
+## Current Feature: Physical Multiplayer Arm Reaching (Procedural Joints)
+- [x] Create `PlayerArmsController.cs` in `Assets/1_Scripts/Player/Controller/` to manage arm physics.
+- [x] Implement Network SyncVars and Commands to replicate arm extension state across clients.
+- [x] Implement automatic hierarchy traversal to find the last segment (hand/nozzle) of each arm.
+- [x] Calculate total arm length dynamically to define accurate maximum reaching distance.
+- [x] Add PD/Spring forces and alignment torque to target hand towards head/look direction.
+- [x] Ensure natural fallback (gravity/joints rest state) when arms are released.
+- [x] Update `DEVELOPMENT_LOG.md` with architectural implementation notes.
+- [x] Perform compilation checks and validation signature checks.
 
+## Current Feature: Real-time Reaching Tweaking parameters for PlayerArms
+- [x] Add serialized real-time tweakable parameters (spread, height, angle offset, forward reach factor) in `PlayerArmsController.cs`.
+- [x] Update `ApplyArmReachingForces` implementation to calculate target positions and target orientations using these properties in FixedUpdate.
+- [x] Adhere to Microsoft CoreFX styling, explicit member visibilities, and full XML comments.
+- [x] Update `DEVELOPMENT_LOG.md` with implementation details.
+- [x] Run verification compile check.
 
+## Current Feature: Vacuum Physics Suction, Object Shrinking, and Player Inventory
+- [x] Create `VacuumableObject.cs` in `Assets/1_Scripts/Physics/` to tag and cache original scale on vacuumable objects.
+- [x] Create `PlayerInventory.cs` in `Assets/1_Scripts/Player/Controller/` to manage storage, LIFO collection, and spawning/spitting over Mirror.
+- [x] Create `VacuumSuctionZone.cs` in `Assets/1_Scripts/Physics/` to apply pull forces, process distance-based shrinking, and trigger local absorption.
+- [x] Rewrite `PlayerVacuumController.cs` to orchestrate input states, trigger zone activation, and host Network Command handlers for absorption and spitting.
+- [x] Update `PlayerArmsController.cs` to expose public read-only hand and extension state properties.
+- [x] Verify compilation status and explicit member visibility signatures.
+- [x] Update `DEVELOPMENT_LOG.md` with implementation logs.
 
+## Current Feature: Merge Collectible and VacuumableObject
+- [x] Merge the fields, properties, and methods of `VacuumableObject` into `Collectible`.
+- [x] Update `Collectible` to implement required components (like `Rigidbody`).
+- [x] Update references in `PlayerInventory.cs` and `VacuumSuctionZone.cs` to use `Collectible` instead of `VacuumableObject`.
+- [x] Delete `VacuumableObject.cs`.
+- [x] Run compile checks and verify all references compile correctly.
+- [x] Update `DEVELOPMENT_LOG.md`.
 
+## Current Feature: Fix Right Arm Extension and Mouth Vacuum Input Logic
+- [x] Fix `FindLastChild` in `PlayerArmsController.cs` to return the deepest node containing a `Rigidbody` component, resolving the issue where children without Rigidbodies (like `VacuumSuctionZone`) broke arm extension physics.
+- [x] Restore `_isVacuuming` audio and animation states in `PlayerVacuumController.cs` to trigger only when both arms are active (`_input.IsVacuuming`), separating it from right click individual arm extension.
+- [x] Verify compilation status.
+- [x] Update `DEVELOPMENT_LOG.md` with detailed description of the fixes.
 
-
-
-
-
-
-
-
-
-
-
-
+## Current Feature: Spit and Mouth Vacuum Constraints
+- [x] Prevent arm extensions from functioning/reaching when both left and right clicks are pressed (`IsVacuuming` state), making it only trigger the mouth vacuum visuals and audio.
+- [x] Implement waiting mechanics for spitting: wait until the left arm is physically extended (reaches 80% target distance) before launching the item, with a 0.25-second timeout fallback.
+- [x] Lower default spit force in `PlayerInventory.cs` to 15f for gentler, more natural shooting.
+- [x] Run compilation checks.
+- [x] Update `DEVELOPMENT_LOG.md` with implementation details.

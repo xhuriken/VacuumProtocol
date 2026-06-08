@@ -1030,6 +1030,7 @@ MonoBehaviour:
   onPointerUp:
     m_PersistentCalls:
       m_Calls: []
+  _interactable: 1
   _leftLine: {fileID: 5270087818880808876}
   _rect: {fileID: 8681858773608466484}
   _dots: {fileID: 6289486873709428254}

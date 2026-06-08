@@ -126,11 +126,11 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 1
   center:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: {x: 0.64, y: 0.5}
   scale:
     m_OverrideState: 0
-    m_Value: 0.8
+    m_Value: 1
 --- !u!114 &-2729049989626198874
 MonoBehaviour:
   m_ObjectHideFlags: 3
