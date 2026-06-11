@@ -98,6 +98,39 @@
 - [x] Run compile checks and verify all references compile correctly.
 - [x] Update `DEVELOPMENT_LOG.md`.
 
+## Current Task: Robot Vacuum Schematic Analysis
+- [x] Analyze and decompose the "Robot Vacuum" schematic image.
+- [x] Document the structural components, degrees of freedom, and look-target constraints.
+- [x] Update the DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Create Head and Vision Mechanics Documentation
+- [x] Create `documentation/Player/Head_and_Vision_Mechanics.md` with detailed explanations of head physical movement (arc of circle, physics reaction, bend factor) and hierarchical vision alignment percentages.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Refine Head and Vision Specs
+- [x] Update `documentation/Player/Head_and_Vision_Mechanics.md` to clarify the mouse-piloted camera, spring-rod head physical model ("boing boing"), and updated hierarchy alignments.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Clarify Unity Physics Implementation for Head Spring
+- [x] Update `documentation/Player/Head_and_Vision_Mechanics.md` to describe the setup using Rigidbody and ConfigurableJoint components, explaining how targetRotation and targetPosition drive the "boing boing" effect and the crouch.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Create Base PhysicalHeadController Script
+- [x] Create `Assets/1_Scripts/Player/Controller/PhysicalHeadController.cs` with explicit visibilities, Allman brackets, private `_camelCase` variables, and complete XML documentation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Implement Runtime Unparenting for Head Physics
+- [x] Update `PhysicalHeadController.cs` to unparent the head at Start to resolve transform conflicts and handle cleanup when the parent player is destroyed.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Implement Head and Body Collision Ignoring
+- [x] Update `PhysicalHeadController.cs` to dynamically find and ignore all collisions between the head's collider and the body/player colliders at Start.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Task: Correct Neck Arc Joint Translation
+- [x] Update `PhysicalHeadController.cs` to use positive Y offsets and negative Z offsets directly for targetPosition, matching Unity's inverted joint space.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
 ## Current Feature: Fix Right Arm Extension and Mouth Vacuum Input Logic
 - [x] Fix `FindLastChild` in `PlayerArmsController.cs` to return the deepest node containing a `Rigidbody` component, resolving the issue where children without Rigidbodies (like `VacuumSuctionZone`) broke arm extension physics.
 - [x] Restore `_isVacuuming` audio and animation states in `PlayerVacuumController.cs` to trigger only when both arms are active (`_input.IsVacuuming`), separating it from right click individual arm extension.
@@ -109,4 +142,10 @@
 - [x] Implement waiting mechanics for spitting: wait until the left arm is physically extended (reaches 80% target distance) before launching the item, with a 0.25-second timeout fallback.
 - [x] Lower default spit force in `PlayerInventory.cs` to 15f for gentler, more natural shooting.
 - [x] Run compilation checks.
+- [x] Update `DEVELOPMENT_LOG.md` with implementation details.
+
+## Current Feature: Simplify Arm Targeting (KISS)
+- [x] Remove horizontal spread, lateral separation, and pointing divergence from `PlayerArmsController.cs`.
+- [x] Update `ApplyArmReachingForces` to pull the hand Rigidbody directly to the center line of the player's look direction, making aiming and spitting much simpler and more intuitive.
+- [x] Verify compilation status.
 - [x] Update `DEVELOPMENT_LOG.md` with implementation details.

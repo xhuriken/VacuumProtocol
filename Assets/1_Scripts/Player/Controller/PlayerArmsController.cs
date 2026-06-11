@@ -50,17 +50,9 @@ public class PlayerArmsController : NetworkBehaviour
     [SerializeField]
     private float _forwardOffset = 0f;
 
-    [Tooltip("Horizontal spread (separation) offset from the look center line.")]
-    [SerializeField]
-    private float _horizontalSpread = 0.3f;
-
     [Tooltip("Vertical height offset applied to the target reach position.")]
     [SerializeField]
     private float _verticalOffset = -0.1f;
-
-    [Tooltip("Diverging outward angle (in degrees) for the arms to point away from the center line.")]
-    [SerializeField]
-    private float _angleSpread = 15f;
 
     [Tooltip("Additional manual rotation offset (Pitch, Yaw, Roll) applied to the hand rotation.")]
     [SerializeField]
@@ -258,8 +250,7 @@ public class PlayerArmsController : NetworkBehaviour
 
     /// <summary>
     /// Computes and applies spring/damping attraction forces and look-alignment torques
-    /// to the hand Rigidbody to pull the physical joint chain towards the looking target.
-    /// Supports real-time tweaking of spreading, vertical height, forward offset, and pointing divergence.
+    /// to the hand Rigidbody to pull the physical joint chain towards the looking target (center line).
     /// </summary>
     /// <param name="handRb">The Rigidbody of the last child segment in the arm.</param>
     /// <param name="armLength">The maximum physical length of the arm hierarchy.</param>
@@ -267,14 +258,11 @@ public class PlayerArmsController : NetworkBehaviour
     private void ApplyArmReachingForces(Rigidbody handRb, float armLength, bool isLeft)
     {
         Vector3 forward = _headTransform.forward;
-        Vector3 right = _headTransform.right;
         Vector3 up = _headTransform.up;
-        float sideSign = isLeft ? -1f : 1f;
 
-        // Calculate target location in front of the head at tweaked extension range and offsets
+        // Calculate target location in front of the head at tweaked extension range and vertical/forward offsets
         Vector3 targetPosition = _headTransform.position 
             + forward * (armLength * _reachLengthFactor + _forwardOffset)
-            + right * (sideSign * _horizontalSpread)
             + up * _verticalOffset;
 
         // Calculate proportional attraction force vector
@@ -288,12 +276,9 @@ public class PlayerArmsController : NetworkBehaviour
         Vector3 netForce = (extensionForce + dampingForce) * handRb.mass;
         handRb.AddForce(netForce, ForceMode.Force);
 
-        // Compute rotational target rotation matching the camera/look direction with spread angle
+        // Compute rotational target rotation matching the camera/look direction
         Quaternion targetRotation = Quaternion.LookRotation(forward, up);
         
-        // Apply outward divergence rotation around the local Up axis
-        targetRotation = targetRotation * Quaternion.Euler(0f, sideSign * _angleSpread, 0f);
-
         // Apply additional manual rotation offset (Pitch, Yaw, Roll)
         targetRotation = targetRotation * Quaternion.Euler(_handRotationOffset);
 

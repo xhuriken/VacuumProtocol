@@ -254,3 +254,41 @@
 
 #### `Assets/1_Scripts/Player/Controller/PlayerInventory.cs`
 - Lowered default `_spitForce` to 15f.
+
+## [2026-06-10] - Simplifying Arm Targeting (KISS)
+
+### Technical Justification & Details
+- **Aim Simplification**: Reduced layout and reach complexity by removing lateral spread, divergence angles, and horizontal offsets when calculating target arm positions. Since the character only extends one arm at a time during gameplay actions, aiming is much more natural and intuitive when the extending arm targets the exact center line of where the player is looking.
+- **KISS Philosophy**: Deleted `_horizontalSpread` and `_angleSpread` fields to keep inspector interfaces cleaner and reduce unnecessary math.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Player/Controller/PlayerArmsController.cs`
+- **Fields**: Removed `_horizontalSpread` and `_angleSpread`.
+- **`ApplyArmReachingForces`**: Simplified the target position and target rotation calculations to pull the hand directly to the center line of vision.
+
+## [2026-06-11] - Spécifications Techniques de la Tête et de la Vision du Robot Vacuum
+
+### Justification Technique & Détails
+- **Analyse du Schéma de Fonctionnement** : Traduction et enrichissement des spécifications de mouvement et de vision du Robot Vacuum depuis les schémas manuscrits.
+- **Intégration Physique via ConfigurableJoint d'Unity** :
+  - Utilisation d'un **Rigidbody** (tête) relié au buste par un **ConfigurableJoint** pour gérer nativement les collisions, chocs et forces d'inertie.
+  - Configuration du `Slerp Drive` (ressorts de rotation) avec un faible amortissement (`Position Damper`) pour générer le balancement élastique ("boing boing") naturel lors des mouvements ou impacts physiques.
+  - Configuration du `Y Drive` pour le déplacement vertical (Crouch) gérant l'affaissement élastique.
+- **Formulation Mathématique de Guidage (targetRotation / targetPosition)** :
+  - La souris pilote directement la **Caméra Verte** (100% de la direction visée).
+  - La rotation de la tête suit à amplitude réduite (70%) via l'assignation de la `targetRotation` du Joint.
+  - La position de la tête suit un arc de cercle et un affaissement via l'assignation de la `targetPosition` du Joint (ajoutant l'offset d'accroupissement).
+- **Vision Hiérarchique Ciblée (Œil, Pupille)** :
+  - L'Œil Bleu s'aligne à **75%** vers la cible et la Pupille Mauve s'aligne à **100%**, produisant un effet visuel de regard en coin très expressif.
+
+### Code Modifié/Added
+- Création du fichier de spécifications : `documentation/Player/Head_and_Vision_Mechanics.md` avec description détaillée de la configuration du Joint et script C# d'implémentation.
+- Création de `Assets/1_Scripts/Player/Controller/PhysicalHeadController.cs` : classe de gestion physique de la tête avec calcul d'arc de cercle, crouch, et liaison ConfigurableJoint.
+- Mise à jour de `PhysicalHeadController.cs` : implémentation du détachement hiérarchique au `Start()` via `transform.SetParent(null)` pour éliminer les conflits de double contrainte avec les animations de l'armature parent, calcul de la rotation relative par rapport au parent d'origine, et destruction automatique lors de la destruction du joueur. Ajustement avec inversion (`Quaternion.Inverse` et `-desiredOffset`) pour `targetRotation` et `targetPosition` du ConfigurableJoint suite aux spécifications internes d'Unity. Ajout de l'ignorance dynamique des collisions via `Physics.IgnoreCollision` au `Start()` entre le collider de la tête et tous les colliders du corps/bras du joueur pour éviter tout blocage physique. Correction des signes de `targetPosition` (+arcY et -arcZ) pour appliquer la translation de l'arc de cercle dans le bon sens physique.
+
+
+
+
+
+
