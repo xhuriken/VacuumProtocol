@@ -1,5 +1,4 @@
 using Adrenak.UniVoice;
-using Adrenak.UniVoice.Samples;
 using Mirror;
 using UnityEngine;
 
@@ -92,6 +91,14 @@ public class MouthAnimator : NetworkBehaviour
         UniVoiceMirrorSetupSample.ClientSession.Input.OnFrameReady += frame =>
         {
             if (frame.samples == null) return;
+
+            // If the local voice activity detector determines the user is not speaking,
+            // we discard the noise peak to prevent mouth wobbling.
+            if (UniVoiceMirrorSetupSample.LocalVad != null && !UniVoiceMirrorSetupSample.LocalVad.IsSpeaking)
+            {
+                _lastPeak = 0f;
+                return;
+            }
 
             float peak = 0;
             for (int i = 0; i < frame.samples.Length; i += 4)

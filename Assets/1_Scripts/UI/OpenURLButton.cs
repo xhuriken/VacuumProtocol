@@ -31,7 +31,7 @@ public class OpenURLButton : MonoBehaviour
         {
             // Wire up the click handler automatically to achieve the "one-click" setup experience
             _button.onClick.AddListener(HandleButtonClick);
-            Debug.Log($"[OpenURLButton] Automatically registered click event on '{gameObject.name}' for URL: {_url}");
+            // Debug.Log($"[OpenURLButton] Automatically registered click event on '{gameObject.name}' for URL: {_url}");
         }
         else
         {

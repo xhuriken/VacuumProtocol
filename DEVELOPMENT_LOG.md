@@ -287,6 +287,111 @@
 - Création de `Assets/1_Scripts/Player/Controller/PhysicalHeadController.cs` : classe de gestion physique de la tête avec calcul d'arc de cercle, crouch, et liaison ConfigurableJoint.
 - Mise à jour de `PhysicalHeadController.cs` : implémentation du détachement hiérarchique au `Start()` via `transform.SetParent(null)` pour éliminer les conflits de double contrainte avec les animations de l'armature parent, calcul de la rotation relative par rapport au parent d'origine, et destruction automatique lors de la destruction du joueur. Ajustement avec inversion (`Quaternion.Inverse` et `-desiredOffset`) pour `targetRotation` et `targetPosition` du ConfigurableJoint suite aux spécifications internes d'Unity. Ajout de l'ignorance dynamique des collisions via `Physics.IgnoreCollision` au `Start()` entre le collider de la tête et tous les colliders du corps/bras du joueur pour éviter tout blocage physique. Correction des signes de `targetPosition` (+arcY et -arcZ) pour appliquer la translation de l'arc de cercle dans le bon sens physique.
 
+## [2026-07-01] - Local VAD Filter for Mouth Animator
+
+### Technical Justification & Details
+- **Raw Mic Noise Jitter Issue**: The local player's mouth animation previously subscribed directly to the raw microphone stream (`IAudioInput.OnFrameReady`), which triggered *before* any filters were run. Consequently, background white noise and breathing caused the local player's mouth to jitter even when they were silent. Conversely, remote players' mouths appeared perfectly clean because remote volumes are derived from the networked stream, which is gated by the client-side Voice Activity Detector (VAD) filter.
+- **Adaptive VAD Synchronization**: Exposing the local `SimpleVad` instance as a static public property in `UniVoiceMirrorSetupSample` allows other scripts to access the local client's VAD state.
+- **Local Volume Gating**: Updated `MouthAnimator.cs` to check `UniVoiceMirrorSetupSample.LocalVad` and force `_lastPeak = 0f` if `LocalVad.IsSpeaking` is false. This mirrors the remote network behavior on the local client, resulting in a clean local mouth animation that only activates when actual speech is detected.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Audio/UniVoiceMirrorSetupSample.cs`
+- **`LocalVad`**: Added a public static property to hold the active local `SimpleVad` instance.
+- **`SetupClientSession`**: Assigned `LocalVad` during VAD initialization before adding it to `ClientSession.InputFilters`.
+
+#### `Assets/1_Scripts/Audio/MouthAnimator.cs`
+- **`SetupLocalMicLogging`**: Updated the local microphone `OnFrameReady` handler to check if `LocalVad` is active, forcing the local peak volume to `0f` when the user is not speaking.
+
+#### `documentation/Audio/Voice_System.md`
+- **Documentation Update**: Completely rewrote the document to explain how the VAD (Voice Activity Detection) algorithm works (RMS energy, EMA background noise floor estimation, SNR thresholds, attack/release timers). Explicitly differentiated between what is built-in in Mirror/UniVoice (network messaging, mic capture, base VAD/Opus filters) and what we custom-coded as a bridge/pont (dynamic 3D spatialization, mouth volume animation, local VAD gating, Steamworks lobby hosts fix).
+
+## [2026-07-01] - Settings Manager System
+
+### Technical Justification & Details
+- **Settings State Isolation**: Designed and implemented a robust, modular, and extensible settings manager pattern. Created `SettingsData` as a POCO class acting as the Single Source of Truth (SSOT). Handled dictionary serialization inside `SettingsData` by implementing `ISerializationCallbackReceiver` to bypass Unity `JsonUtility` serialization limitations.
+- **Decoupled Consumer Pipeline**: Added `ISettingsConsumer` interface allowing game components (Voice, Input, Graphics) to dynamically observe Settings changes. `SettingsManager` manages loading/saving JSON configurations from/to PlayerPrefs and routes updates to all registered consumers.
+- **Audio Hot-swapping & Sensibility Bridge**: Implemented `VoiceSettingsConsumer.cs` to capture settings changes. Resolves hot-swapping by stopping previous recording devices, starting recording on the new target device, and updating `ClientSession.Input` dynamically. Uses reflection to access `SimpleVad._config` and update SNR thresholds dynamically based on user sensitivity preferences. Calculates combined peer volumes (Master * Voice * PeerMultiplier) dynamically.
+- **Input System Rebinding**: Implemented `InputSettingsConsumer.cs` to apply bindings overrides onto `InputActionAsset` at load, and provides methods to trigger interactive rebinding.
+- **UI Presenter and Thread-Safe Indicator**: Implemented `SettingsUIPresenter.cs` to bind UI components (Sliders, Dropdowns) to the manager. Calculates frame RMS in-place on the microphone capture thread and uses a cached float field to safely apply level changes to the UI on Unity's main thread inside `Update()`.
+- **Namespace Clean-Up**: Removed namespaces from all settings scripts (`SettingsData`, `ISettingsConsumer`, `SettingsManager`, `VoiceSettingsConsumer`, `InputSettingsConsumer`, and `SettingsUIPresenter`) to prevent compilation blocks, match the project conventions, and allow global references.
+
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/Core/Settings/SettingsData.cs` [NEW]
+- Holds all volume, sensitivity, input overrides, and graphics quality index. Implements `ISerializationCallbackReceiver`.
+
+#### `Assets/1_Scripts/Core/Settings/ISettingsConsumer.cs` [NEW]
+- Interface declaring `OnSettingsUpdated(SettingsData)` method.
+
+#### `Assets/1_Scripts/Core/Settings/SettingsManager.cs` [NEW]
+- Central Singleton manager for lifecycle, persistence, and event dispatching. Fixed type conversion compiler error by querying `.Name` property on target `Mic.Device`.
+
+#### `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs` [NEW]
+- Bridges volume, microphone hot-swapping, and VAD sensitivity levels dynamically.
+
+#### `Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs` [NEW]
+- Handles control rebinding overrides with the new Unity Input System.
+
+#### `Assets/1_Scripts/UI/SettingsUIPresenter.cs` [NEW]
+- Presenter script to bind UI sliders/dropdowns and render live micro RMS levels with thread-safety.
+
+#### `Assets/1_Scripts/Audio/UniVoiceMirrorSetupSample.cs`
+- Removed namespace wrapper to put the class in the global namespace. Also added `using Adrenak.UniVoice;` to restore visibility of `IAudioServer`, `ClientSession`, and `SimpleVad` which are no longer automatically visible from parent namespace nesting after removing the namespace wrapper.
+
+#### `Assets/1_Scripts/Audio/MouthAnimator.cs`
+- Removed `using Adrenak.UniVoice.Samples;` reference.
+
+#### `Assets/1_Scripts/Audio/UniVoicePlayerAudio.cs`
+- Removed `using Adrenak.UniVoice.Samples;` reference.
+
+#### `documentation/Gameplay/Settings_System.md` [NEW]
+- Technical documentation detailing the modular, extensible Settings Manager system, core component responsibilities, VAD details, and Unity Editor setup steps. Added note explaining why `UniVoiceMirrorSetupSample` is locally copied.
+
+## [2026-07-01] - Modular UI Page Navigation System
+
+### Technical Justification & Details
+- **Reusable Prefab Architecture**: Designed a decoupled UI workflow where individual menu panels (e.g. Settings Panel, Main Menu, Pause Menu) handle their own show/hide/animation logic and remain independent. This allows the Settings Panel to be turned into a Prefab and dropped into both Main Menu and In-Game Pause canvas hierarchies without duplication.
+- **Visual Panel Transitions**: Implemented `UIPanelController.cs` which manages opacity fading (`DOFade`) and scale scaling (`DOScale` using `Ease.OutBack`/`Ease.InBack`) dynamically using DOTween. Sets `SetUpdate(true)` to guarantee animations play when the game is paused (timeScale = 0).
+- **Navigation Groups**: Implemented `UINavigationGroup.cs` to orchestrate mutually exclusive panels and maintain history stack tracking for back button traversal.
+- **Pause Menu Key Gating**: Implemented `InGameMenuController.cs` supporting both legacy `Input.GetKeyDown` and New Input System `Keyboard.current` to capture Escape key and toggle the pause panel. If settings are open, it closes them first.
+
+### Code Modified/Added
+
+#### `Assets/1_Scripts/UI/UIPanelController.cs` [NEW]
+- Manages show/hide lifecycle, raycast blocking, and DOTween transitions for individual canvas group panels.
+
+#### `Assets/1_Scripts/UI/UINavigationGroup.cs` [NEW]
+- Coordinates active panel swapping in a group and handles back operations.
+
+#### `Assets/1_Scripts/UI/InGameMenuController.cs` [NEW]
+- Listens for Escape key to toggle pause menus and manage nested panel visibility.
+
+#### `documentation/Gameplay/UI_Navigation_System.md` [NEW]
+- Comprehensive design document detailing the modular UI layout, component roles, code structure, and guide for editor setup.
+
+#### `Assets/1_Scripts/UI/SettingsUIPresenter.cs`
+- Added offline fallback check to `UpdateVolumeIndicator()` comparing live RMS values directly against the threshold slider value when `LocalVad` is null (e.g. in the Main Menu), allowing test/preview of color changing thresholds offline.
+- Added `SettingsManager.Instance.SaveToDisk()` call inside `OnDisable()` to safely persist changes when the UI panel is closed.
+- Subscribed to `VoiceSettingsConsumer.OnMicInputSwapped` to automatically re-subscribe the RMS local mic frame analyzer callback (`OnLocalMicFrameReady`) onto the newly instantiated `ClientSession.Input` device, preventing the dynamic volume indicator level from locking or stopping after a hot-swap.
+
+#### `Assets/1_Scripts/Core/Settings/SettingsManager.cs`
+- Removed synchronous `PlayerPrefs.Save()` disk flush from the hot update path (`SaveSettings()`) to prevent I/O blocking lag during active UI slider dragging.
+- Added `SaveToDisk()` method and hooked it to `OnApplicationQuit()` and `OnApplicationPause()` to safely write changes to disk on application cycle events.
+
+#### `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs`
+- Added caching system (`_lastAppliedDevice`, `_lastAppliedSensitivity`, `_lastAppliedMasterVolume`, `_lastAppliedVoiceVolume`) in `OnSettingsUpdated` to completely avoid invoking costly OS audio driver list checks (`Mic.AvailableDevices`) and VAD reflection changes during slider drag ticks.
+- Added `Update()` monitoring loop to automatically detect when `UniVoiceMirrorSetupSample.ClientSession` is initialized, invalidating the local cache and applying the player's saved parameters to the active VoIP session dynamically.
+- Declared and triggered public static event `OnMicInputSwapped` when hot-swapping `ClientSession.Input` with a new `UniMicInput` instance.
+
+#### `Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs`
+- Added caching field (`_lastAppliedBindingsJson`) to skip redundant JSON parsing and binding overrides instantiation during slider drag updates.
+
+#### `Assets/1_Scripts/Audio/UniVoiceMirrorSetupSample.cs`
+- Updated `SetupClientSession()` to initialize using the saved `ActiveMicrophoneDevice` name from `SettingsManager.Instance.CurrentSettings` instead of defaulting statically to the first microphone index in the system.
+
+
 
 
 

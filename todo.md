@@ -149,3 +149,29 @@
 - [x] Update `ApplyArmReachingForces` to pull the hand Rigidbody directly to the center line of the player's look direction, making aiming and spitting much simpler and more intuitive.
 - [x] Verify compilation status.
 - [x] Update `DEVELOPMENT_LOG.md` with implementation details.
+
+## Current Feature: Local VAD Filter for Mouth Animator
+- [x] Expose local `SimpleVad` instance as a static property in `UniVoiceMirrorSetupSample.cs`.
+- [x] Update `MouthAnimator.cs` to check `UniVoiceMirrorSetupSample.LocalVad.IsSpeaking` for the local player's mouth animation.
+- [x] Run compilation checks to ensure everything builds without errors.
+- [x] Update `DEVELOPMENT_LOG.md` and `todo.md` to mark tasks as completed.
+
+## Current Feature: Settings Manager System
+- [x] Create `SettingsData.cs`, `ISettingsConsumer.cs`, and `SettingsManager.cs` under `Assets/1_Scripts/Core/Settings/`.
+- [x] Create `VoiceSettingsConsumer.cs` under `Assets/1_Scripts/Audio/` to bridge micro, VAD sensitivity, master volume, and peer-to-peer volumes.
+- [x] Create `InputSettingsConsumer.cs` under `Assets/1_Scripts/Player/Controller/` to bridge input rebinding.
+- [x] Create `SettingsUIPresenter.cs` under `Assets/1_Scripts/UI/` to manage sliders, dropdowns, and live micro RMS levels.
+- [x] Verify compilation status.
+- [x] Update `DEVELOPMENT_LOG.md` and `todo.md` to mark tasks as completed.
+
+## Current Feature: Modular UI Page Navigation System
+- [x] Create `UIPanelController.cs`, `UINavigationGroup.cs`, and `InGameMenuController.cs` under `Assets/1_Scripts/UI/` to manage page transition logic.
+- [x] Set up DOTween animations for panels with SetUpdate(true) safety for paused states.
+- [x] Document the UI Navigation System layout, component roles, and installation guide in `UI_Navigation_System.md`.
+- [x] Add note to `Voice_System.md` and `Settings_System.md` justifying why `UniVoiceMirrorSetupSample` is locally copied.
+- [x] Run compilation checks to ensure everything builds successfully.
+- [x] Update `DEVELOPMENT_LOG.md` and `todo.md` to mark tasks as completed.
+
+
+
+
