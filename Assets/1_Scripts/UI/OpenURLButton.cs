@@ -14,6 +14,10 @@ public class OpenURLButton : MonoBehaviour
     [SerializeField]
     private string _url = "https://";
 
+    [Header("Debug")]
+    [SerializeField]
+    private bool _enableDebugLogs = false;
+
     /// <summary>
     /// Cached UGUI Button component on this GameObject.
     /// </summary>
@@ -31,11 +35,10 @@ public class OpenURLButton : MonoBehaviour
         {
             // Wire up the click handler automatically to achieve the "one-click" setup experience
             _button.onClick.AddListener(HandleButtonClick);
-            // Debug.Log($"[OpenURLButton] Automatically registered click event on '{gameObject.name}' for URL: {_url}");
         }
         else
         {
-            Debug.LogError($"[OpenURLButton] CRITICAL: Button component is missing on '{gameObject.name}' despite RequireComponent constraint!");
+            if (_enableDebugLogs) Debug.LogError($"[OpenURLButton] CRITICAL: Button component is missing on '{gameObject.name}' despite RequireComponent constraint!");
         }
     }
 
@@ -59,14 +62,14 @@ public class OpenURLButton : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_url) || _url == "https://")
         {
-            Debug.LogWarning($"[OpenURLButton] Attempted to open URL on '{gameObject.name}', but the link is empty or default!");
+            if (_enableDebugLogs) Debug.LogWarning($"[OpenURLButton] Attempted to open URL on '{gameObject.name}', but the link is empty or default!");
             return;
         }
 
         // Clean up leading/trailing whitespaces that might cause browser failures
         string sanitizedUrl = _url.Trim();
 
-        Debug.Log($"[OpenURLButton] Redirecting user to browser. URL: '{sanitizedUrl}'");
+        if (_enableDebugLogs) Debug.Log($"[OpenURLButton] Redirecting user to browser. URL: '{sanitizedUrl}'");
         Application.OpenURL(sanitizedUrl);
     }
 

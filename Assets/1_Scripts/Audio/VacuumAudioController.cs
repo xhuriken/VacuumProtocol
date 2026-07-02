@@ -34,6 +34,8 @@ public class VacuumAudioController : MonoBehaviour
     [Tooltip("Allows shifting pitch dynamically by exact semitones during gameplay to resolve chords")]
     public int SemitoneShift = 0;
 
+    [Header("Debug")]
+    [SerializeField] private bool _enableDebugLogs = false;
 
     private bool _isActive = false;
     public bool IsActive => _isActive;
@@ -64,7 +66,7 @@ public class VacuumAudioController : MonoBehaviour
 
     public void SetVacuumState(bool active)
     {
-        Debug.Log($"[VacuumAudio] SetVacuumState({active}). IsPlaying={_audioSource.isPlaying}, CurrentVol={_audioSource.volume}");
+        if (_enableDebugLogs) Debug.Log($"[VacuumAudio] SetVacuumState({active}). IsPlaying={_audioSource.isPlaying}, CurrentVol={_audioSource.volume}");
         if (active == _isActive) return;
         _isActive = active;
 

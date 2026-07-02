@@ -69,30 +69,30 @@ public class ColorButtonUI : UICustomButtonBase
     {
         base.Awake();
 
-        Debug.Log($"[ColorButtonUI] Awake triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] Awake triggered on '{gameObject.name}'");
 
         // Validate Shape References to assist editor diagnostics
         if (_plainShape == null)
         {
-            Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Plain Shape reference is not assigned in the Inspector! Magnetic movement will be disabled.");
+            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Plain Shape reference is not assigned in the Inspector! Magnetic movement will be disabled.");
         }
         else
         {
             _originalPlainScale = _plainShape.transform.localScale;
             _originalPlainLocalPos = _plainShape.transform.localPosition;
-            Debug.Log($"[ColorButtonUI] '{gameObject.name}' cached original Plain scale ({_originalPlainScale}) and local position ({_originalPlainLocalPos})");
+            if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] '{gameObject.name}' cached original Plain scale ({_originalPlainScale}) and local position ({_originalPlainLocalPos})");
         }
 
         if (_outlineShape == null)
         {
-            Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Outline Shape reference is not assigned in the Inspector! Resizing animations will be disabled.");
+            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Outline Shape reference is not assigned in the Inspector! Resizing animations will be disabled.");
         }
         else
         {
             // Initialize outline to its default width and height immediately
             _outlineShape.Width = _baseWidth;
             _outlineShape.Height = _baseHeight;
-            Debug.Log($"[ColorButtonUI] '{gameObject.name}' initialized Outline size to {_baseWidth}x{_baseHeight}");
+            if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] '{gameObject.name}' initialized Outline size to {_baseWidth}x{_baseHeight}");
         }
     }
 
@@ -101,25 +101,25 @@ public class ColorButtonUI : UICustomButtonBase
     /// </summary>
     private void Start()
     {
-        Debug.Log($"[ColorButtonUI] Start triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] Start triggered on '{gameObject.name}'");
 
         // Diagnose if MouseManager is missing
         if (MouseManager.Instance == null)
         {
-            Debug.LogWarning($"[ColorButtonUI] WARNING on '{gameObject.name}': MouseManager.Instance is null! Please make sure a MouseManager component is attached to an active GameObject (e.g. your UI Canvas) in the scene.");
+            if (_enableDebugLogs) Debug.LogWarning($"[ColorButtonUI] WARNING on '{gameObject.name}': MouseManager.Instance is null! Please make sure a MouseManager component is attached to an active GameObject (e.g. your UI Canvas) in the scene.");
         }
 
         // Diagnose if EventSystem is missing in the scene
         if (EventSystem.current == null)
         {
-            Debug.LogError($"[ColorButtonUI] CRITICAL ERROR on '{gameObject.name}': No EventSystem found in the scene! Unity UI cannot process pointer events (hovers/clicks) without an EventSystem.");
+            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] CRITICAL ERROR on '{gameObject.name}': No EventSystem found in the scene! Unity UI cannot process pointer events (hovers/clicks) without an EventSystem.");
         }
         else
         {
             BaseInputModule activeInputModule = EventSystem.current.GetComponent<BaseInputModule>();
             if (activeInputModule != null)
             {
-                Debug.Log($"[ColorButtonUI] EventSystem active on '{gameObject.name}' with Input Module: {activeInputModule.GetType().Name}");
+                if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] EventSystem active on '{gameObject.name}' with Input Module: {activeInputModule.GetType().Name}");
             }
         }
     }
@@ -195,7 +195,7 @@ public class ColorButtonUI : UICustomButtonBase
 
         if (EventSystem.current == null)
         {
-            Debug.LogError("[UI Diagnostic Raycaster] EventSystem.current is NULL! Dynamic UI hover captures are completely offline.");
+            if (_enableDebugLogs) Debug.LogError("[UI Diagnostic Raycaster] EventSystem.current is NULL! Dynamic UI hover captures are completely offline.");
             return;
         }
 
@@ -227,7 +227,7 @@ public class ColorButtonUI : UICustomButtonBase
 
                     logBreakdown += $"   -> [{i}] Name: '{hitObj.name}' | Layer: {LayerMask.LayerToName(hitObj.layer)} | {raycastState} | Rect Size: {rectSize}\n";
                 }
-                Debug.Log(logBreakdown);
+                if (_enableDebugLogs) Debug.Log(logBreakdown);
             }
         }
         else
@@ -260,7 +260,7 @@ public class ColorButtonUI : UICustomButtonBase
     /// <param name="color">The color to apply.</param>
     public void SetButtonColor(Color color)
     {
-        Debug.Log($"[ColorButtonUI] SetButtonColor triggered on '{gameObject.name}' with color: {color}");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] SetButtonColor triggered on '{gameObject.name}' with color: {color}");
 
         if (_plainShape != null)
         {
@@ -281,7 +281,7 @@ public class ColorButtonUI : UICustomButtonBase
     {
         base.OnPointerEnter(eventData);
 
-        Debug.Log($"[ColorButtonUI] OnPointerEnter callback executing on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] OnPointerEnter callback executing on '{gameObject.name}'");
 
         float targetWidth = _baseWidth * _hoverWidthMultiplier;
         float targetHeight = _baseHeight * _hoverHeightMultiplier;
@@ -304,7 +304,7 @@ public class ColorButtonUI : UICustomButtonBase
     {
         base.OnPointerExit(eventData);
 
-        Debug.Log($"[ColorButtonUI] OnPointerExit callback executing on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] OnPointerExit callback executing on '{gameObject.name}'");
 
         AnimateOutlineSize(_baseWidth, _baseHeight, _animationDuration);
 
@@ -325,7 +325,7 @@ public class ColorButtonUI : UICustomButtonBase
     {
         base.OnPointerDown(eventData);
 
-        Debug.Log($"[ColorButtonUI] OnPointerDown callback executing on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] OnPointerDown callback executing on '{gameObject.name}'");
 
         float pressWidth = _baseWidth * 0.9f;
         float pressHeight = _baseHeight * 0.9f;
@@ -348,7 +348,7 @@ public class ColorButtonUI : UICustomButtonBase
     {
         base.OnPointerUp(eventData);
 
-        Debug.Log($"[ColorButtonUI] OnPointerUp callback executing on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] OnPointerUp callback executing on '{gameObject.name}'");
 
         float targetMultiplier = IsHovered ? _hoverWidthMultiplier : 1.0f;
         float targetWidth = _baseWidth * targetMultiplier;
@@ -378,7 +378,7 @@ public class ColorButtonUI : UICustomButtonBase
             return;
         }
 
-        Debug.Log($"[ColorButtonUI] '{gameObject.name}' animating Outline size to: {targetWidth}x{targetHeight}");
+        if (_enableDebugLogs) Debug.Log($"[ColorButtonUI] '{gameObject.name}' animating Outline size to: {targetWidth}x{targetHeight}");
 
         // Kill active size tweens targeting this specific shapes outline to avoid conflicts
         DOTween.Kill(_outlineShape);

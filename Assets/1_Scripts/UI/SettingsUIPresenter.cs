@@ -32,6 +32,9 @@ public class SettingsUIPresenter : MonoBehaviour
     [SerializeField] private Toggle _autoVadToggle;
     [SerializeField] private Slider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
+    [Header("Debug")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     // Cached runtime variables
     private float _latestRms = 0f;
     private float _smoothedRms = 0f;
@@ -75,7 +78,7 @@ public class SettingsUIPresenter : MonoBehaviour
         // Re-subscribe the frame analyzer to the newly instantiated Input device
         UnsubscribeFromMicrophoneEvents();
         SubscribeToMicrophoneEvents();
-        Debug.Log("[SettingsUIPresenter] Re-subscribed RMS indicator to new microphone input.");
+        if (_enableDebugLogs) Debug.Log("[SettingsUIPresenter] Re-subscribed RMS indicator to new microphone input.");
     }
 
     private void Update()
@@ -220,7 +223,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (Mathf.Abs(snrDb - _lastLoggedSnrDb) >= SnrLogThresholdDelta)
         {
             _lastLoggedSnrDb = snrDb;
-            // Debug.Log($"[SettingsUIPresenter] Audio peak SNR = {snrDb:F2} dB  (noise floor = {noiseRms:F6}  signal RMS = {_smoothedRms:F6})");
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Audio peak SNR = {snrDb:F2} dB  (noise floor = {noiseRms:F6}  signal RMS = {_smoothedRms:F6})");
         }
 
         // In Auto mode: indicator still shows level but calibration is based on defaults (8 dB enter / 4 dB exit)
@@ -278,13 +281,13 @@ public class SettingsUIPresenter : MonoBehaviour
     {
         if (VoiceSettingsConsumer.IsAutoVad)
         {
-            Debug.Log("[SettingsUIPresenter] Sensitivity slider moved but AUTO mode is active — slider ignored.");
+            if (_enableDebugLogs) Debug.Log("[SettingsUIPresenter] Sensitivity slider moved but AUTO mode is active — slider ignored.");
             return;
         }
 
         // Log the threshold equivalent in dB so you can compare to SNR peak logs
         float targetDb = 2.0f + (value * 16.0f);
-        // Debug.Log($"[SettingsUIPresenter] Sensitivity slider -> {value:F3}  |  VAD will trigger when SNR > {targetDb:F2} dB");
+        if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Sensitivity slider -> {value:F3}  |  VAD will trigger when SNR > {targetDb:F2} dB");
 
         SettingsManager.Instance.UpdateSettings(data =>
         {
@@ -324,7 +327,7 @@ public class SettingsUIPresenter : MonoBehaviour
         }
 
         UpdateSensitivitySliderInteractability();
-        Debug.Log($"[SettingsUIPresenter] Auto VAD toggled: {value}");
+        if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Auto VAD toggled: {value}");
     }
 
     /// <summary>

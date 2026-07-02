@@ -37,6 +37,10 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     [SerializeField]
     private bool _interactable = true;
 
+    [Header("Debug")]
+    [SerializeField]
+    protected bool _enableDebugLogs = false;
+
     private bool _isHovered = false;
 
     /// <summary>
@@ -78,7 +82,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         Graphic graphic = GetComponent<Graphic>();
         if (graphic == null)
         {
-            Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': Raycast target missing! A Graphic component (e.g. Image) is required for EventSystem raycasts. Adding a transparent Image dynamically to resolve this.");
+            if (_enableDebugLogs) Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': Raycast target missing! A Graphic component (e.g. Image) is required for EventSystem raycasts. Adding a transparent Image dynamically to resolve this.");
             
             Image dynamicImage = gameObject.AddComponent<Image>();
             dynamicImage.color = new Color(0f, 0f, 0f, 0f);
@@ -86,7 +90,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         }
         else if (!graphic.raycastTarget)
         {
-            Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': The {graphic.GetType().Name} component has raycastTarget set to FALSE. Enabling raycastTarget dynamically so events can fire.");
+            if (_enableDebugLogs) Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': The {graphic.GetType().Name} component has raycastTarget set to FALSE. Enabling raycastTarget dynamically so events can fire.");
             graphic.raycastTarget = true;
         }
     }
@@ -106,7 +110,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     public virtual void OnPointerEnter(PointerEventData eventData)
     {
         if (!_interactable) return;
-        Debug.Log($"[UICustomButtonBase] OnPointerEnter triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerEnter triggered on '{gameObject.name}'");
         _isHovered = true;
         onPointerEnter.Invoke();
     }
@@ -118,7 +122,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     public virtual void OnPointerExit(PointerEventData eventData)
     {
         if (!_interactable) return;
-        Debug.Log($"[UICustomButtonBase] OnPointerExit triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerExit triggered on '{gameObject.name}'");
         _isHovered = false;
         onPointerExit.Invoke();
     }
@@ -130,7 +134,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     public virtual void OnPointerDown(PointerEventData eventData)
     {
         if (!_interactable) return;
-        Debug.Log($"[UICustomButtonBase] OnPointerDown triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerDown triggered on '{gameObject.name}'");
         onPointerDown.Invoke();
     }
 
@@ -141,7 +145,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     public virtual void OnPointerUp(PointerEventData eventData)
     {
         if (!_interactable) return;
-        Debug.Log($"[UICustomButtonBase] OnPointerUp triggered on '{gameObject.name}'");
+        if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerUp triggered on '{gameObject.name}'");
         onPointerUp.Invoke();
     }
 
@@ -154,7 +158,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         if (!_interactable) return;
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            Debug.Log($"[UICustomButtonBase] OnPointerClick (Left-Click) triggered on '{gameObject.name}'");
+            if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerClick (Left-Click) triggered on '{gameObject.name}'");
             onClick.Invoke();
         }
     }

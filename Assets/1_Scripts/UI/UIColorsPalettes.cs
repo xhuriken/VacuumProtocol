@@ -17,6 +17,10 @@ public class UIColorsPalettes : MonoBehaviour
     [SerializeField]
     private Color[] _colors = new Color[16];
 
+    [Header("Debug")]
+    [SerializeField]
+    private bool _enableDebugLogs = false;
+
     [Header("Lobby Integration")]
     [Tooltip("Reference to the Lobby Customization UI script in the scene.")]
     [SerializeField]
@@ -65,7 +69,7 @@ public class UIColorsPalettes : MonoBehaviour
             _colors[3 + i] = rainbowColor;
         }
 
-        Debug.Log("[UIColorsPalettes] Generated 16 quantized colors successfully.");
+        if (_enableDebugLogs) Debug.Log("[UIColorsPalettes] Generated 16 quantized colors successfully.");
     }
 
     /// <summary>
@@ -81,17 +85,17 @@ public class UIColorsPalettes : MonoBehaviour
             _lobbyCustomizationUI = FindAnyObjectByType<LobbyCustomizationUI>();
             if (_lobbyCustomizationUI != null)
             {
-                Debug.Log("[UIColorsPalettes] Automatically located LobbyCustomizationUI in the scene.");
+                if (_enableDebugLogs) Debug.Log("[UIColorsPalettes] Automatically located LobbyCustomizationUI in the scene.");
             }
             else
             {
-                Debug.LogWarning("[UIColorsPalettes] LobbyCustomizationUI could not be found in the scene. Click actions may fail until it is present.");
+                if (_enableDebugLogs) Debug.LogWarning("[UIColorsPalettes] LobbyCustomizationUI could not be found in the scene. Click actions may fail until it is present.");
             }
         }
 
         // Fetch all custom color buttons in the children of this GameObject
         ColorButtonUI[] buttons = GetComponentsInChildren<ColorButtonUI>(true);
-        Debug.Log($"[UIColorsPalettes] Found {buttons.Length} child custom color buttons to initialize.");
+        if (_enableDebugLogs) Debug.Log($"[UIColorsPalettes] Found {buttons.Length} child custom color buttons to initialize.");
 
         // Loop through all custom buttons and configure them based on our color palette
         for (int i = 0; i < buttons.Length; i++)
@@ -99,7 +103,7 @@ public class UIColorsPalettes : MonoBehaviour
             // Stop configuring if we exceed the color palette list size
             if (i >= _colors.Length)
             {
-                Debug.LogWarning($"[UIColorsPalettes] More child buttons exist ({buttons.Length}) than colors defined ({_colors.Length}). Remaining buttons will be left unconfigured.");
+                if (_enableDebugLogs) Debug.LogWarning($"[UIColorsPalettes] More child buttons exist ({buttons.Length}) than colors defined ({_colors.Length}). Remaining buttons will be left unconfigured.");
                 break;
             }
 
@@ -131,13 +135,13 @@ public class UIColorsPalettes : MonoBehaviour
                     }
                     else
                     {
-                        Debug.LogError("[UIColorsPalettes] Color button clicked, but no LobbyCustomizationUI was found in the scene.");
+                        if (_enableDebugLogs) Debug.LogError("[UIColorsPalettes] Color button clicked, but no LobbyCustomizationUI was found in the scene.");
                     }
                 }
             });
         }
 
-        Debug.Log("[UIColorsPalettes] Color palette successfully initialized.");
+        if (_enableDebugLogs) Debug.Log("[UIColorsPalettes] Color palette successfully initialized.");
     }
 }
 
