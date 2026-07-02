@@ -9,6 +9,12 @@ using UnityEngine;
 public class SettingsManager : MonoBehaviour
 {
     private static SettingsManager _instance;
+    private static bool _isQuitting = false;
+
+    /// <summary>
+    /// Gets whether a valid active instance of SettingsManager exists.
+    /// </summary>
+    public static bool HasInstance => _instance != null;
 
     /// <summary>
     /// Gets the singleton instance of the Settings Manager.
@@ -17,6 +23,11 @@ public class SettingsManager : MonoBehaviour
     {
         get
         {
+            if (_isQuitting)
+            {
+                return _instance;
+            }
+
             if (_instance == null)
             {
                 var go = GameObject.Find("SettingsManager");
@@ -180,6 +191,7 @@ public class SettingsManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        _isQuitting = true;
         SaveToDisk();
     }
 

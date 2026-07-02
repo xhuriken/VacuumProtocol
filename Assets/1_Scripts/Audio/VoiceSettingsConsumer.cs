@@ -5,6 +5,7 @@ using Adrenak.UniMic;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.Inputs;
 using Adrenak.UniVoice.Outputs;
+using Adrenak.UniVoice.Filters;
 using Adrenak.UniVoice.Samples;
 
 /// <summary>
@@ -35,7 +36,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void OnDestroy()
     {
-        if (SettingsManager.Instance != null)
+        TeardownLoopbackFilter();
+
+        if (SettingsManager.HasInstance)
         {
             SettingsManager.Instance.UnregisterConsumer(this);
         }
@@ -186,6 +189,23 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
         }
     }
 
+    private static LocalLoopbackFilter _loopbackFilter;
+    private static bool _loopbackRequested = false;
+
+    /// <summary>
+    /// Configures the local loopback audio preview so the player can listen to their own voice (gated by VAD settings).
+    /// </summary>
+    /// <param name="enabled">True to start playing, false to stop.</param>
+    public static void SetLocalLoopback(bool enabled)
+    {
+        _loopbackRequested = enabled;
+        if (_loopbackFilter != null)
+        {
+            _loopbackFilter.Enabled = enabled;
+            Debug.Log($"[VoiceSettingsConsumer] Local microphone loopback preview toggled to: {enabled}");
+        }
+    }
+
     private bool _sessionWasActive = false;
 
     private void Update()
@@ -203,8 +223,112 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
                 _lastAppliedVoiceVolume = -1f;
 
                 OnSettingsUpdated(SettingsManager.Instance.CurrentSettings);
+
+                // Initialize loopback filter after settings have been updated
+                SetupLoopbackFilter();
+
                 Debug.Log("[VoiceSettingsConsumer] VoIP ClientSession detected. Applied saved settings successfully.");
             }
+            else
+            {
+                TeardownLoopbackFilter();
+            }
+        }
+    }
+
+    private void SetupLoopbackFilter()
+    {
+        if (UniVoiceMirrorSetupSample.ClientSession == null) return;
+
+        _loopbackFilter = new LocalLoopbackFilter();
+        _loopbackFilter.Enabled = _loopbackRequested;
+
+        // Insert local loopback preview filter right after SimpleVadFilter to ensure we preview gated sound
+        int insertIndex = 0;
+        var filters = UniVoiceMirrorSetupSample.ClientSession.InputFilters;
+        for (int i = 0; i < filters.Count; i++)
+        {
+            if (filters[i] is SimpleVadFilter)
+            {
+                insertIndex = i + 1;
+                break;
+            }
+        }
+        filters.Insert(insertIndex, _loopbackFilter);
+        Debug.Log("[VoiceSettingsConsumer] Hooked LocalLoopbackFilter into UniVoice InputFilters chain.");
+    }
+
+    private void TeardownLoopbackFilter()
+    {
+        if (_loopbackFilter != null)
+        {
+            if (UniVoiceMirrorSetupSample.ClientSession != null && UniVoiceMirrorSetupSample.ClientSession.InputFilters != null)
+            {
+                UniVoiceMirrorSetupSample.ClientSession.InputFilters.Remove(_loopbackFilter);
+            }
+            _loopbackFilter.Dispose();
+            _loopbackFilter = null;
+            Debug.Log("[VoiceSettingsConsumer] Disposed and removed LocalLoopbackFilter.");
+        }
+    }
+}
+
+/// <summary>
+/// Custom UniVoice filter that intercepts processed microphone PCM float frames and plays them back in real time.
+/// </summary>
+public class LocalLoopbackFilter : IAudioFilter
+{
+    private StreamedAudioSourceOutput _previewOutput;
+    private bool _enabled = false;
+
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (_enabled != value)
+            {
+                _enabled = value;
+                if (_enabled)
+                {
+                    if (_previewOutput == null)
+                    {
+                        _previewOutput = StreamedAudioSourceOutput.New();
+                        var audioSource = _previewOutput.Stream.UnityAudioSource;
+                        if (audioSource != null)
+                        {
+                            audioSource.spatialBlend = 0f; // Force 2D sound so the user hears it clearly in both ears
+                            audioSource.volume = 1f;
+                        }
+                    }
+                }
+                else
+                {
+                    if (_previewOutput != null)
+                    {
+                        _previewOutput.Dispose();
+                        _previewOutput = null;
+                    }
+                }
+            }
+        }
+    }
+
+    public AudioFrame Run(AudioFrame frame)
+    {
+        if (_enabled && _previewOutput != null && frame.samples != null && frame.samples.Length > 0)
+        {
+            _previewOutput.Feed(frame);
+        }
+        return frame;
+    }
+
+    public void Dispose()
+    {
+        if (_previewOutput != null)
+        {
+            _previewOutput.Dispose();
+            _previewOutput = null;
         }
     }
 }

@@ -185,9 +185,11 @@
 - [x] Configure the runtimeconfig.json of DotRush (version 26.6.179) to target stable .NET 9.0 (tfm: net9.0, version: 9.0.17), bypassing .NET 10 preview runtime MSBuild crash bugs.
 - [x] Remove the wildcard `'*'` activation warning in the Unity integration package.json.
 
-
-
-
-
-
-
+## Current Feature: Local VAD Loopback & Teardown Cleanup
+- [x] Expose `SettingsManager.HasInstance` and add `_isQuitting` safety flag to block GameObject spawning on teardown.
+- [x] Update all settings consumers (`VoiceSettingsConsumer`, `InputSettingsConsumer`, `SettingsUIPresenter`) to check `HasInstance` before unregistering or saving on destruction.
+- [x] Implement `LocalLoopbackFilter` to preview microphone audio after VAD processing but before Concentus Opus encoding.
+- [x] Expose static toggling API `VoiceSettingsConsumer.SetLocalLoopback(enabled)` to control local preview playback.
+- [x] Add UI Toggle `_micTestToggle` in `SettingsUIPresenter` and link it to trigger loopback preview dynamically.
+- [x] Verify compilation status.
+- [x] Update `DEVELOPMENT_LOG.md` and `todo.md` to mark tasks as completed.

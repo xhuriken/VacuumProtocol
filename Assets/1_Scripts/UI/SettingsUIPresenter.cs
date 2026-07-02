@@ -24,6 +24,7 @@ public class SettingsUIPresenter : MonoBehaviour
     [SerializeField] private Color _silenceColor = Color.green;
     [SerializeField] private Color _talkingColor = Color.cyan;
     [SerializeField] private float _indicatorSmoothSpeed = 10f;
+    [SerializeField] private Toggle _micTestToggle;
 
     // Cached runtime variables
     private float _latestRms = 0f;
@@ -46,8 +47,11 @@ public class SettingsUIPresenter : MonoBehaviour
         UnsubscribeFromMicrophoneEvents();
         VoiceSettingsConsumer.OnMicInputSwapped -= HandleMicInputSwapped;
 
+        // Force disable microphone loopback preview when the UI panel is closed
+        VoiceSettingsConsumer.SetLocalLoopback(false);
+
         // Flush settings to disk when settings panel is closed/disabled
-        if (SettingsManager.Instance != null)
+        if (SettingsManager.HasInstance)
         {
             SettingsManager.Instance.SaveToDisk();
         }
@@ -87,6 +91,12 @@ public class SettingsUIPresenter : MonoBehaviour
             int selectedIndex = devices.IndexOf(current.ActiveMicrophoneDevice);
             _microphoneDropdown.value = Mathf.Max(0, selectedIndex);
         }
+
+        // Always reset the mic test toggle to off when opening the UI
+        if (_micTestToggle != null)
+        {
+            _micTestToggle.isOn = false;
+        }
     }
 
     private void BindUIEvents()
@@ -95,6 +105,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_voiceVolumeSlider != null) _voiceVolumeSlider.onValueChanged.AddListener(OnVoiceVolumeChanged);
         if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.AddListener(OnSensitivityChanged);
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.AddListener(OnMicrophoneSelected);
+        if (_micTestToggle != null) _micTestToggle.onValueChanged.AddListener(OnMicTestToggleChanged);
     }
 
     private void UnbindUIEvents()
@@ -103,6 +114,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_voiceVolumeSlider != null) _voiceVolumeSlider.onValueChanged.RemoveListener(OnVoiceVolumeChanged);
         if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.RemoveListener(OnSensitivityChanged);
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.RemoveListener(OnMicrophoneSelected);
+        if (_micTestToggle != null) _micTestToggle.onValueChanged.RemoveListener(OnMicTestToggleChanged);
     }
 
     private void SubscribeToMicrophoneEvents()
@@ -216,5 +228,10 @@ public class SettingsUIPresenter : MonoBehaviour
         {
             data.ActiveMicrophoneDevice = selectedDevice;
         });
+    }
+
+    private void OnMicTestToggleChanged(bool value)
+    {
+        VoiceSettingsConsumer.SetLocalLoopback(value);
     }
 }

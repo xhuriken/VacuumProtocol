@@ -25,7 +25,7 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void OnDestroy()
     {
-        if (SettingsManager.Instance != null)
+        if (SettingsManager.HasInstance)
         {
             SettingsManager.Instance.UnregisterConsumer(this);
         }

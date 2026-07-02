@@ -420,11 +420,22 @@
 ### Environment Changes
 - Patched DotRush 26.6.179, forcing its execution environment to the stable .NET 9 CLR runtime, and pinned the workspace to .NET 9 using `global.json` to resolve the MSBuild loading crash.
 
+## [2026-07-02] - Local VAD Loopback & Teardown Cleanup
 
+### Technical Justification & Details
+- **Singleton Teardown Leak Fix**: Resolved Unity warning `Some objects were not cleaned up when closing the scene. (Did you spawn new GameObjects from OnDestroy?)`. In Unity, singletons accessed inside `OnDestroy()` or `OnDisable()` during scene teardown can inadvertently instantiate a new singleton GameObject if the singleton has already been destroyed. Added a `HasInstance` property to `SettingsManager.cs` and an `_isQuitting` safety flag in the `Instance` getter. Updated all settings consumers (`VoiceSettingsConsumer.cs`, `InputSettingsConsumer.cs`, `SettingsUIPresenter.cs`) to check `HasInstance` before trying to unregister or flush settings on destruction.
+- **Local Microphone Loopback (Gated Preview)**: Implemented a Discord-style local microphone test toggle. Added `LocalLoopbackFilter` implementing `IAudioFilter` to intercept PCM frames directly from the microphone after VAD processing but before Concentus Opus compression. This allows players to hear their own voice gated by the threshold value. Added `_micTestToggle` in `SettingsUIPresenter.cs` to trigger the local loopback preview dynamically.
 
+### Code Modified/Added
 
+#### `Assets/1_Scripts/Core/Settings/SettingsManager.cs`
+- Added `HasInstance` static property and `_isQuitting` check to the `Instance` getter to block GameObject spawning during teardown.
 
+#### `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs`
+- Changed `OnDestroy()` to check `SettingsManager.HasInstance`. Implemented the nested class `LocalLoopbackFilter` and the static methods `SetLocalLoopback`, `SetupLoopbackFilter`, and `TeardownLoopbackFilter` to inject loopback preview after VAD.
 
+#### `Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs`
+- Changed `OnDestroy()` to check `SettingsManager.HasInstance` before unregistering.
 
-
-
+#### `Assets/1_Scripts/UI/SettingsUIPresenter.cs`
+- Added `_micTestToggle` field and bound it to toggle the local preview audio loopback. Changed `OnDisable()` to check `SettingsManager.HasInstance` and automatically disable local preview when closing.
