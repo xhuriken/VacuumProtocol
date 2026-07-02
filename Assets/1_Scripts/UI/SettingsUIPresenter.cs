@@ -220,7 +220,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (Mathf.Abs(snrDb - _lastLoggedSnrDb) >= SnrLogThresholdDelta)
         {
             _lastLoggedSnrDb = snrDb;
-            Debug.Log($"[SettingsUIPresenter] Audio peak SNR = {snrDb:F2} dB  (noise floor = {noiseRms:F6}  signal RMS = {_smoothedRms:F6})");
+            // Debug.Log($"[SettingsUIPresenter] Audio peak SNR = {snrDb:F2} dB  (noise floor = {noiseRms:F6}  signal RMS = {_smoothedRms:F6})");
         }
 
         // In Auto mode: indicator still shows level but calibration is based on defaults (8 dB enter / 4 dB exit)
@@ -284,7 +284,7 @@ public class SettingsUIPresenter : MonoBehaviour
 
         // Log the threshold equivalent in dB so you can compare to SNR peak logs
         float targetDb = 2.0f + (value * 16.0f);
-        Debug.Log($"[SettingsUIPresenter] Sensitivity slider -> {value:F3}  |  VAD will trigger when SNR > {targetDb:F2} dB");
+        // Debug.Log($"[SettingsUIPresenter] Sensitivity slider -> {value:F3}  |  VAD will trigger when SNR > {targetDb:F2} dB");
 
         SettingsManager.Instance.UpdateSettings(data =>
         {

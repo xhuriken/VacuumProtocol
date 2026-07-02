@@ -24,10 +24,12 @@ public class SettingsData : ISerializationCallbackReceiver
     [SerializeField] private bool _isFullscreen = true;
 
     // --- Peer Volume Dictionary (Non-serialized directly) ---
-    private Dictionary<int, float> _peerVolumeMultipliers = new Dictionary<int, float>();
+    // Key: Steam64 ID (ulong) — persistent across sessions, unlike Mirror ConnectionId which is session-local.
+    private Dictionary<ulong, float> _peerVolumeMultipliers = new Dictionary<ulong, float>();
 
     // Lists used by ISerializationCallbackReceiver for Dictionary serialization
-    [SerializeField] private List<int> _peerVolumeKeys = new List<int>();
+    // ulong is stored as string to avoid JSON precision loss (ulong exceeds float/int JSON range)
+    [SerializeField] private List<string> _peerVolumeKeys = new List<string>();
     [SerializeField] private List<float> _peerVolumeValues = new List<float>();
 
     /// <summary>
@@ -94,12 +96,14 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets the dictionary of peer volume multipliers (Key: Peer Connection ID, Value: Multiplier).
+    /// Gets the dictionary of peer volume multipliers (Key: Steam64 ID, Value: Volume multiplier [0..2]).
+    /// Keyed by SteamId for persistence across sessions. ConnectionId is session-ephemeral and must not be used here.
     /// </summary>
-    public Dictionary<int, float> PeerVolumeMultipliers => _peerVolumeMultipliers;
+    public Dictionary<ulong, float> PeerVolumeMultipliers => _peerVolumeMultipliers;
 
     /// <summary>
     /// Saves dictionary state to lists before serialization.
+    /// ulong keys are serialized as strings to avoid JSON 64-bit integer precision loss.
     /// </summary>
     public void OnBeforeSerialize()
     {
@@ -108,7 +112,8 @@ public class SettingsData : ISerializationCallbackReceiver
 
         foreach (var kvp in _peerVolumeMultipliers)
         {
-            _peerVolumeKeys.Add(kvp.Key);
+            // Store SteamId as string to survive JsonUtility serialization without precision loss
+            _peerVolumeKeys.Add(kvp.Key.ToString());
             _peerVolumeValues.Add(kvp.Value);
         }
     }
@@ -123,7 +128,11 @@ public class SettingsData : ISerializationCallbackReceiver
         int count = Mathf.Min(_peerVolumeKeys.Count, _peerVolumeValues.Count);
         for (int i = 0; i < count; i++)
         {
-            _peerVolumeMultipliers[_peerVolumeKeys[i]] = _peerVolumeValues[i];
+            // Parse the string key back to ulong
+            if (ulong.TryParse(_peerVolumeKeys[i], out ulong steamId))
+            {
+                _peerVolumeMultipliers[steamId] = _peerVolumeValues[i];
+            }
         }
     }
 }

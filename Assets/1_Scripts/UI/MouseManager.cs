@@ -15,6 +15,16 @@ public class MouseManager : MonoBehaviour
     /// <summary>
     /// Unity Awake callback. Establishes the singleton pattern.
     /// </summary>
+    [Header("Settings")]
+    [Tooltip("If true, the default system cursor will be hidden when the custom cursor is active.")]
+    [SerializeField] private bool _hideHardwareCursor = true;
+
+    /// <summary>
+    /// Gets whether the custom cursor should be visible based on lockstate.
+    /// True if mouse is unlocked (UI menus), false if locked (FPS gameplay).
+    /// </summary>
+    public bool ShouldShowCursor { get; private set; } = true;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -23,6 +33,43 @@ public class MouseManager : MonoBehaviour
             return;
         }
         Instance = this;
+
+        // Persist mouse manager across scenes
+        transform.SetParent(null);
+        DontDestroyOnLoad(gameObject);
+
+        UpdateCursorState();
+    }
+
+    private void Start()
+    {
+        UpdateCursorState();
+    }
+
+    private void Update()
+    {
+        UpdateCursorState();
+    }
+
+    /// <summary>
+    /// Evaluates Unity's cursor lockstate and visibility context.
+    /// Hide hardware cursor underneath the custom cursor disk.
+    /// </summary>
+    private void UpdateCursorState()
+    {
+        // If the system cursor is locked (e.g., first-person gameplay controls are active)
+        // we should hide custom cursor disks.
+        bool isCursorLocked = Cursor.lockState == CursorLockMode.Locked;
+        ShouldShowCursor = !isCursorLocked;
+
+        if (ShouldShowCursor)
+        {
+            // Hide the default operating system mouse cursor underneath our disk
+            if (_hideHardwareCursor && Cursor.visible)
+            {
+                Cursor.visible = false;
+            }
+        }
     }
 
     /// <summary>

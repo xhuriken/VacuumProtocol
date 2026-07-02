@@ -169,6 +169,15 @@ public class LobbyController : MonoBehaviour
             NewPlayerItemScript.Ready = player.Ready;
             NewPlayerItemScript.SetPlayerValues();
 
+            // Initialize per-peer volume slider: pass both IDs.
+            // SteamId is the persistent storage key; ConnectionId is the runtime UniVoice key.
+            var volumeSlider = newPlayerItem.GetComponent<PlayerVolumeSlider>();
+            if (volumeSlider != null)
+            {
+                bool isLocal = player.isLocalPlayer;
+                volumeSlider.SetPeerIdentity(player.ConnectionId, player.PlayerSteamId, isLocal);
+            }
+
             newPlayerItem.transform.SetParent(PlayerListViewContent.transform);
             newPlayerItem.transform.localPosition = new Vector3(0, 0, 0);
             newPlayerItem.transform.localScale = Vector3.one;
@@ -195,6 +204,15 @@ public class LobbyController : MonoBehaviour
                 NewPlayerItemScript.PlayerSteamId = player.PlayerSteamId;
                 NewPlayerItemScript.Ready = player.Ready;
                 NewPlayerItemScript.SetPlayerValues();
+
+                // Initialize per-peer volume slider: pass both IDs.
+                // SteamId is the persistent storage key; ConnectionId is the runtime UniVoice key.
+                var volumeSlider = newPlayerItem.GetComponent<PlayerVolumeSlider>();
+                if (volumeSlider != null)
+                {
+                    bool isLocal = player.isLocalPlayer;
+                    volumeSlider.SetPeerIdentity(player.ConnectionId, player.PlayerSteamId, isLocal);
+                }
 
                 newPlayerItem.transform.SetParent(PlayerListViewContent.transform);
                 newPlayerItem.transform.localScale = Vector3.one;

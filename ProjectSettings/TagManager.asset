@@ -44,6 +44,9 @@ TagManager:
   - name: UI
     uniqueID: 1443710875
     locked: 0
+  - name: CURSOR
+    uniqueID: 241687243
+    locked: 0
   m_RenderingLayers:
   - Default
   - Light Layer 1

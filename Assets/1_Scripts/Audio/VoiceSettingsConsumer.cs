@@ -251,6 +251,21 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
         float baseVolume = settings.MasterVolume * settings.VoiceVolume;
 
+        // Build a temporary lookup: Mirror ConnectionId -> Steam64 ID, using the GamePlayers list.
+        // GamePlayers is populated by MyNetworkManager and contains both IDs for every connected peer.
+        var manager = MyNetworkManager.singleton as MyNetworkManager;
+        var connectionToSteam = new System.Collections.Generic.Dictionary<int, ulong>();
+        if (manager != null)
+        {
+            foreach (var player in manager.GamePlayers)
+            {
+                if (player != null)
+                {
+                    connectionToSteam[player.ConnectionId] = player.PlayerSteamId;
+                }
+            }
+        }
+
         foreach (var kp in UniVoiceMirrorSetupSample.ClientSession.PeerOutputs)
         {
             int peerId = kp.Key;
@@ -258,18 +273,42 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
             if (output is StreamedAudioSourceOutput streamedOutput)
             {
-                // Retrieve peer volume multiplier (default to 1.0 if not defined)
+                // Resolve SteamId from ConnectionId, then look up the saved multiplier
                 float peerMultiplier = 1.0f;
-                if (settings.PeerVolumeMultipliers.TryGetValue(peerId, out float mult))
+                if (connectionToSteam.TryGetValue(peerId, out ulong steamId)
+                    && settings.PeerVolumeMultipliers.TryGetValue(steamId, out float mult))
                 {
                     peerMultiplier = mult;
                 }
 
-                // Combined volume formula
+                // Combined volume formula: master * voice * per-peer multiplier
                 streamedOutput.Stream.UnityAudioSource.volume = baseVolume * peerMultiplier;
             }
         }
     }
+
+    /// <summary>
+    /// Immediately adjusts the AudioSource volume of a single peer identified by their Mirror ConnectionId.
+    /// Called by PlayerVolumeSlider on each slider change for real-time response without cache lag.
+    /// The multiplier is sourced directly from the caller — no dictionary lookup required here.
+    /// </summary>
+    /// <param name="peerId">Mirror ConnectionId (session-local runtime key for UniVoice PeerOutputs).</param>
+    /// <param name="multiplier">Volume multiplier in [0, 2] range.</param>
+    public static void ApplyPeerVolume(int peerId, float multiplier)
+    {
+        if (UniVoiceMirrorSetupSample.ClientSession == null) return;
+        if (!UniVoiceMirrorSetupSample.ClientSession.PeerOutputs.TryGetValue(peerId, out IAudioOutput output)) return;
+
+        if (output is StreamedAudioSourceOutput streamedOutput && SettingsManager.HasInstance)
+        {
+            var settings = SettingsManager.Instance.CurrentSettings;
+            float baseVolume = settings.MasterVolume * settings.VoiceVolume;
+            streamedOutput.Stream.UnityAudioSource.volume = baseVolume * multiplier;
+            Debug.Log($"[VoiceSettingsConsumer] Peer {peerId} volume -> {multiplier:F2}x (final = {baseVolume * multiplier:F3})");
+        }
+    }
+
+
 
     private static LocalLoopbackFilter _loopbackFilter;
     private static bool _loopbackRequested = false;

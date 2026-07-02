@@ -443,3 +443,48 @@
 - Added `_micTestToggle` field and bound it to toggle the local preview audio loopback. Changed `OnDisable()` to check `SettingsManager.HasInstance` and automatically disable local preview when closing.
 - Implemented **Peak-Hold (Instant-Attack, Slow-Decay)** visual meter logic in `UpdateVolumeIndicator()`. If a new audio frame peak is higher than the smoothed value, the jauge jumps to it instantly instead of being slowed down by interpolation (Lerp). The meter then decays slowly.
 - Aligned visual level indicator logarithmically to display the **live Signal-to-Noise Ratio (SNR) in dB** instead of raw linear RMS. It queries the active noise floor `_noiseRms` dynamically via reflection from `SimpleVad`, computes `20 * log10(signal / noise)`, and maps the result to the precise 2..18 dB SNR range of the sensitivity slider. This ensures the voice indicator crosses the slider handle to the exact pixel whenever the noise gate opens.
+
+## [2026-07-02] - Per-Peer Volume Slider (Lobby)
+
+### Technical Justification & Details
+- **Feature Request**: Each player in the lobby should be able to independently adjust the volume of each other player's voice (from 0% to 200%).
+- **Architecture**: `SettingsData` already held a `Dictionary<int, float> PeerVolumeMultipliers` (key = Mirror `ConnectionId`) that was already serialized and already read by `VoiceSettingsConsumer.ApplyVoiceVolumes()`. However, no UI script existed to write into this dictionary.
+- **Slider Range**: The slider uses `[0, 2]` (not `[0, 1]`). The float value is used directly as a multiplier in `baseVolume * peerMultiplier`. `1.0 = 100%`, `2.0 = 200%`, `0 = muted`.
+- **Immediate Application**: Instead of waiting for the `SettingsManager` → `ISettingsConsumer` propagation loop (which only fires when MasterVolume or VoiceVolume changes), a new static method `VoiceSettingsConsumer.ApplyPeerVolume(int peerId, float multiplier)` directly touches the target peer's `UnityAudioSource.volume` for zero-latency feedback while the user is dragging the slider.
+- **Local Player Card Handling**: When `LobbyController` instantiates a `PlayerListItem`, it checks if the card belongs to the local player and if so, disables and hides the volume slider (`volumeSlider.SetConnectionId(id, isLocalPlayer: true)`). Adjusting your own outgoing voice for yourself is meaningless.
+- **Persistence**: On slider change, `SettingsManager.UpdateSettings()` writes to `PeerVolumeMultipliers[connectionId]`. On startup/reconnect, `PlayerVolumeSlider.RefreshFromSettings()` restores the slider position from saved data.
+
+### Code Modified/Added
+
+#### [NEW] `Assets/1_Scripts/UI/PlayerVolumeSlider.cs`
+- MonoBehaviour placed on each `PlayerListItem` prefab.
+- Exposes `SetConnectionId(int, bool)` to bind itself to a Mirror peer by ConnectionId.
+- Listens to `onValueChanged`, persists via `SettingsManager.UpdateSettings`, and calls `VoiceSettingsConsumer.ApplyPeerVolume` for real-time volume control.
+- Hides the slider entirely when `isLocalPlayer = true`.
+
+#### [MODIFY] `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs`
+- Added `public static void ApplyPeerVolume(int peerId, float multiplier)` — directly applies `baseVolume * multiplier` to the peer's `UnityAudioSource` for immediate feedback without waiting for `OnSettingsUpdated`.
+
+#### [MODIFY] `Assets/1_Scripts/Networking/Lobby/LobbyController.cs`
+- Both `CreateHostPlayerItem()` and `CreateClientPlayerItem()` now call `volumeSlider.SetConnectionId(player.ConnectionId, isLocal)` after each `PlayerListItem` instantiation.
+
+## [2026-07-02] - Custom UI Cursor (Follower Architecture)
+
+### Technical Justification & Details
+- **Feature Request**: Hide the default system cursor and display a custom circle/disc shape cursor. The setup must avoid multi-scene canvas registration issues (e.g. cameras going missing during DontDestroyOnLoad transitions) and work cleanly in all rendering modes (Overlay and Screen Space Camera).
+- **Implementation**: 
+  - **Decoupled Architecture**: Upgraded `MouseManager.cs` to serve solely as a persistent global coordinator (`DontDestroyOnLoad`). It hides the default hardware cursor and exposes `ShouldShowCursor` (based on `Cursor.lockState`) and `MousePosition`.
+  - **Local Follower Component**: Created `CustomCursorFollower.cs`. You can place the custom cursor prefab inside any local Canvas of any scene. The local follower reads the global `MouseManager` values, automatically adapts to the local Canvas scaler, handles camera lookups locally on the active Canvas, and handles visibility automatically.
+
+### Code Modified/Added
+
+#### [NEW] `Assets/1_Scripts/UI/CustomCursorFollower.cs`
+- Local follower script to place on local custom cursor UI prefabs.
+- Handles ScreenSpace camera-relative point translation locally, adapting instantly to any screen resolution, scale factor, or rendering mode.
+
+#### [MODIFY] `Assets/1_Scripts/UI/MouseManager.cs`
+- Stripped UI Canvas positioning logic.
+- Serves as persistent, clean global mouse coordinate provider and hardware cursor suppression system.
+
+
+
