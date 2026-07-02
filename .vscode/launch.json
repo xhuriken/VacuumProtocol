@@ -4,7 +4,8 @@
         {
             "name": "Attach to Unity Editor",
             "type": "unity",
-            "request": "attach"
+            "request": "attach",
+            "path": "${workspaceFolder}/Library/EditorInstance.json"
         },
         {
             "name": "Attach to Unity Player",

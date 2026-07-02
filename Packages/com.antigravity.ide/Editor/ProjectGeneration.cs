@@ -355,6 +355,7 @@ public static class ProjectGeneration
         sb.AppendLine("  <ItemGroup>");
 
         var referencedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        referencedNames.Add(assembly.name);
         foreach (var reference in assembly.compiledAssemblyReferences)
         {
             var refName = Path.GetFileNameWithoutExtension(reference);

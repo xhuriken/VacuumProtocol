@@ -235,7 +235,7 @@ public class AntigravityScriptEditor : IExternalCodeEditor
                     {
                         installations.Add(new CodeEditor.Installation
                         {
-                            Name = EditorName,
+                            Name = canonicalPath.Contains("Antigravity IDE") ? "Antigravity IDE" : "Antigravity",
                             Path = canonicalPath
                         });
                     }
@@ -492,7 +492,7 @@ public class AntigravityScriptEditor : IExternalCodeEditor
 
         installation = new CodeEditor.Installation
         {
-            Name = EditorName,
+            Name = editorPath.Contains("Antigravity IDE") ? "Antigravity IDE" : "Antigravity",
             Path = installPath
         };
         return true;

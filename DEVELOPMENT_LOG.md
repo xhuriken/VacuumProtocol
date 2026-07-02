@@ -391,6 +391,37 @@
 #### `Assets/1_Scripts/Audio/UniVoiceMirrorSetupSample.cs`
 - Updated `SetupClientSession()` to initialize using the saved `ActiveMicrophoneDevice` name from `SettingsManager.Instance.CurrentSettings` instead of defaulting statically to the first microphone index in the system.
 
+## [2026-07-02] - IDE Configuration & Autocomplete Repair
+
+### Technical Justification & Details
+- **Self-Reference DLL Bug in Project Generator**: Fixed a compiler-blocking bug in `ProjectGeneration.cs` where assemblies (such as `Mirror.Components.csproj`) were being configured to reference their own pre-compiled DLL binaries located under `Library/ScriptAssemblies/`. This self-reference caused duplicate type definitions at compilation, generating CS0121 ambiguity errors (e.g. `'PredictedSyncDataReadWrite.ReadPredictedSyncData' is ambiguous between ...`). These compilation failures broke the Roslyn Analyzer/LSP, blocking autocomplete for Unity-specific APIs globally. Fix applied by adding `assembly.name` to `referencedNames` immediately, ensuring the generator skips adding the assembly's own compiled output as a dependency.
+- **Extension Conflict Resolution**: Cleaned up the IDE's extensions directory and updated `extensions.json` and `.obsolete` list. Removed `muhammad-sammy.csharp` (conflicts with DotRush), `zlorn.vstuc` (redundant debugger bridge), and `november.clover-unity` (redundant Unity integration), leaving `nromanov.dotrush` and `antigravity-unity` as the single unified C# and Unity support stack to prevent language server conflicts and performance issues.
+- **Visual Studio Aesthetics Match**: Configured global user settings in `settings.json` to match the exact aesthetics of Visual Studio C#, setting the theme to `Visual Studio Dark` (`vs-dark`), font to `Consolas`, and enabling autocomplete, parameter hints, and enter-to-commit preferences.
+- **Unity External Script Editor Distinction**: Modified [AntigravityScriptEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Packages/com.antigravity.ide/Editor/AntigravityScriptEditor.cs) to dynamically differentiate between "Antigravity" and "Antigravity IDE" depending on their executable paths. This allows selecting the correct executable in the Unity Preferences dropdown list.
+- **Clover Extension Restoration**: Re-installed `november.clover-unity` v1.0.5 in the IDE via CLI to restore the "1 meta reference", "Unity Script", and "Unity Serialized Field" CodeLens annotations.
+- **Workspace-wide SDK Pinning**: Added a [global.json](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/global.json) file at the root of the workspace to force the use of stable `.NET 9` SDK (`9.0.315`), resolving MSBuild incompatibilities on preview .NET 10 systems.
+- **DotRush .NET 9 Runtime Override**: Configured the `DotRush.runtimeconfig.json` of the re-installed DotRush version `26.6.179` to target `.NET 9` (TFM `net9.0`, runtime `9.0.17`), and registered it in `extensions.json` to bypass .NET 10 preview runtime MSBuild crash bugs.
+- **Package.json Activation Cleanup**: Removed the wildcard `*` from the activationEvents array in the Unity extension package.json to eliminate performance warnings in the IDE problems list.
+
+### Code Modified/Added
+
+#### [MODIFY] [AntigravityScriptEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Packages/com.antigravity.ide/Editor/AntigravityScriptEditor.cs)
+- Replaced hardcoded `EditorName` references with path checks to dynamically return `"Antigravity IDE"` or `"Antigravity"`.
+
+#### [MODIFY] [package.json (extension)](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Packages/com.antigravity.ide/antigravity-unity-extension~/package.json)
+- Removed wildcard `*` activation entry.
+
+#### [MODIFY] [DotRush.runtimeconfig.json](file:///c:/Users/celestin/.antigravity-ide/extensions/nromanov.dotrush-26.6.179-win32-x64/extension/bin/LanguageServer/DotRush.runtimeconfig.json)
+- Override `tfm` to `"net9.0"` and `version` to `"9.0.17"`.
+
+#### [NEW] [global.json](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/global.json)
+- Configured to pin .NET SDK version to `9.0.315`.
+
+### Environment Changes
+- Patched DotRush 26.6.179, forcing its execution environment to the stable .NET 9 CLR runtime, and pinned the workspace to .NET 9 using `global.json` to resolve the MSBuild loading crash.
+
+
+
 
 
 

@@ -172,6 +172,22 @@
 - [x] Run compilation checks to ensure everything builds successfully.
 - [x] Update `DEVELOPMENT_LOG.md` and `todo.md` to mark tasks as completed.
 
+## Current Task: IDE Configuration & Autocomplete Repair
+- [x] Fix self-reference DLL reference bug in `ProjectGeneration.cs` project generator.
+- [x] Clean up conflicting C# / Unity extensions (`csharp`, `vstuc`, `clover-unity`) to remove LSP and utility overlaps.
+- [x] Update global `settings.json` for Visual Studio C# aesthetics (Visual Studio 2022 Dark theme, Cascadia Code font with ligatures, Ctrl + molette zoom, Quick Suggestions, Enter suggestion commit, Tab completion).
+- [x] Run local compilation verification to ensure all project assemblies build without CS0121 errors.
+- [x] Upgrade dotnet 10 SDK to 10.0.301 to check if runtime mismatch was resolved (MSBuild still had incompatibility in preview assemblies).
+- [x] Install stable dotnet 9 SDK (9.0.315) and update workspace `settings.json` to load it. This resolves the `Microsoft.Build.Shared.XMakeElements` TypeInitializationException completely.
+- [x] Dynamically name the external script editor entries in `AntigravityScriptEditor.cs` to show both "Antigravity" and "Antigravity IDE" in Unity preferences.
+- [x] Re-install the Clover extension (`november.clover-unity`) to restore the "1 meta reference", "Unity Script", "Unity Serialized Field" annotations above classes/fields.
+- [x] Create a `global.json` file in the workspace root to pin the SDK to stable `9.0.315` and prevent preview .NET 10 compilation blocks.
+- [x] Configure the runtimeconfig.json of DotRush (version 26.6.179) to target stable .NET 9.0 (tfm: net9.0, version: 9.0.17), bypassing .NET 10 preview runtime MSBuild crash bugs.
+- [x] Remove the wildcard `'*'` activation warning in the Unity integration package.json.
+
+
+
+
 
 
 

@@ -36,7 +36,6 @@
         "unity-debug"
     ],
     "activationEvents": [
-        "*",
         "onLanguage:csharp",
         "workspaceContains:**/*.unity",
         "workspaceContains:Assets/",
