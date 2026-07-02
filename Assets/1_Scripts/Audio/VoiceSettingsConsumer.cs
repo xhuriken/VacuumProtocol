@@ -19,6 +19,11 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     /// </summary>
     public static event Action OnMicInputSwapped;
 
+    /// <summary>
+    /// When true, the manual sensitivity slider is ignored and UniVoice's default VAD config is used.
+    /// </summary>
+    public static bool IsAutoVad { get; private set; } = false;
+
     private FieldInfo _vadConfigField;
     private string _lastAppliedDevice;
     private float _lastAppliedSensitivity = -1f;
@@ -30,12 +35,18 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
         // Cache reflection info for VAD config access
         _vadConfigField = typeof(SimpleVad).GetField("_config", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // Register instance callback for static Auto VAD toggle hot-reload
+        _onAutoVadChanged += OnAutoVadChangedCallback;
+
         // Register with the central settings manager
         SettingsManager.Instance.RegisterConsumer(this);
     }
 
     private void OnDestroy()
     {
+        // Unregister from static callback to avoid stale instance references after destroy
+        _onAutoVadChanged -= OnAutoVadChangedCallback;
+
         TeardownLoopbackFilter();
 
         if (SettingsManager.HasInstance)
@@ -73,6 +84,62 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             _lastAppliedMasterVolume = settings.MasterVolume;
             _lastAppliedVoiceVolume = settings.VoiceVolume;
             ApplyVoiceVolumes(settings);
+        }
+    }
+
+    // Internal callback allowing the static SetAutoVad to trigger instance-level config changes
+    private static Action _onAutoVadChanged;
+
+    /// <summary>
+    /// Toggles the Auto VAD mode. When enabled, restores UniVoice default config immediately.
+    /// When disabled, re-applies the saved sensitivity from SettingsManager.
+    /// </summary>
+    /// <param name="enabled">True to use UniVoice default VAD; false to use manual slider value.</param>
+    public static void SetAutoVad(bool enabled)
+    {
+        IsAutoVad = enabled;
+        _onAutoVadChanged?.Invoke();
+        Debug.Log($"[VoiceSettingsConsumer] Auto VAD mode set to: {enabled}");
+    }
+
+    private void OnAutoVadChangedCallback()
+    {
+        if (IsAutoVad)
+        {
+            RestoreDefaultVadConfig();
+        }
+        else
+        {
+            // Invalidate cache and immediately re-apply the saved manual threshold
+            _lastAppliedSensitivity = -1f;
+            if (SettingsManager.HasInstance)
+            {
+                OnSettingsUpdated(SettingsManager.Instance.CurrentSettings);
+            }
+        }
+    }
+
+    private void RestoreDefaultVadConfig()
+    {
+        if (UniVoiceMirrorSetupSample.LocalVad == null || _vadConfigField == null) return;
+
+        try
+        {
+            var config = _vadConfigField.GetValue(UniVoiceMirrorSetupSample.LocalVad) as SimpleVad.Config;
+            if (config != null)
+            {
+                // Restore UniVoice SimpleVad defaults (from SimpleVad.Config class definition)
+                config.SnrEnterDb = 8f;
+                config.SnrExitDb = 4f;
+                config.ReleaseMs = 1000;
+                config.NoDropWindowMs = 400;
+                config.AttackMs = 20;
+                Debug.Log("[VoiceSettingsConsumer] Restored default UniVoice VAD config.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[VoiceSettingsConsumer] Failed to restore default VAD config: {ex.Message}");
         }
     }
 
@@ -142,6 +209,13 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void ApplyGateSensitivity(float sensitivity)
     {
+        // In Auto mode, skip manual config and restore defaults instead
+        if (IsAutoVad)
+        {
+            RestoreDefaultVadConfig();
+            return;
+        }
+
         if (UniVoiceMirrorSetupSample.LocalVad == null || _vadConfigField == null) return;
 
         try
@@ -150,11 +224,19 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             if (config != null)
             {
                 // Map sensitivity (0.0 to 1.0) to decibel thresholds
-                // 0.0 = very sensitive (2 dB enter threshold)
-                // 1.0 = barely sensitive (32 dB enter threshold)
-                float targetDb = 2.0f + (sensitivity * 30.0f);
+                // 0.0 = very sensitive (2 dB SNR enter threshold)
+                // 1.0 = barely sensitive (18 dB SNR enter threshold)
+                // Using 18 dB instead of 32 dB makes the slider much more precise (useful zone spread across the full width)
+                float targetDb = 2.0f + (sensitivity * 16.0f);
                 config.SnrEnterDb = targetDb;
-                config.SnrExitDb = Mathf.Max(1.0f, targetDb - 4.0f); // maintain a hysteresis gap
+                config.SnrExitDb = Mathf.Max(1.0f, targetDb - 3.0f); // maintain a small hysteresis gap (3 dB)
+
+                // Speed up release time (hangover) from default 1000ms (1s) to 300ms for snappier cutoffs
+                config.ReleaseMs = 300;
+                config.NoDropWindowMs = 200;
+
+                // Log the resolved threshold so the user can compare against audio peak logs
+                Debug.Log($"[VoiceSettingsConsumer] Sensitivity slider = {sensitivity:F3} -> SNR enter threshold = {targetDb:F2} dB  (exit = {config.SnrExitDb:F2} dB)");
             }
         }
         catch (Exception ex)

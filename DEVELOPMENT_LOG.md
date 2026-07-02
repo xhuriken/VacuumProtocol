@@ -433,9 +433,13 @@
 
 #### `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs`
 - Changed `OnDestroy()` to check `SettingsManager.HasInstance`. Implemented the nested class `LocalLoopbackFilter` and the static methods `SetLocalLoopback`, `SetupLoopbackFilter`, and `TeardownLoopbackFilter` to inject loopback preview after VAD.
+- Optimized VAD sensitivity mappings in `ApplyGateSensitivity()` from a wide 2..32 dB SNR range to a more precise 2..18 dB SNR range.
+- Reduced the VAD release hangover timer (`ReleaseMs`) from 1000ms to 300ms, and `NoDropWindowMs` to 200ms to ensure highly responsive, snappy voice cuts.
 
 #### `Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs`
 - Changed `OnDestroy()` to check `SettingsManager.HasInstance` before unregistering.
 
 #### `Assets/1_Scripts/UI/SettingsUIPresenter.cs`
 - Added `_micTestToggle` field and bound it to toggle the local preview audio loopback. Changed `OnDisable()` to check `SettingsManager.HasInstance` and automatically disable local preview when closing.
+- Implemented **Peak-Hold (Instant-Attack, Slow-Decay)** visual meter logic in `UpdateVolumeIndicator()`. If a new audio frame peak is higher than the smoothed value, the jauge jumps to it instantly instead of being slowed down by interpolation (Lerp). The meter then decays slowly.
+- Aligned visual level indicator logarithmically to display the **live Signal-to-Noise Ratio (SNR) in dB** instead of raw linear RMS. It queries the active noise floor `_noiseRms` dynamically via reflection from `SimpleVad`, computes `20 * log10(signal / noise)`, and maps the result to the precise 2..18 dB SNR range of the sensitivity slider. This ensures the voice indicator crosses the slider handle to the exact pixel whenever the noise gate opens.

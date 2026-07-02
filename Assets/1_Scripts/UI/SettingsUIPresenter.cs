@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Adrenak.UniMic;
 using Adrenak.UniVoice;
+using System.Reflection;
 
 /// <summary>
 /// Presenter that bridges UI components with SettingsManager properties.
@@ -21,21 +22,32 @@ public class SettingsUIPresenter : MonoBehaviour
     [Header("Microphone Level Indicator")]
     [SerializeField] private Slider _micLevelIndicator;
     [SerializeField] private Image _micLevelFillImage;
-    [SerializeField] private Color _silenceColor = Color.green;
-    [SerializeField] private Color _talkingColor = Color.cyan;
+    [SerializeField] private Color _silenceColor = new Color(0.341f, 0.235f, 0.251f, 1.000f);
+    [SerializeField] private Color _talkingColor = new Color(0.000f, 1.000f, 0.251f, 1.000f);
     [SerializeField] private float _indicatorSmoothSpeed = 10f;
     [SerializeField] private Toggle _micTestToggle;
+
+    [Header("Auto VAD Mode")]
+    [Tooltip("When enabled, bypasses the manual sensitivity slider and uses UniVoice's default VAD algorithm.")]
+    [SerializeField] private Toggle _autoVadToggle;
+    [SerializeField] private Slider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
     // Cached runtime variables
     private float _latestRms = 0f;
     private float _smoothedRms = 0f;
     private bool _isSubscribedToMic = false;
+    private FieldInfo _noiseRmsField;
+    private float _lastLoggedSnrDb = float.MinValue;
+    private const float SnrLogThresholdDelta = 1.5f; // only log SNR if it changes by more than this amount
 
     private void OnEnable()
     {
         InitializeUI();
         BindUIEvents();
         SubscribeToMicrophoneEvents();
+
+        // Cache reflection field to query active noise floor from UniVoice VAD
+        _noiseRmsField = typeof(SimpleVad).GetField("_noiseRms", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Listen for microphone hot-swap changes to re-bind the RMS level listener
         VoiceSettingsConsumer.OnMicInputSwapped += HandleMicInputSwapped;
@@ -47,8 +59,9 @@ public class SettingsUIPresenter : MonoBehaviour
         UnsubscribeFromMicrophoneEvents();
         VoiceSettingsConsumer.OnMicInputSwapped -= HandleMicInputSwapped;
 
-        // Force disable microphone loopback preview when the UI panel is closed
+        // Force disable microphone loopback preview and auto VAD when the UI panel is closed
         VoiceSettingsConsumer.SetLocalLoopback(false);
+        // Note: we do NOT reset AutoVad on panel close — user preference persists until toggled off
 
         // Flush settings to disk when settings panel is closed/disabled
         if (SettingsManager.HasInstance)
@@ -92,11 +105,12 @@ public class SettingsUIPresenter : MonoBehaviour
             _microphoneDropdown.value = Mathf.Max(0, selectedIndex);
         }
 
-        // Always reset the mic test toggle to off when opening the UI
-        if (_micTestToggle != null)
-        {
-            _micTestToggle.isOn = false;
-        }
+        // Always reset both toggles to off when opening the UI
+        if (_micTestToggle != null) _micTestToggle.isOn = false;
+        if (_autoVadToggle != null) _autoVadToggle.isOn = VoiceSettingsConsumer.IsAutoVad;
+
+        // Sync slider interactability with current auto mode state
+        UpdateSensitivitySliderInteractability();
     }
 
     private void BindUIEvents()
@@ -106,6 +120,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.AddListener(OnSensitivityChanged);
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.AddListener(OnMicrophoneSelected);
         if (_micTestToggle != null) _micTestToggle.onValueChanged.AddListener(OnMicTestToggleChanged);
+        if (_autoVadToggle != null) _autoVadToggle.onValueChanged.AddListener(OnAutoVadToggleChanged);
     }
 
     private void UnbindUIEvents()
@@ -115,6 +130,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.RemoveListener(OnSensitivityChanged);
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.RemoveListener(OnMicrophoneSelected);
         if (_micTestToggle != null) _micTestToggle.onValueChanged.RemoveListener(OnMicTestToggleChanged);
+        if (_autoVadToggle != null) _autoVadToggle.onValueChanged.RemoveListener(OnAutoVadToggleChanged);
     }
 
     private void SubscribeToMicrophoneEvents()
@@ -172,9 +188,57 @@ public class SettingsUIPresenter : MonoBehaviour
     {
         if (_micLevelIndicator == null) return;
 
-        // Interpolate the value on the main thread for smooth transitions
-        _smoothedRms = Mathf.Lerp(_smoothedRms, _latestRms, Time.deltaTime * _indicatorSmoothSpeed);
-        _micLevelIndicator.value = Mathf.Clamp01(_smoothedRms * 10f); // Multiply to boost visualization scale
+        // Peak-hold (Instant-Attack, Slow-Decay) meter logic.
+        float rawTarget = _latestRms;
+        if (rawTarget > _smoothedRms)
+        {
+            _smoothedRms = rawTarget;
+        }
+        else
+        {
+            _smoothedRms = Mathf.Lerp(_smoothedRms, rawTarget, Time.deltaTime * _indicatorSmoothSpeed);
+        }
+
+        // Get VAD noise floor dynamically via reflection to compute actual SNR
+        float noiseRms = 0.002f; // default fallback if VAD is not active yet
+        if (UniVoiceMirrorSetupSample.LocalVad != null && _noiseRmsField != null)
+        {
+            try
+            {
+                noiseRms = (float)_noiseRmsField.GetValue(UniVoiceMirrorSetupSample.LocalVad);
+            }
+            catch
+            {
+                noiseRms = 0.002f;
+            }
+        }
+
+        // Calculate live SNR in dB
+        float snrDb = 20f * Mathf.Log10((_smoothedRms + 1e-6f) / (noiseRms + 1e-6f));
+
+        // Log the SNR when it crosses a meaningful threshold — useful for comparing against sensitivity threshold logs
+        if (Mathf.Abs(snrDb - _lastLoggedSnrDb) >= SnrLogThresholdDelta)
+        {
+            _lastLoggedSnrDb = snrDb;
+            Debug.Log($"[SettingsUIPresenter] Audio peak SNR = {snrDb:F2} dB  (noise floor = {noiseRms:F6}  signal RMS = {_smoothedRms:F6})");
+        }
+
+        // In Auto mode: indicator still shows level but calibration is based on defaults (8 dB enter / 4 dB exit)
+        float snrMin, snrRange;
+        if (VoiceSettingsConsumer.IsAutoVad)
+        {
+            snrMin = 4f;  // SnrExitDb default
+            snrRange = 12f; // 4..16 dB covers the visible range when using defaults
+        }
+        else
+        {
+            snrMin = 2.0f;   // manual mode minimum
+            snrRange = 16.0f; // 2..18 dB maps to 0..1
+        }
+
+        // Map SNR to the linear [0..1] range of the indicator
+        float normalizedVal = (snrDb - snrMin) / snrRange;
+        _micLevelIndicator.value = Mathf.Clamp01(normalizedVal);
 
         // Visual feedback matching Discord: change indicator color when speaking vs silent
         if (_micLevelFillImage != null)
@@ -186,7 +250,7 @@ public class SettingsUIPresenter : MonoBehaviour
             }
             else if (_micSensitivitySlider != null)
             {
-                // Fallback check (e.g. offline menu): compare normalized live RMS against slider threshold
+                // Fallback check (e.g. offline menu): compare normalized live SNR against slider threshold
                 isSpeaking = _micLevelIndicator.value > _micSensitivitySlider.value;
             }
 
@@ -212,6 +276,16 @@ public class SettingsUIPresenter : MonoBehaviour
 
     private void OnSensitivityChanged(float value)
     {
+        if (VoiceSettingsConsumer.IsAutoVad)
+        {
+            Debug.Log("[SettingsUIPresenter] Sensitivity slider moved but AUTO mode is active — slider ignored.");
+            return;
+        }
+
+        // Log the threshold equivalent in dB so you can compare to SNR peak logs
+        float targetDb = 2.0f + (value * 16.0f);
+        Debug.Log($"[SettingsUIPresenter] Sensitivity slider -> {value:F3}  |  VAD will trigger when SNR > {targetDb:F2} dB");
+
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.MicSensitivityLimit = value;
@@ -233,5 +307,33 @@ public class SettingsUIPresenter : MonoBehaviour
     private void OnMicTestToggleChanged(bool value)
     {
         VoiceSettingsConsumer.SetLocalLoopback(value);
+    }
+
+    private void OnAutoVadToggleChanged(bool value)
+    {
+        VoiceSettingsConsumer.SetAutoVad(value);
+
+        // When toggling AUTO off, immediately force re-apply the saved sensitivity to restore manual config
+        if (!value && SettingsManager.HasInstance)
+        {
+            SettingsManager.Instance.UpdateSettings(data =>
+            {
+                // Invalidate cached value to force VoiceSettingsConsumer to re-apply the threshold
+                data.MicSensitivityLimit = data.MicSensitivityLimit;
+            });
+        }
+
+        UpdateSensitivitySliderInteractability();
+        Debug.Log($"[SettingsUIPresenter] Auto VAD toggled: {value}");
+    }
+
+    /// <summary>
+    /// Greys out the sensitivity slider and its reference when Auto VAD is enabled.
+    /// </summary>
+    private void UpdateSensitivitySliderInteractability()
+    {
+        bool manual = !VoiceSettingsConsumer.IsAutoVad;
+        if (_micSensitivitySlider != null) _micSensitivitySlider.interactable = manual;
+        if (_autoVadSensitivitySliderRef != null) _autoVadSensitivitySliderRef.interactable = manual;
     }
 }
