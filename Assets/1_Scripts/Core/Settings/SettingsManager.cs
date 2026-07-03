@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Service locator / Singleton manager for user configuration lifecycle.
-/// Coordinates saving/loading from PlayerPrefs and dispatching events to consumers.
+/// Description: Service locator / Singleton manager for user configuration lifecycle.
+/// Context: Globally accessible via SettingsManager.Instance to fetch or update settings.
+/// Justification: Coordinates saving/loading from PlayerPrefs and dispatching events to decoupled consumers. A Singleton is used here because settings must be universally accessible and persistent across scenes.
 /// </summary>
 public class SettingsManager : MonoBehaviour
 {
@@ -12,12 +13,16 @@ public class SettingsManager : MonoBehaviour
     private static bool _isQuitting = false;
 
     /// <summary>
-    /// Gets whether a valid active instance of SettingsManager exists.
+    /// Description: Gets whether a valid active instance of SettingsManager exists.
+    /// Context: Used during teardown (OnDestroy / OnApplicationQuit) by other scripts.
+    /// Justification: Prevents accidental Singleton recreation during application exit, which causes ghost objects and memory leaks in the editor.
     /// </summary>
     public static bool HasInstance => _instance != null;
 
     /// <summary>
-    /// Gets the singleton instance of the Settings Manager.
+    /// Description: Gets the singleton instance of the Settings Manager.
+    /// Context: Accessed by any script needing to read or write settings.
+    /// Justification: Lazy instantiation ensures the manager exists when called, while DontDestroyOnLoad keeps it alive across scene transitions.
     /// </summary>
     public static SettingsManager Instance
     {
@@ -50,12 +55,16 @@ public class SettingsManager : MonoBehaviour
     private readonly List<ISettingsConsumer> _consumers = new List<ISettingsConsumer>();
 
     /// <summary>
-    /// Event raised when settings are changed.
+    /// Description: Event raised when settings are changed.
+    /// Context: Subscribed to by UI elements or dynamic systems that don't implement ISettingsConsumer.
+    /// Justification: Provides a standard C# event pattern for lightweight listeners.
     /// </summary>
     public event Action<SettingsData> OnSettingsChanged;
 
     /// <summary>
-    /// Gets the current active settings data.
+    /// Description: Gets the current active settings data.
+    /// Context: Used by consumers to read the current state of settings.
+    /// Justification: Exposes the SSOT (Single Source of Truth) read-only so external scripts cannot replace the instance, only mutate it through UpdateSettings.
     /// </summary>
     public SettingsData CurrentSettings => _currentSettings;
 
@@ -73,7 +82,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Registers a consumer to receive settings updates.
+    /// Description: Registers a consumer to receive settings updates.
+    /// Context: Called by consumers in their Start() or OnEnable() methods.
+    /// Justification: Keeps a list of active consumers to push updates to, avoiding expensive FindObjectsOfType calls. Also immediately pushes the current settings to the new consumer.
     /// </summary>
     /// <param name="consumer">The consumer instance.</param>
     public void RegisterConsumer(ISettingsConsumer consumer)
@@ -88,7 +99,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Unregisters a consumer from settings updates.
+    /// Description: Unregisters a consumer from settings updates.
+    /// Context: Called by consumers in their OnDestroy() or OnDisable() methods.
+    /// Justification: Prevents memory leaks and null reference exceptions when consumers are destroyed.
     /// </summary>
     /// <param name="consumer">The consumer instance.</param>
     public void UnregisterConsumer(ISettingsConsumer consumer)
@@ -98,7 +111,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates a setting and notifies all registered consumers.
+    /// Description: Updates a setting and notifies all registered consumers.
+    /// Context: Called by UI presenters when a user changes a setting via slider/toggle.
+    /// Justification: Takes a lambda to mutate data, ensuring that every modification triggers a save and notifies all listeners synchronously.
     /// </summary>
     /// <param name="updateAction">Lambda mutating the settings data.</param>
     public void UpdateSettings(Action<SettingsData> updateAction)
@@ -126,7 +141,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Loads settings data from PlayerPrefs.
+    /// Description: Loads settings data from PlayerPrefs.
+    /// Context: Called automatically during Awake.
+    /// Justification: Deserializes the JSON from disk. If missing or corrupted, creates a new default instance to ensure stability.
     /// </summary>
     public void LoadSettings()
     {
@@ -156,7 +173,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Saves settings data to PlayerPrefs memory.
+    /// Description: Saves settings data to PlayerPrefs memory.
+    /// Context: Called automatically by UpdateSettings.
+    /// Justification: Serializes the current state into JSON and stores it in Unity's PlayerPrefs. Note: Does not force disk write immediately to save performance.
     /// </summary>
     public void SaveSettings()
     {
@@ -174,7 +193,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Forces flushing PlayerPrefs changes to the physical disk.
+    /// Description: Forces flushing PlayerPrefs changes to the physical disk.
+    /// Context: Called during ApplicationQuit or ApplicationPause.
+    /// Justification: Ensures that changes held in memory are physically written to the OS storage before the application is terminated.
     /// </summary>
     public void SaveToDisk()
     {

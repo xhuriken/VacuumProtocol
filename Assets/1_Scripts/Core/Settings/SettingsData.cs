@@ -3,25 +3,43 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Holds serializable data representing all user preferences.
-/// Implements ISerializationCallbackReceiver to handle dictionary serialization via Unity's JsonUtility.
-/// This acts as the Single Source of Truth (SSOT).
+/// Description: Holds serializable data representing all user preferences.
+/// Context: Used by the SettingsManager to persist data to PlayerPrefs.
+/// Justification: Acts as the Single Source of Truth (SSOT). Implements ISerializationCallbackReceiver to handle dictionary serialization via Unity's JsonUtility, which natively fails to serialize dictionaries.
 /// </summary>
 [Serializable]
 public class SettingsData : ISerializationCallbackReceiver
 {
     // --- Audio Settings ---
-    [SerializeField] private string _activeMicrophoneDevice = string.Empty;
-    [SerializeField] private float _micSensitivityLimit = 0.1f;
-    [SerializeField] private float _masterVolume = 1.0f;
-    [SerializeField] private float _voiceVolume = 1.0f;
+    [SerializeField] 
+    [Tooltip("Role: Stores the name of the microphone device.\nUse Case: Audio input selection.\nJustification: Used to re-bind the microphone in UniVoice upon startup.")]
+    private string _activeMicrophoneDevice = string.Empty;
+
+    [SerializeField] 
+    [Tooltip("Role: The microphone activation threshold.\nUse Case: VAD (Voice Activity Detection).\nJustification: Prevents background noise from broadcasting to other players.")]
+    private float _micSensitivityLimit = 0.1f;
+
+    [SerializeField] 
+    [Tooltip("Role: Overall game volume.\nUse Case: Audio mixer parameter.\nJustification: User control over the entire game sound output.")]
+    private float _masterVolume = 1.0f;
+
+    [SerializeField] 
+    [Tooltip("Role: Voice chat volume modifier.\nUse Case: Voice system gain.\nJustification: Allows users to balance in-game voice chat relative to game sounds.")]
+    private float _voiceVolume = 1.0f;
 
     // --- Controls Settings ---
-    [SerializeField] private string _controlBindingsOverrideJson = string.Empty;
+    [SerializeField] 
+    [Tooltip("Role: Serialized JSON of custom input bindings.\nUse Case: Control mapping.\nJustification: Allows overriding the default Unity Input System bindings at runtime.")]
+    private string _controlBindingsOverrideJson = string.Empty;
 
     // --- Graphics Settings ---
-    [SerializeField] private int _qualityLevelIndex = 2;
-    [SerializeField] private bool _isFullscreen = true;
+    [SerializeField] 
+    [Tooltip("Role: Quality settings index.\nUse Case: Graphics fidelity.\nJustification: Maps directly to Unity's QualitySettings.SetQualityLevel index.")]
+    private int _qualityLevelIndex = 2;
+
+    [SerializeField] 
+    [Tooltip("Role: Fullscreen toggle state.\nUse Case: Screen mode.\nJustification: Maps directly to Screen.fullScreen.")]
+    private bool _isFullscreen = true;
 
     // --- Peer Volume Dictionary (Non-serialized directly) ---
     // Key: Steam64 ID (ulong) — persistent across sessions, unlike Mirror ConnectionId which is session-local.
@@ -29,11 +47,18 @@ public class SettingsData : ISerializationCallbackReceiver
 
     // Lists used by ISerializationCallbackReceiver for Dictionary serialization
     // ulong is stored as string to avoid JSON precision loss (ulong exceeds float/int JSON range)
-    [SerializeField] private List<string> _peerVolumeKeys = new List<string>();
-    [SerializeField] private List<float> _peerVolumeValues = new List<float>();
+    [SerializeField] 
+    [Tooltip("Role: Serialized keys for peer volumes.\nUse Case: Player-specific muting.\nJustification: JsonUtility doesn't serialize dictionaries, so we use parallel lists.")]
+    private List<string> _peerVolumeKeys = new List<string>();
+
+    [SerializeField] 
+    [Tooltip("Role: Serialized values for peer volumes.\nUse Case: Player-specific muting.\nJustification: Corresponds to _peerVolumeKeys to reconstruct the dictionary.")]
+    private List<float> _peerVolumeValues = new List<float>();
 
     /// <summary>
-    /// Gets or sets the active microphone device name.
+    /// Description: Gets or sets the active microphone device name.
+    /// Context: UI dropdowns for mic selection.
+    /// Justification: Direct mapping to Unity's Microphone.devices string array.
     /// </summary>
     public string ActiveMicrophoneDevice
     {
@@ -42,7 +67,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets the microphone sensitivity threshold (0.0 to 1.0).
+    /// Description: Gets or sets the microphone sensitivity threshold (0.0 to 1.0).
+    /// Context: Settings slider.
+    /// Justification: Clamped to 0-1 to prevent invalid values breaking the VAD math.
     /// </summary>
     public float MicSensitivityLimit
     {
@@ -51,7 +78,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets the master audio volume (0.0 to 1.0).
+    /// Description: Gets or sets the master audio volume (0.0 to 1.0).
+    /// Context: General audio mixing.
+    /// Justification: Clamped to 0-1.
     /// </summary>
     public float MasterVolume
     {
@@ -60,7 +89,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets the global voice chat volume (0.0 to 1.0).
+    /// Description: Gets or sets the global voice chat volume (0.0 to 1.0).
+    /// Context: Voice system volume application.
+    /// Justification: Clamped to 0-1.
     /// </summary>
     public float VoiceVolume
     {
@@ -69,7 +100,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets the input system bindings override JSON string.
+    /// Description: Gets or sets the input system bindings override JSON string.
+    /// Context: New Input System rebinding UI.
+    /// Justification: The easiest way to save Rebind overrides is serializing the InputActionAsset overrides to JSON.
     /// </summary>
     public string ControlBindingsOverrideJson
     {
@@ -78,7 +111,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets the graphics quality level index.
+    /// Description: Gets or sets the graphics quality level index.
+    /// Context: Video settings menu.
+    /// Justification: Standard Unity approach for scalable graphics settings.
     /// </summary>
     public int QualityLevelIndex
     {
@@ -87,7 +122,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets or sets whether the game runs in fullscreen.
+    /// Description: Gets or sets whether the game runs in fullscreen.
+    /// Context: Video settings menu.
+    /// Justification: Standard toggle for Windowed/Fullscreen mode.
     /// </summary>
     public bool IsFullscreen
     {
@@ -96,14 +133,16 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Gets the dictionary of peer volume multipliers (Key: Steam64 ID, Value: Volume multiplier [0..2]).
-    /// Keyed by SteamId for persistence across sessions. ConnectionId is session-ephemeral and must not be used here.
+    /// Description: Gets the dictionary of peer volume multipliers.
+    /// Context: Used to mute or adjust the volume of specific players.
+    /// Justification: Keyed by SteamId (ulong) for persistence across sessions, since Mirror ConnectionId is ephemeral and changes every lobby.
     /// </summary>
     public Dictionary<ulong, float> PeerVolumeMultipliers => _peerVolumeMultipliers;
 
     /// <summary>
-    /// Saves dictionary state to lists before serialization.
-    /// ulong keys are serialized as strings to avoid JSON 64-bit integer precision loss.
+    /// Description: Saves dictionary state to lists before serialization.
+    /// Context: Called automatically by Unity before JsonUtility.ToJson.
+    /// Justification: ulong keys are serialized as strings to avoid JSON 64-bit integer precision loss, which is a common JS/JSON limitation.
     /// </summary>
     public void OnBeforeSerialize()
     {
@@ -119,7 +158,9 @@ public class SettingsData : ISerializationCallbackReceiver
     }
 
     /// <summary>
-    /// Restores dictionary state from lists after deserialization.
+    /// Description: Restores dictionary state from lists after deserialization.
+    /// Context: Called automatically by Unity after JsonUtility.FromJson.
+    /// Justification: Reconstructs the workable C# Dictionary from the parallel lists stored in JSON.
     /// </summary>
     public void OnAfterDeserialize()
     {

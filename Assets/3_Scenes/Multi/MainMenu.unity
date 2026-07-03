@@ -1533,6 +1533,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpenURLButton
   _url: https://
+  _enableDebugLogs: 0
 --- !u!114 &627312356
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4373,6 +4374,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpenURLButton
   _url: https://
+  _enableDebugLogs: 0
 --- !u!114 &1589247952
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5648,6 +5650,7 @@ MonoBehaviour:
   _micTestToggle: {fileID: 1445704368}
   _autoVadToggle: {fileID: 84219500}
   _autoVadSensitivitySliderRef: {fileID: 1076916783}
+  _enableDebugLogs: 0
 --- !u!114 &2122261541
 MonoBehaviour:
   m_ObjectHideFlags: 0

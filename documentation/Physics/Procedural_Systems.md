@@ -1,28 +1,35 @@
-# Procedural Systems
+# Systèmes Procéduraux et Physique (Procedural & Physics)
 
-This feature handles complex physical structures that are generated or configured at runtime.
+Ce document détaille les systèmes gérant la physique avancée, la génération procédurale de contraintes, et les champs de force d'aspiration du jeu.
 
-## Principle
-The system automates the setup of physics-heavy components that would be tedious to configure manually in the editor. Currently, it focuses on creating softbody-like behavior for tubes or arms using a chain of physics constraints.
+## 1. Génération de Corps Souples ([ProceduralTubePhysics.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/ProceduralTubePhysics.cs))
 
-## Related Files
-- `Assets/1_Scripts/Physics/ProceduralTubePhysics.cs`: Automates the creation of a softbody-like chain of joints.
+Ce système automatise la configuration de composants physiques lourds qui seraient autrement extrêmement fastidieux à configurer manuellement dans l'éditeur (ex: le tuyau de l'aspirateur).
+
+### A. Principe de Fonctionnement
+Le script s'attache à la racine d'une hiérarchie d'os (bones) d'un mesh 3D. Lorsqu'on déclenche l'action `Setup()` via l'inspecteur Odin, il descend récursivement l'arbre et génère dynamiquement une chaîne de type "Softbody" :
+* **Rigidbodies** : Ajoutés avec des itérations de solveur élevées pour garantir la stabilité de la chaîne.
+* **CapsuleColliders** : Calculés mathématiquement pour relier parfaitement un os à son enfant, évitant ainsi que le tube ne traverse les murs.
+* **ConfigurableJoints** : Verrouille les mouvements de translation mais autorise une rotation limitée (`angularLimit`), amortie par des forces de ressort (Spring/Damper) via un mode `Slerp`.
+
+### B. Paramétrage Avancé
+* `segmentMass` : Une masse trop élevée déchire les joints, une masse trop faible provoque des tremblements.
+* `tipStiffnessMultiplier` : La buse (dernier segment) possède un multiplicateur de rigidité. Cela garantit que la pointe de l'aspirateur reste stable et contrôlable par le joueur, même si le reste du tuyau flotte librement.
 
 ---
 
-## File Details
+## 2. Champ de Force d'Aspiration ([VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs))
 
-### ProceduralTubePhysics.cs
-**Context:** Attached to the root of a bone/transform hierarchy.
-**Usage:** Used in the editor (Odin Inspector buttons) to generate components.
+Ce système est attaché au volume de détection (Trigger) situé à l'extrémité de la buse de l'aspirateur.
 
-#### Variables
-- `segmentMass`: Mass assigned to each Rigidbody in the chain.
-- `stiffness`: The spring force (positionSpring) of the joints.
-- `tipStiffnessMultiplier`: Increases stiffness at the end of the chain to prevent the tip from being too floppy.
-- `angularLimit`: Limits how much each joint can bend.
+### A. Attraction Physique Dynamique
+Lorsqu'un objet possédant un `Rigidbody` et implémentant `Collectible` entre dans la zone :
+1. Le script calcule le vecteur directionnel vers le point de convergence (`_nozzleTransform`).
+2. Il applique une force continue (`_suctionForce`) en utilisant `ForceMode.Force`.
+3. Cette force est divisée par la `PullResistance` de l'objet, permettant aux level designers de créer des objets légers mais difficiles à aspirer (ex: accrochés au sol).
 
-#### Functions
-- `Setup()`: Clears existing physics and recursively adds `Rigidbody`, `CapsuleCollider`, and `ConfigurableJoint` to every child in the hierarchy.
-- `Clear()`: Removes all physics-related components from children.
-- `SetupRecursive()`: Configures the capsule colliders to automatically align with the distance to the next child and locks linear motion while limiting angular motion.
+### B. Effet Visuel d'Engouffrement (Shrinking)
+Pour que les gros objets semblent passer dans la petite buse de l'aspirateur sans clipper brutalement :
+* **Zone de Réduction (`_shrinkStartDistance`)** : Dès que l'objet franchit ce rayon, le script interpole linéairement son échelle locale de 100% vers 0%.
+* **Zone d'Absorption (`_absorbDistance`)** : Lorsque l'objet atteint ce rayon critique, il est considéré comme "avalé" et l'événement d'absorption finale est déclenché vers le `PlayerVacuumController`.
+* **Récupération de Sécurité** : Si le joueur relâche le bouton d'aspiration pendant qu'un objet est à moitié réduit, le script restaure immédiatement son échelle d'origine (`OriginalScale`) pour éviter qu'un objet minuscule ne retombe au sol.

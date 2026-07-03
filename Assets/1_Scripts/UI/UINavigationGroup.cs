@@ -2,15 +2,16 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Manages a group of mutually exclusive panels (e.g., swapping between Main, Settings, and Credits).
-/// Tracks historical navigation stack to allow simple backing operations.
+/// Description: Manages a group of mutually exclusive panels.
+/// Context: Attached to a parent canvas object.
+/// Justification: Tracks historical navigation stack to allow simple backing operations (e.g. Settings -> Main).
 /// </summary>
 public class UINavigationGroup : MonoBehaviour
 {
-    [Tooltip("The panel that should be active at startup.")]
+    [Tooltip("Role: The panel that should be active at startup.\nUse Case: Default view.\nJustification: Guarantees the player sees something initially.")]
     [SerializeField] private UIPanelController _defaultPanel;
 
-    [Tooltip("All panels managed under this mutually exclusive group.")]
+    [Tooltip("Role: All panels managed under this mutually exclusive group.\nUse Case: Bulk tracking.\nJustification: Needed to instant-hide panels that aren't the default.")]
     [SerializeField] private List<UIPanelController> _panels = new List<UIPanelController>();
 
     private readonly Stack<UIPanelController> _history = new Stack<UIPanelController>();
@@ -34,8 +35,9 @@ public class UINavigationGroup : MonoBehaviour
     }
 
     /// <summary>
-    /// Deactivates the active panel in the group and activates the target panel.
-    /// Saves the current panel to navigation history.
+    /// Description: Deactivates the active panel in the group and activates the target panel.
+    /// Context: Called by Navigation UI Buttons.
+    /// Justification: Saves the current panel to navigation history for the 'GoBack' function.
     /// </summary>
     /// <param name="targetPanel">The panel to display.</param>
     public void OpenPanel(UIPanelController targetPanel)
@@ -61,7 +63,9 @@ public class UINavigationGroup : MonoBehaviour
     }
 
     /// <summary>
-    /// Hides the active panel and displays the previous panel in the history stack.
+    /// Description: Hides the active panel and displays the previous panel in the history stack.
+    /// Context: Called by 'Back' UI Buttons.
+    /// Justification: Allows nesting UI screens (like Settings within Settings) cleanly.
     /// </summary>
     public void GoBack()
     {

@@ -4,21 +4,23 @@ using System.Collections.Generic;
 using System.Reflection;
 
 /// <summary>
-/// Helper utility to migrate components and references from an old 3D model hierarchy to a new one.
-/// Useful when replacing character models while keeping script references and custom objects intact.
+/// Description: Helper utility to migrate components and references from an old 3D model hierarchy to a new one.
+/// Context: Editor-only script attached to a temporary migration object.
+/// Justification: Re-rigging a player model manually is tedious. This automates transferring colliders, scripts, and manual children (like cameras) to a new bone hierarchy while preserving references.
 /// </summary>
 public class ModelMigrator : MonoBehaviour
 {
     [Title("Migration Setup")]
-    [Required, Tooltip("The old model currently inside the Player hierarchy.")]
+    [Required, Tooltip("Role: The old model currently inside the Player hierarchy.\nUse Case: Source object.\nJustification: The script will pull components and children from this hierarchy.")]
     public GameObject oldModel;
     
-    [Required, Tooltip("The new model (Prefab or scene object) to migrate to.")]
+    [Required, Tooltip("Role: The new model (Prefab or scene object) to migrate to.\nUse Case: Destination object.\nJustification: The script will paste components and reparent children to matching bones in this hierarchy.")]
     public GameObject newModel;
 
     /// <summary>
-    /// Executes the migration process by instantiating the new model, transferring components, 
-    /// moving manual objects, and updating script references.
+    /// Description: Executes the migration process.
+    /// Context: Triggered via Odin Inspector button in the editor.
+    /// Justification: Automates the entire process in one click: instantiation, component copying, child reparenting, and reference updating.
     /// </summary>
     [Button(ButtonSizes.Large), GUIColor(0, 1, 0)]
     public void PerfectMigration()
@@ -91,7 +93,9 @@ public class ModelMigrator : MonoBehaviour
     }
 
     /// <summary>
-    /// Copies components from a source object to a destination object, avoiding core structural components.
+    /// Description: Copies components from a source object to a destination object.
+    /// Context: Internal helper.
+    /// Justification: Explicitly avoids copying structural components (Transforms, Renderers, Animators) so that the new model's geometry isn't corrupted by the old one.
     /// </summary>
     private void TransferComponents(GameObject source, GameObject destination)
     {
@@ -111,7 +115,9 @@ public class ModelMigrator : MonoBehaviour
     }
 
     /// <summary>
-    /// Scans all scripts on the Player and updates Transform/GameObject fields to point to the new model.
+    /// Description: Scans all scripts on the Player and updates Transform/GameObject fields to point to the new model.
+    /// Context: Internal helper.
+    /// Justification: Uses Reflection to find all fields in all MonoBehaviours and remaps them automatically so designers don't have to manually drag-and-drop references in the inspector after migration.
     /// </summary>
     private void UpdateAllReferencesInPlayer(Dictionary<string, Transform> mapping)
     {
@@ -138,6 +144,11 @@ public class ModelMigrator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Description: Checks if an object is a child of a given parent transform.
+    /// Context: Used during reference remapping.
+    /// Justification: We only want to remap references that point to the old model; external references (like global managers) should be left alone.
+    /// </summary>
     private bool IsChildOf(Object obj, Transform potentialParent)
     {
         Transform t = null;

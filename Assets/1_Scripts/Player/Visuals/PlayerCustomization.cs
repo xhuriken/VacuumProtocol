@@ -4,23 +4,26 @@ using UnityEngine;
 namespace VacuumProtocol.Player.Visuals
 {
     /// <summary>
-    /// Handles syncing player customization (color and root note) across the network.
+    /// Description: Handles syncing player customization (color and root note) across the network.
+    /// Context: Attached to the player prefab.
+    /// Justification: Centralizes visual and audio customization data and uses Mirror SyncVars to ensure late-joiners see the correct colors and hear the correct notes.
     /// </summary>
     public class PlayerCustomization : NetworkBehaviour
     {
         [Header("References")]
-        [Tooltip("The renderer whose material color will change.")]
+        [Tooltip("Role: The renderer whose material color will change.\nUse Case: Visual customization.\nJustification: Allows targeting a specific sub-mesh (like the robot chassis) without tinting everything.")]
         [SerializeField] private Renderer _modelRenderer;
 
 
-        [Tooltip("The audio controller for the vacuum sound.")]
+        [Tooltip("Role: The audio controller for the vacuum sound.\nUse Case: Audio customization.\nJustification: Needs a direct reference to inject the chosen musical root note into the synthesis engine.")]
         [SerializeField] private VacuumAudioController _vacuumAudio;
 
         [Header("Preview Settings")]
-        [Tooltip("Check this ONLY on your Lobby Dummy prefab so it stays completely offline and local!")]
+        [Tooltip("Role: Disables networking hooks for preview mannequins.\nUse Case: Main Menu.\nJustification: Check this ONLY on your Lobby Dummy prefab so it stays completely offline and local, allowing players to preview colors without throwing network errors.")]
         public bool IsLobbyDummy = false;
 
         [Header("Debug")]
+        [Tooltip("Role: Enable verbose logging.\nUse Case: Debugging customization.\nJustification: Used to trace whether colors are failing to load from PlayerPrefs or failing to sync over the network.")]
         public bool EnableDebugLogs = true;
 
         // SyncVars automatically sync from the server to all clients. 
@@ -33,6 +36,11 @@ namespace VacuumProtocol.Player.Visuals
 
         private Material _instancedMaterial;
 
+        /// <summary>
+        /// Description: Awake callback. Clones the material.
+        /// Context: Lifecycle event.
+        /// Justification: We must create an instanced material so changing one player's color doesn't accidentally tint every player in the match who shares the same base material.
+        /// </summary>
         private void Awake()
         {
             // Create an instanced material so changing color doesn't affect all players
@@ -42,6 +50,11 @@ namespace VacuumProtocol.Player.Visuals
             }
         }
 
+        /// <summary>
+        /// Description: Applies synced data on client start.
+        /// Context: Mirror NetworkBehaviour callback.
+        /// Justification: Ensures that when a new client connects, they immediately apply the current synced values to already-spawned players before the first frame renders.
+        /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
@@ -52,6 +65,11 @@ namespace VacuumProtocol.Player.Visuals
             ApplyNote(PlayerRootNote);
         }
 
+        /// <summary>
+        /// Description: Triggers loading of saved customization data.
+        /// Context: Mirror NetworkBehaviour callback for the local player.
+        /// Justification: As soon as our local player object spawns (in Lobby OR Game), it becomes the authoritative source to load from PlayerPrefs and push to the server.
+        /// </summary>
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
@@ -61,6 +79,11 @@ namespace VacuumProtocol.Player.Visuals
             LoadSavedCustomization();
         }
 
+        /// <summary>
+        /// Description: Reads local PlayerPrefs and commands the server to adopt them.
+        /// Context: Called by OnStartLocalPlayer.
+        /// Justification: Customization is persistent between sessions. The client must tell the server what they look/sound like.
+        /// </summary>
         private void LoadSavedCustomization()
         {
             if (EnableDebugLogs) Debug.Log("[PlayerCustomization] LoadSavedCustomization called.");
@@ -82,6 +105,11 @@ namespace VacuumProtocol.Player.Visuals
             }
         }
 
+        /// <summary>
+        /// Description: Cleans up instanced materials.
+        /// Context: Lifecycle event.
+        /// Justification: Prevents Unity memory leaks by explicitly destroying dynamically created material instances when the player object is destroyed.
+        /// </summary>
         private void OnDestroy()
         {
             if (_instancedMaterial != null)
@@ -92,6 +120,11 @@ namespace VacuumProtocol.Player.Visuals
 
         #region Hooks (Executed on all clients)
 
+        /// <summary>
+        /// Description: SyncVar Hook for color changes.
+        /// Context: Triggered on all clients when the server updates PlayerColor.
+        /// Justification: Automatically applies visual updates to remote avatars when they change their settings.
+        /// </summary>
         private void OnColorChanged(Color oldColor, Color newColor)
         {
             if (IsLobbyDummy) return;
@@ -99,6 +132,11 @@ namespace VacuumProtocol.Player.Visuals
             ApplyColor(newColor);
         }
 
+        /// <summary>
+        /// Description: SyncVar Hook for musical note changes.
+        /// Context: Triggered on all clients when the server updates PlayerRootNote.
+        /// Justification: Automatically applies audio updates to remote avatars when they change their settings.
+        /// </summary>
         private void OnNoteChanged(MusicalNote oldNote, MusicalNote newNote)
         {
             if (IsLobbyDummy) return;
@@ -106,6 +144,11 @@ namespace VacuumProtocol.Player.Visuals
             ApplyNote(newNote);
         }
 
+        /// <summary>
+        /// Description: Pushes a color into the material shader.
+        /// Context: Internal execution.
+        /// Justification: Supports both Standard (_Color) and URP (_BaseColor) shader property naming conventions.
+        /// </summary>
         private void ApplyColor(Color color)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] ApplyColor called with color: {color}");
@@ -120,6 +163,11 @@ namespace VacuumProtocol.Player.Visuals
             else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyColor failed because _instancedMaterial is null! Did you assign _modelRenderer?");
         }
 
+        /// <summary>
+        /// Description: Updates the root note in the audio controller.
+        /// Context: Internal execution.
+        /// Justification: Passes the enum value to the audio synthesis system.
+        /// </summary>
         private void ApplyNote(MusicalNote note)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] ApplyNote called with note: {note}");
@@ -135,6 +183,11 @@ namespace VacuumProtocol.Player.Visuals
 
         #region Public Requests (Safe for both Networked and Offline Dummies)
 
+        /// <summary>
+        /// Description: Universal entry point to change player color.
+        /// Context: Called by the UI color picker.
+        /// Justification: Safely handles both networked multiplayer avatars (sends a Command) and offline lobby dummies (applies locally without network errors).
+        /// </summary>
         public void RequestColorChange(Color newColor)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestColorChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
@@ -151,6 +204,11 @@ namespace VacuumProtocol.Player.Visuals
             }
         }
 
+        /// <summary>
+        /// Description: Universal entry point to change the musical note.
+        /// Context: Called by the UI note picker.
+        /// Justification: Safely handles both networked multiplayer avatars (sends a Command) and offline lobby dummies (applies locally without network errors).
+        /// </summary>
         public void RequestNoteChange(MusicalNote newNote)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestNoteChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
@@ -167,6 +225,11 @@ namespace VacuumProtocol.Player.Visuals
             }
         }
 
+        /// <summary>
+        /// Description: Universal entry point to test the vacuum sound.
+        /// Context: Called by UI testing buttons.
+        /// Justification: Safely routes the test command either through the network (for other players to hear) or locally for offline dummies.
+        /// </summary>
         public void RequestVacuumTest(bool isVacuuming)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVacuumTest called ({isVacuuming}). NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
@@ -191,7 +254,9 @@ namespace VacuumProtocol.Player.Visuals
         #region Commands (Executed on the Server, requested by the Local Client)
 
         /// <summary>
-        /// Called by the local client's UI to request a color change.
+        /// Description: Called by the local client's UI to request a color change.
+        /// Context: Mirror Command.
+        /// Justification: The server must own the SyncVar. Updating it here pushes it to all clients automatically.
         /// </summary>
         [Command]
         private void CmdChangeColor(Color newColor)
@@ -201,7 +266,9 @@ namespace VacuumProtocol.Player.Visuals
         }
 
         /// <summary>
-        /// Called by the local client's UI to request a note change.
+        /// Description: Called by the local client's UI to request a note change.
+        /// Context: Mirror Command.
+        /// Justification: The server must own the SyncVar. Updating it here pushes it to all clients automatically.
         /// </summary>
         [Command]
         private void CmdChangeNote(MusicalNote newNote)
@@ -211,7 +278,9 @@ namespace VacuumProtocol.Player.Visuals
         }
 
         /// <summary>
-        /// A small debug command to test the vacuum sound from the lobby.
+        /// Description: A small debug command to test the vacuum sound from the lobby.
+        /// Context: Mirror Command.
+        /// Justification: Routes a temporary audio test to all clients via an RPC rather than using a SyncVar, since it's a momentary action.
         /// </summary>
         [Command]
         private void CmdTestVacuum(bool isVacuuming)
@@ -220,7 +289,11 @@ namespace VacuumProtocol.Player.Visuals
             RpcTestVacuum(isVacuuming);
         }
 
-        // Executed on all clients to hear the preview
+        /// <summary>
+        /// Description: Executed on all clients to hear the preview.
+        /// Context: Mirror ClientRpc.
+        /// Justification: Forces every connected client to momentarily play the vacuum sound so the customizing player knows others can hear their new note.
+        /// </summary>
         [ClientRpc]
         private void RpcTestVacuum(bool isVacuuming)
         {

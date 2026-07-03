@@ -130,7 +130,6 @@ GameObject:
   - component: {fileID: 32290597}
   - component: {fileID: 32290596}
   - component: {fileID: 32290595}
-  - component: {fileID: 32290594}
   m_Layer: 0
   m_Name: Cube (1)
   m_TagString: Untagged
@@ -138,27 +137,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!65 &32290594
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 32290593}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &32290595
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -497,6 +475,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 1941548635}
   _plainShape: {fileID: 1840870614}
   _baseWidth: 80
@@ -1464,7 +1443,7 @@ MonoBehaviour:
   _modelRenderer: {fileID: 1757901436}
   _vacuumAudio: {fileID: 1757901439}
   IsLobbyDummy: 1
-  EnableDebugLogs: 1
+  EnableDebugLogs: 0
   PlayerColor: {r: 1, g: 1, b: 1, a: 1}
   PlayerRootNote: 0
 --- !u!4 &267729408
@@ -2534,6 +2513,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 2094361366}
   _plainShape: {fileID: 2093281040}
   _baseWidth: 80
@@ -3339,6 +3319,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 1409994133}
   _plainShape: {fileID: 1900473189}
   _baseWidth: 80
@@ -3502,6 +3483,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 332072741}
   _plainShape: {fileID: 765528349}
   _baseWidth: 80
@@ -3816,6 +3798,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 2053236360}
   _plainShape: {fileID: 303137263}
   _baseWidth: 80
@@ -3947,7 +3930,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1810674563}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.8237948
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -4403,6 +4386,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 373035132}
   _plainShape: {fileID: 1157521661}
   _baseWidth: 80
@@ -4649,6 +4633,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 1552120762}
   _plainShape: {fileID: 1587526498}
   _baseWidth: 80
@@ -5788,6 +5773,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 234652870}
   _plainShape: {fileID: 734358160}
   _baseWidth: 80
@@ -5942,6 +5928,7 @@ MonoBehaviour:
   - {r: 0.6153846, g: 0, b: 1, a: 1}
   - {r: 1, g: 0, b: 0.9230766, a: 1}
   - {r: 1, g: 0, b: 0.4615383, a: 1}
+  _enableDebugLogs: 0
   _lobbyCustomizationUI: {fileID: 1128091988}
 --- !u!1 &934340351
 GameObject:
@@ -6262,6 +6249,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 2064661261}
   _plainShape: {fileID: 792049026}
   _baseWidth: 80
@@ -6939,7 +6927,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.Networking.Lobby.LobbyCustomizationUI
   PreviewPlayer: {fileID: 267729407}
-  EnableDebugLogs: 1
+  EnableDebugLogs: 0
 --- !u!1 &1157521657
 GameObject:
   m_ObjectHideFlags: 0
@@ -7491,6 +7479,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 1164060939}
   _plainShape: {fileID: 54122470}
   _baseWidth: 80
@@ -7791,6 +7780,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 421026435}
   _plainShape: {fileID: 1610018244}
   _baseWidth: 80
@@ -8103,6 +8093,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 623646696}
   _plainShape: {fileID: 316822765}
   _baseWidth: 80
@@ -8796,6 +8787,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 204073830}
   _plainShape: {fileID: 1096983151}
   _baseWidth: 80
@@ -9110,6 +9102,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 548151252}
   _plainShape: {fileID: 1507194097}
   _baseWidth: 80
@@ -9169,7 +9162,6 @@ GameObject:
   - component: {fileID: 1551031483}
   - component: {fileID: 1551031482}
   - component: {fileID: 1551031481}
-  - component: {fileID: 1551031480}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -9177,27 +9169,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!65 &1551031480
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1551031479}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1551031481
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -9838,6 +9809,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 934340355}
   _plainShape: {fileID: 1826081002}
   _baseWidth: 80
@@ -10174,7 +10146,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.000015258789}
+  m_AnchoredPosition: {x: 0, y: 0.0000076293945}
   m_SizeDelta: {x: 0, y: 100}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1691765680
@@ -10328,6 +10300,7 @@ MonoBehaviour:
   BasePitch: 0.58
   RootNote: 0
   SemitoneShift: 0
+  _enableDebugLogs: 0
 --- !u!82 &1757901440
 AudioSource:
   m_ObjectHideFlags: 0
@@ -11653,6 +11626,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _interactable: 1
+  _enableDebugLogs: 0
   _outlineShape: {fileID: 808235053}
   _plainShape: {fileID: 323664985}
   _baseWidth: 80
@@ -11712,7 +11686,6 @@ GameObject:
   - component: {fileID: 2011057444}
   - component: {fileID: 2011057443}
   - component: {fileID: 2011057442}
-  - component: {fileID: 2011057441}
   m_Layer: 0
   m_Name: Cube (2)
   m_TagString: Untagged
@@ -11720,27 +11693,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!65 &2011057441
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2011057440}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &2011057442
 MeshRenderer:
   m_ObjectHideFlags: 0

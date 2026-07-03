@@ -2,8 +2,9 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Handles the vacuum aspiration logic, trigger zone activation,
-/// and spits/launches collected items using the player's arm components.
+/// Description: Handles the vacuum aspiration logic, trigger zone activation, and spits/launches collected items using the player's arm components.
+/// Context: Attached to the player prefab.
+/// Justification: Coordinates interaction between the physical arms, the inventory, the audio, and the network to unify the vacuuming action.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
 [RequireComponent(typeof(PlayerArmsController))]
@@ -11,7 +12,7 @@ using UnityEngine;
 public class PlayerVacuumController : NetworkBehaviour
 {
     [Header("References")]
-    [Tooltip("The audio controller for vacuum sound feedback.")]
+    [Tooltip("Role: The audio controller for vacuum sound feedback.\nUse Case: Sound playback.\nJustification: Required to sync the physical vacuum state with the audio looping system.")]
     [SerializeField]
     private VacuumAudioController _audioController;
 
@@ -28,12 +29,16 @@ public class PlayerVacuumController : NetworkBehaviour
     private bool _hasSpittedForCurrentClick = false;
 
     /// <summary>
-    /// Gets a value indicating whether the vacuum is currently active (synced over network).
+    /// Description: Gets a value indicating whether the vacuum is currently active.
+    /// Context: Synced over network.
+    /// Justification: Exposed for external systems like animation or UI to know the current active state.
     /// </summary>
     public bool IsVacuuming => _isVacuuming;
 
     /// <summary>
-    /// Awake callback. Caches input, arms, and inventory components.
+    /// Description: Awake callback. Caches input, arms, and inventory components.
+    /// Context: Lifecycle event.
+    /// Justification: Guaranteed to fetch required local components before they are used in Start or Update.
     /// </summary>
     private void Awake()
     {
@@ -43,7 +48,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Start callback.
+    /// Description: Start callback.
+    /// Context: Lifecycle event.
+    /// Justification: Attempts an initial cache of the suction zone, although it may need to be re-attempted if arms initialize late.
     /// </summary>
     private void Start()
     {
@@ -52,7 +59,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Update callback. Handles local inputs for vacuuming and spitting, and manages trigger activation on all clients.
+    /// Description: Update callback. Handles local inputs for vacuuming and spitting, and manages trigger activation on all clients.
+    /// Context: Update lifecycle event.
+    /// Justification: Combines both server-side trigger updates and local-side input polling.
     /// </summary>
     private void Update()
     {
@@ -111,7 +120,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Commands the server to absorb a targeted vacuumed object into the inventory.
+    /// Description: Commands the server to absorb a targeted vacuumed object into the inventory.
+    /// Context: Called by the client when an object enters the suction kill-zone.
+    /// Justification: Only the server can manipulate the inventory stack securely.
     /// </summary>
     /// <param name="target">The vacuumable GameObject to store.</param>
     [Command]
@@ -129,8 +140,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Instantly deactivates the object locally for responsive feedback,
-    /// and requests the server to absorb the object.
+    /// Description: Instantly deactivates the object locally for responsive feedback, and requests the server to absorb the object.
+    /// Context: Public API called by the VacuumSuctionZone.
+    /// Justification: Providing immediate local feedback prevents the object from jittering while waiting for the server's authoritative destruction.
     /// </summary>
     /// <param name="target">The vacuumable GameObject to absorb.</param>
     public void AbsorbObject(GameObject target)
@@ -148,7 +160,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Ensure the audio state is correct when a player joins or the object is spawned.
+    /// Description: Ensure the audio state is correct when a player joins or the object is spawned.
+    /// Context: Mirror NetworkBehaviour lifecycle event.
+    /// Justification: Late-joiners need to hear if a player is already vacuuming upon connection.
     /// </summary>
     public override void OnStartClient()
     {
@@ -159,7 +173,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Attempts to spit out a stored item from the Left Hand tip/nozzle.
+    /// Description: Attempts to spit out a stored item from the Left Hand tip/nozzle.
+    /// Context: Called locally when the left arm click conditions are met.
+    /// Justification: Computes the proper spawn point to prevent physics clipping, then asks the server to instantiate the spat item.
     /// </summary>
     private void TrySpitItem()
     {
@@ -190,7 +206,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Attempts to cache the VacuumSuctionZone component by checking the Right Hand hierarchy.
+    /// Description: Attempts to cache the VacuumSuctionZone component by checking the Right Hand hierarchy.
+    /// Context: Called during initialization and update loops.
+    /// Justification: Since the arm hierarchy is procedural, we must search dynamically for the trigger zone once the arms are fully built.
     /// </summary>
     private void TryCacheSuctionZone()
     {
@@ -203,7 +221,9 @@ public class PlayerVacuumController : NetworkBehaviour
     #region Network Commands
 
     /// <summary>
-    /// Commands the server to spit out the last item from the inventory.
+    /// Description: Commands the server to spit out the last item from the inventory.
+    /// Context: Mirror Command.
+    /// Justification: Routes the spit request from the local player to the authoritative server inventory.
     /// </summary>
     [Command]
     private void CmdSpitItem(Vector3 spawnPosition, Vector3 spitDirection)
@@ -215,7 +235,9 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Syncs the vacuum state across the network.
+    /// Description: Syncs the vacuum state across the network.
+    /// Context: Mirror Command.
+    /// Justification: Keeps all clients aware of whether the player is holding the vacuum button, driving audio and VFX.
     /// </summary>
     [Command]
     private void CmdSetVacuumState(bool state)
@@ -228,7 +250,9 @@ public class PlayerVacuumController : NetworkBehaviour
     #region Hook Handlers
 
     /// <summary>
-    /// Hook callback triggered when vacuum state changes over the network.
+    /// Description: Hook callback triggered when vacuum state changes over the network.
+    /// Context: Mirror SyncVar Hook.
+    /// Justification: Pushes the new state down to the audio controller immediately upon replication.
     /// </summary>
     private void OnVacuumStateChanged(bool oldState, bool newState)
     {

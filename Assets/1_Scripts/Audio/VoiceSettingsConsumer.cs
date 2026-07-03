@@ -9,8 +9,9 @@ using Adrenak.UniVoice.Filters;
 using Adrenak.UniVoice.Samples;
 
 /// <summary>
-/// Decoupled consumer responsible for bridging SettingsManager changes into UniVoice.
-/// Handles microphone hot-swapping, VAD sensitivity gating, and volume adjustments.
+/// Description: Decoupled consumer responsible for bridging SettingsManager changes into UniVoice.
+/// Context: Attached to a persistent GameObject in the scene.
+/// Justification: Handles microphone hot-swapping, VAD sensitivity gating, and volume adjustments. Keeps UniVoice completely unaware of the SettingsManager for better modularity.
 /// </summary>
 public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 {
@@ -56,7 +57,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Implementation of ISettingsConsumer. Invoked whenever settings are updated.
+    /// Description: Implementation of ISettingsConsumer. Invoked whenever settings are updated.
+    /// Context: Called by SettingsManager.
+    /// Justification: Checks what exactly changed (mic, sensitivity, volume) and only re-applies those specific settings to avoid unneeded audio hitching.
     /// </summary>
     /// <param name="settings">The updated settings data.</param>
     public void OnSettingsUpdated(SettingsData settings)
@@ -91,8 +94,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     private static Action _onAutoVadChanged;
 
     /// <summary>
-    /// Toggles the Auto VAD mode. When enabled, restores UniVoice default config immediately.
-    /// When disabled, re-applies the saved sensitivity from SettingsManager.
+    /// Description: Toggles the Auto VAD mode. When enabled, restores UniVoice default config immediately.
+    /// Context: Used by UI presenters to let users opt out of manual mic threshold tuning.
+    /// Justification: When disabled, re-applies the saved sensitivity from SettingsManager. Static so any UI can trigger it globally.
     /// </summary>
     /// <param name="enabled">True to use UniVoice default VAD; false to use manual slider value.</param>
     public static void SetAutoVad(bool enabled)
@@ -288,9 +292,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Immediately adjusts the AudioSource volume of a single peer identified by their Mirror ConnectionId.
-    /// Called by PlayerVolumeSlider on each slider change for real-time response without cache lag.
-    /// The multiplier is sourced directly from the caller — no dictionary lookup required here.
+    /// Description: Immediately adjusts the AudioSource volume of a single peer identified by their Mirror ConnectionId.
+    /// Context: Called by PlayerVolumeSlider on each slider change for real-time response without cache lag.
+    /// Justification: The multiplier is sourced directly from the caller — no dictionary lookup required here, ensuring smooth volume sliding.
     /// </summary>
     /// <param name="peerId">Mirror ConnectionId (session-local runtime key for UniVoice PeerOutputs).</param>
     /// <param name="multiplier">Volume multiplier in [0, 2] range.</param>
@@ -314,7 +318,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     private static bool _loopbackRequested = false;
 
     /// <summary>
-    /// Configures the local loopback audio preview so the player can listen to their own voice (gated by VAD settings).
+    /// Description: Configures the local loopback audio preview so the player can listen to their own voice (gated by VAD settings).
+    /// Context: Used in the settings menu for mic testing.
+    /// Justification: Exposes static toggling API to easily control local preview playback from UI toggles.
     /// </summary>
     /// <param name="enabled">True to start playing, false to stop.</param>
     public static void SetLocalLoopback(bool enabled)
@@ -395,7 +401,9 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 }
 
 /// <summary>
-/// Custom UniVoice filter that intercepts processed microphone PCM float frames and plays them back in real time.
+/// Description: Custom UniVoice filter that intercepts processed microphone PCM float frames and plays them back in real time.
+/// Context: Used internally by VoiceSettingsConsumer for mic preview.
+/// Justification: Essential for players to test their VAD threshold without needing a second client connected.
 /// </summary>
 public class LocalLoopbackFilter : IAudioFilter
 {

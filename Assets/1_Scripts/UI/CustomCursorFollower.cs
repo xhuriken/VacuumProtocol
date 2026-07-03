@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Placed on a local custom cursor UI element in any scene.
-/// Automatically tracks the global MouseManager's position and visibility state,
-/// adapting correctly to the local Canvas scaler, camera, and sorting settings.
+/// Description: Placed on a local custom cursor UI element in any scene. Automatically tracks the global MouseManager's position and visibility state.
+/// Context: Attached to a UI image/rect transform that acts as a cursor.
+/// Justification: Adapts correctly to the local Canvas scaler, camera, and sorting settings, which a global cursor might fail at.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
 public class CustomCursorFollower : MonoBehaviour
@@ -11,12 +11,25 @@ public class CustomCursorFollower : MonoBehaviour
     private RectTransform _rectTransform;
     private Canvas _canvas;
 
+    private RectTransform _rectTransform;
+    private Canvas _canvas;
+
+    /// <summary>
+    /// Description: Unity Awake callback. Caches necessary components.
+    /// Context: Initialization.
+    /// Justification: Required to correctly position the cursor inside the canvas hierarchy.
+    /// </summary>
     private void Awake()
     {
         _rectTransform = GetComponent<RectTransform>();
         _canvas = GetComponentInParent<Canvas>();
     }
 
+    /// <summary>
+    /// Description: Unity LateUpdate callback. Updates cursor position and visibility.
+    /// Context: Frame loop, runs after all standard Updates.
+    /// Justification: Ensures the cursor perfectly matches the final mouse position without jitter.
+    /// </summary>
     private void LateUpdate()
     {
         if (MouseManager.Instance == null)
@@ -40,6 +53,11 @@ public class CustomCursorFollower : MonoBehaviour
         PositionCursor();
     }
 
+    /// <summary>
+    /// Description: Calculates the correct screen/world position for the cursor based on Canvas render mode.
+    /// Context: Called every frame while visible.
+    /// Justification: Solves the discrepancy between ScreenSpaceOverlay and ScreenSpaceCamera positioning.
+    /// </summary>
     private void PositionCursor()
     {
         if (_canvas == null)

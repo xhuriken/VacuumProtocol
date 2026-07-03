@@ -3,22 +3,23 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Manages the player's collected items inventory.
-/// Handles item storage (deactivation) and launching (spitting) over the network.
+/// Description: Manages the player's collected items inventory.
+/// Context: Attached to the player prefab.
+/// Justification: Centralizes state for vacuumed items. Handles server-side authority for deactivating absorbed items and launching (spitting) them back into the world.
 /// </summary>
 public class PlayerInventory : NetworkBehaviour
 {
     [Header("Inventory Settings")]
-    [Tooltip("Maximum number of items the inventory can hold.")]
+    [Tooltip("Role: Maximum number of items the inventory can hold.\nUse Case: Capacity limit.\nJustification: Prevents players from hoovering up the entire map, enforcing inventory management mechanics.")]
     [SerializeField]
     private int _maxCapacity = 10;
 
-    [Tooltip("Force applied when spitting an item out.")]
+    [Tooltip("Role: Force applied when spitting an item out.\nUse Case: Physics impulse.\nJustification: Determines how far an item shoots out when expelled.")]
     [SerializeField]
     private float _spitForce = 15f;
 
     [Header("Debug & Diagnostics")]
-    [Tooltip("Enables debug logs for inventory actions.")]
+    [Tooltip("Role: Enables debug logs for inventory actions.\nUse Case: Network tracing.\nJustification: Helps diagnose desync issues where an item is absorbed locally but not on the server.")]
     [SerializeField]
     private bool _enableDebugLogs = true;
 
@@ -30,7 +31,9 @@ public class PlayerInventory : NetworkBehaviour
     private int _syncedItemCount = 0;
 
     /// <summary>
-    /// Gets the current number of items in the inventory.
+    /// Description: Gets the current number of items in the inventory.
+    /// Context: Used by UI and internal logic.
+    /// Justification: Checks local server list directly on the server, but relies on a SyncVar for clients to ensure accurate counts without replicating the full GameObject list over the network.
     /// </summary>
     public int ItemCount
     {
@@ -41,7 +44,9 @@ public class PlayerInventory : NetworkBehaviour
     }
 
     /// <summary>
-    /// Gets a value indicating whether the inventory is full.
+    /// Description: Gets a value indicating whether the inventory is full.
+    /// Context: Checked before allowing new items to be vacuumed.
+    /// Justification: Enforces the _maxCapacity limit dynamically.
     /// </summary>
     public bool IsFull
     {
@@ -52,7 +57,9 @@ public class PlayerInventory : NetworkBehaviour
     }
 
     /// <summary>
-    /// Adds an object to the inventory. Must be called on the server.
+    /// Description: Adds an object to the inventory.
+    /// Context: Must be called on the server by the PlayerVacuumController.
+    /// Justification: Security. Only the server can validate capacity limits and permanently deactivate networked objects.
     /// </summary>
     /// <param name="item">The GameObject to add.</param>
     /// <returns>True if successfully added; false otherwise.</returns>
@@ -81,8 +88,9 @@ public class PlayerInventory : NetworkBehaviour
     }
 
     /// <summary>
-    /// Spits out the last absorbed item from the inventory in the specified direction.
-    /// Must be called on the server.
+    /// Description: Spits out the last absorbed item from the inventory in the specified direction.
+    /// Context: Must be called on the server when the player triggers the spit action.
+    /// Justification: Employs a Last-In-First-Out (LIFO) stack mechanic for spitting. Detaches the object from the player, reactivates it on the network, and applies physics impulse.
     /// </summary>
     /// <param name="spawnPosition">World position where the item should be activated.</param>
     /// <param name="spitDirection">World direction to launch the item.</param>

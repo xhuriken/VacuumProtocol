@@ -2,29 +2,35 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Reusable global helper to fetch clean mouse positioning coordinates.
-/// Fully compatible with the Unity New Input System.
+/// Description: Reusable global helper to fetch clean mouse positioning coordinates.
+/// Context: Persists across scenes.
+/// Justification: Provides a single source of truth for mouse state, fully compatible with the Unity New Input System.
 /// </summary>
 public class MouseManager : MonoBehaviour
 {
     /// <summary>
-    /// Static singleton instance of the MouseManager for global accessibility.
+    /// Description: Static singleton instance of the MouseManager.
+    /// Context: Global accessibility.
+    /// Justification: Required so local CustomCursorFollower instances can query the mouse.
     /// </summary>
     public static MouseManager Instance { get; private set; }
 
-    /// <summary>
-    /// Unity Awake callback. Establishes the singleton pattern.
-    /// </summary>
     [Header("Settings")]
-    [Tooltip("If true, the default system cursor will be hidden when the custom cursor is active.")]
+    [Tooltip("Role: Hides the default OS cursor.\nUse Case: Custom UI.\nJustification: Prevents seeing double cursors when a custom one is drawn.")]
     [SerializeField] private bool _hideHardwareCursor = true;
 
     /// <summary>
-    /// Gets whether the custom cursor should be visible based on lockstate.
-    /// True if mouse is unlocked (UI menus), false if locked (FPS gameplay).
+    /// Description: Gets whether the custom cursor should be visible based on lockstate.
+    /// Context: Property read by cursor followers.
+    /// Justification: Hides custom UI cursors if the player is in locked-camera gameplay.
     /// </summary>
     public bool ShouldShowCursor { get; private set; } = true;
 
+    /// <summary>
+    /// Description: Unity Awake callback. Establishes the singleton pattern.
+    /// Context: Initialization.
+    /// Justification: Ensures only one MouseManager exists across scene loads.
+    /// </summary>
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -52,8 +58,9 @@ public class MouseManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Evaluates Unity's cursor lockstate and visibility context.
-    /// Hide hardware cursor underneath the custom cursor disk.
+    /// Description: Evaluates Unity's cursor lockstate and visibility context.
+    /// Context: Called during initialization and frame loop.
+    /// Justification: Required to hide the hardware cursor underneath the custom cursor disk.
     /// </summary>
     private void UpdateCursorState()
     {
@@ -73,8 +80,9 @@ public class MouseManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets the current screen space position of the mouse pointer.
-    /// Retrieves coordinates from the New Input System package.
+    /// Description: Gets the current screen space position of the mouse pointer.
+    /// Context: Property accessor.
+    /// Justification: Wraps the New Input System call (Mouse.current.position.ReadValue()) safely.
     /// </summary>
     public Vector2 MousePosition
     {

@@ -2,15 +2,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Automatically detects a UGUI Button component on the same GameObject and configures
-/// it to open a serialized web link in the default system browser upon being clicked.
-/// Supports a safe visual fallback method for manual hookups in the Inspector.
+/// Description: Automatically configures a UGUI Button to open a serialized web link.
+/// Context: Attached to a Button component.
+/// Justification: Supports a safe visual fallback method for manual hookups in the Inspector without hard-coding URLs.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class OpenURLButton : MonoBehaviour
 {
     [Header("URL Settings")]
-    [Tooltip("The destination URL address to open in the system browser.")]
+    [Tooltip("Role: The destination URL address.\nUse Case: External link.\nJustification: Opens in the system browser.")]
     [SerializeField]
     private string _url = "https://";
 
@@ -19,12 +19,16 @@ public class OpenURLButton : MonoBehaviour
     private bool _enableDebugLogs = false;
 
     /// <summary>
-    /// Cached UGUI Button component on this GameObject.
+    /// Description: Cached UGUI Button component on this GameObject.
+    /// Context: Retrieved in Awake.
+    /// Justification: Used to hook up the click listener programmatically.
     /// </summary>
     private Button _button;
 
     /// <summary>
-    /// Unity Awake callback. Caches the Button component and registers the click event.
+    /// Description: Unity Awake callback. Caches the Button component and registers the click event.
+    /// Context: Initialization.
+    /// Justification: One-click setup experience.
     /// </summary>
     private void Awake()
     {
@@ -43,7 +47,9 @@ public class OpenURLButton : MonoBehaviour
     }
 
     /// <summary>
-    /// Unity OnDestroy callback. Unregisters listeners to prevent potential memory leaks.
+    /// Description: Unity OnDestroy callback. Unregisters listeners to prevent potential memory leaks.
+    /// Context: Object destruction.
+    /// Justification: Standard Unity Event cleanup practice.
     /// </summary>
     private void OnDestroy()
     {
@@ -55,8 +61,9 @@ public class OpenURLButton : MonoBehaviour
     }
 
     /// <summary>
-    /// Opens the configured URL in the default web browser.
-    /// Exposes a public endpoint that can be bound manually via Inspector onClick events.
+    /// Description: Opens the configured URL in the default web browser.
+    /// Context: Public function endpoint.
+    /// Justification: Can be bound manually via Inspector onClick events if auto-setup fails.
     /// </summary>
     public void OpenConfiguredURL()
     {
@@ -74,7 +81,9 @@ public class OpenURLButton : MonoBehaviour
     }
 
     /// <summary>
-    /// Internal delegate listener fired when the cached Button is clicked.
+    /// Description: Internal delegate listener fired when the cached Button is clicked.
+    /// Context: Programmatic callback.
+    /// Justification: Wrapper for OpenConfiguredURL.
     /// </summary>
     private void HandleButtonClick()
     {

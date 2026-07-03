@@ -68,6 +68,7 @@ graph TD
   * **Pourquoi avoir une copie locale ?** : Le script original du package est situé dans le cache en lecture seule de Unity (`Library/PackageCache/...`). Nous l'avons extrait localement dans nos scripts afin d'y ajouter nos propres fonctionnalités d'intégration sans écraser le package de base.
   * **Correctif Steamworks** : En multijoueur via Steam, le Host ID est parfois mal assigné à `-1`. Nous avons programmé une vérification à chaque frame pour forcer l'ID de l'hôte à `0` via réflexion C# afin de ne pas bloquer le traitement audio local.
   * **Pont VAD** : Nous avons exposé l'instance interne du détecteur de voix local (`LocalVad`) pour que d'autres composants du jeu (comme l'animateur de bouche et les jauges UI) puissent lire son état en temps réel.
+  * **Auto VAD & Local Loopback** : Permet au joueur de tester la sensibilité de son micro en temps réel via un retour audio local direct (`LocalLoopbackFilter`), avec une option de configuration automatique (`AutoVad`) pour restaurer les paramètres par défaut optimaux d'UniVoice.
 
 #### 2. Le Pont de Spatialisation 3D ([UniVoicePlayerAudio.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/UniVoicePlayerAudio.cs))
 * **Rôle** : Liaison entre l'identité réseau d'un joueur Mirror et sa voix UniVoice.
@@ -95,7 +96,7 @@ Composant global unique placé dans la première scène.
   * `LocalVad` : Instance statique du VAD local.
   * `ClientSession` : Session globale d'écoute et d'envoi.
 * **Fonctions** :
-  * `SetupClientSession()` : Démarre le micro et enregistre la chaîne de filtres (`SimpleVadFilter`, `ConcentusEncodeFilter`, `ConcentusDecodeFilter`).
+  * `SetupClientSession()` : Démarre le micro et enregistre la chaîne de filtres (`SimpleVadFilter`, `LocalLoopbackFilter` (lorsque activé), `ConcentusEncodeFilter`, `ConcentusDecodeFilter`).
 
 ### UniVoicePlayerAudio.cs
 Attaché à la racine du préfabrique Joueur.

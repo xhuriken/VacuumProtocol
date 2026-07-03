@@ -2,7 +2,9 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// Manages the vacuum sound effects using a pre-rendered Audio Clip.
+/// Description: Manages the vacuum sound effects using a pre-rendered Audio Clip.
+/// Context: Attached to the player's vacuum component and used in the lobby UI for previews.
+/// Justification: Rather than generating audio purely in Unity, we use a synthesized clip from Vital and manipulate its pitch/volume dynamically with DOTween.
 /// </summary>
 public enum MusicalNote
 {
@@ -14,7 +16,7 @@ public enum MusicalNote
 public class VacuumAudioController : MonoBehaviour
 {
     [Header("Audio Source References")]
-    [Tooltip("Put your Vital sound here (exported WITH its own LFO if you want). It must be set to loop.")]
+    [Tooltip("Role: The AudioSource component.\nUse Case: Sound emission.\nJustification: Must contain the looping Vital audio clip.")]
     [SerializeField] private AudioSource _audioSource;
 
     [Header("Audio Dynamics (DOTween)")]
@@ -24,14 +26,14 @@ public class VacuumAudioController : MonoBehaviour
     public Ease FadeCurve = Ease.OutQuad;
 
     [Header("Musical Pitching")]
-    [Tooltip("Base pitch multiplier (1 = Original DO/C from Vital)")]
+    [Tooltip("Role: Base pitch multiplier.\nUse Case: Tuning.\nJustification: 1 = Original DO/C from Vital. Used as the foundation for semitone shifts.")]
     [Range(0.1f, 3.0f)] public float BasePitch = 1.0f;
 
 
-    [Tooltip("Choose the root note you want this vacuum to play!")]
+    [Tooltip("Role: Base musical note of the vacuum.\nUse Case: Lobby Customization.\nJustification: Players can select a root note to harmonize with others.")]
     public MusicalNote RootNote = MusicalNote.C;
 
-    [Tooltip("Allows shifting pitch dynamically by exact semitones during gameplay to resolve chords")]
+    [Tooltip("Role: Dynamic pitch shift in semitones.\nUse Case: Chord resolution during gameplay.\nJustification: Allows scripts to dynamically alter the pitch without changing the base RootNote.")]
     public int SemitoneShift = 0;
 
     [Header("Debug")]
@@ -43,6 +45,11 @@ public class VacuumAudioController : MonoBehaviour
     private Tween _volumeTween;
     private Tween _pitchTween;
 
+    /// <summary>
+    /// Description: Validates components and configures the audio source.
+    /// Context: Awake lifecycle event.
+    /// Justification: Ensures the audio source loops but starts silent, allowing DOTween to handle the fade-ins.
+    /// </summary>
     private void Awake()
     {
         if (_audioSource == null) _audioSource = GetComponent<AudioSource>();
@@ -56,6 +63,11 @@ public class VacuumAudioController : MonoBehaviour
         _audioSource.volume = 0f;
     }
 
+    /// <summary>
+    /// Description: Starts the audio source playback (silently).
+    /// Context: Start lifecycle event.
+    /// Justification: The clip must be playing continuously in the background so that pitch/volume tweens can smoothly fade it in/out at any time.
+    /// </summary>
     private void Start()
     {
         if (!_audioSource.isPlaying)
@@ -64,6 +76,12 @@ public class VacuumAudioController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Description: Toggles the vacuum sound on or off with smooth DOTween transitions.
+    /// Context: Called by PlayerVacuumController or Lobby UI when the player activates the vacuum.
+    /// Justification: Avoids abrupt audio cuts by fading volume and pitch simultaneously.
+    /// </summary>
+    /// <param name="active">True to turn on, false to turn off.</param>
     public void SetVacuumState(bool active)
     {
         if (_enableDebugLogs) Debug.Log($"[VacuumAudio] SetVacuumState({active}). IsPlaying={_audioSource.isPlaying}, CurrentVol={_audioSource.volume}");
@@ -94,7 +112,9 @@ public class VacuumAudioController : MonoBehaviour
     }
 
     /// <summary>
-    /// Update the note offset dynamically from outside scripts to resolve chords!
+    /// Description: Update the note offset dynamically to resolve chords.
+    /// Context: Can be called by gameplay managers to alter the pitch of the vacuum.
+    /// Justification: Allows musical interplay during gameplay without permanently modifying the user's customized RootNote.
     /// </summary>
     public void SetNoteOffset(int semitones)
     {
@@ -107,7 +127,9 @@ public class VacuumAudioController : MonoBehaviour
     }
 
     /// <summary>
-    /// Future method for the Lobby Radio Buttons to change the root note.
+    /// Description: Changes the fundamental base note of the vacuum sound.
+    /// Context: Used by the Lobby Customization UI when the player selects a new note.
+    /// Justification: Immediately updates the running tween to provide real-time audio feedback to the player.
     /// </summary>
     public void SetRootNote(MusicalNote newRootNote)
     {
@@ -119,6 +141,11 @@ public class VacuumAudioController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Description: Calculates the combined target pitch multiplier.
+    /// Context: Called internally before triggering pitch tweens.
+    /// Justification: Consolidates the RootNote and SemitoneShift into a single mathematical pitch float.
+    /// </summary>
     private float GetCurrentTargetPitch()
     {
         int totalSemitones = (int)RootNote + SemitoneShift;
@@ -126,7 +153,9 @@ public class VacuumAudioController : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculates the exact pitch multiplier needed for musical semitone shifts.
+    /// Description: Calculates the exact pitch multiplier needed for musical semitone shifts.
+    /// Context: Mathematical audio helper function.
+    /// Justification: Standard music theory formula (12th root of 2) used to correctly scale audio playback speeds to musical notes.
     /// </summary>
     public static float GetMusicalPitch(float basePitch, int semitones)
     {
@@ -134,7 +163,11 @@ public class VacuumAudioController : MonoBehaviour
         return basePitch * Mathf.Pow(1.059463094359f, semitones);
     }
 
-    // Allows live-testing the note change directly from the Unity Inspector
+    /// <summary>
+    /// Description: Allows live-testing the note change directly from the Unity Inspector.
+    /// Context: Unity Editor OnValidate event.
+    /// Justification: Rapid prototyping and testing of audio levels without needing a custom inspector script.
+    /// </summary>
     private void OnValidate()
     {
         if (Application.isPlaying && _isActive && _audioSource != null)

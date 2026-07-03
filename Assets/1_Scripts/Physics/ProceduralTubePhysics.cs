@@ -3,39 +3,50 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
-/// Automates the creation of a procedural softbody-like chain of Rigidbodies and ConfigurableJoints.
-/// Useful for tubes, arms, or flexible robotic appendages.
+/// Description: Automates the creation of a procedural softbody-like chain of Rigidbodies and ConfigurableJoints.
+/// Context: Attached to the root bone of a rigged tube/cable mesh (e.g., the vacuum hose).
+/// Justification: Writing manual physics joints for 20+ bone segments is extremely tedious and prone to error. This script auto-generates the entire chain with mathematically consistent damping and spring forces at runtime or edit time.
 /// </summary>
 public class ProceduralTubePhysics : MonoBehaviour
 {
     [BoxGroup("General Settings")]
     [Range(0.01f, 10f)]
+    [Tooltip("Role: The mass of each generated Rigidbody.\nUse Case: Physics weight calculation.\nJustification: Too high mass causes joint tearing; too low causes jitter.")]
     public float segmentMass = 0.5f;
 
-
     [BoxGroup("General Settings")]
+    [Tooltip("Role: Linear drag applied to each segment.\nUse Case: Slowing down translation.\nJustification: Prevents the tube from oscillating endlessly when swung.")]
     public float linearDamping = 1f;
 
-
     [BoxGroup("General Settings")]
+    [Tooltip("Role: Angular drag applied to each segment.\nUse Case: Slowing down rotation.\nJustification: Prevents the joints from twisting violently.")]
     public float angularDamping = 5f;
 
     [BoxGroup("Joint Settings (Softbody Feel)")]
+    [Tooltip("Role: The spring force pulling the joint back to its original rotation.\nUse Case: Maintaining shape.\nJustification: High stiffness = rigid pipe. Low stiffness = wet noodle.")]
     public float stiffness = 100f;
+
     [BoxGroup("Joint Settings (Softbody Feel)")]
+    [Tooltip("Role: The damping applied to the spring force.\nUse Case: Smoothing spring bounciness.\nJustification: Required to stop the stiffness spring from overshooting and vibrating.")]
     public float damping = 10f;
+
     [BoxGroup("Joint Settings (Softbody Feel)")]
-    [Tooltip("Multiplier for the stiffness of the last segment (the hand/tip) to make it more stable.")]
+    [Tooltip("Role: Multiplier for the stiffness of the last segment.\nUse Case: Stabilizing the nozzle end.\nJustification: The player needs precise control over the end of the vacuum tube. Increasing stiffness here prevents it from flopping out of view.")]
     public float tipStiffnessMultiplier = 2f;
+
     [BoxGroup("Joint Settings (Softbody Feel)")]
     [Range(0, 180)]
+    [Tooltip("Role: The maximum angle a joint can bend.\nUse Case: Limiting flex.\nJustification: Simulates the physical limits of rubber tubing.")]
     public float angularLimit = 45f;
 
     [BoxGroup("Collider Settings")]
+    [Tooltip("Role: Radius of the auto-generated CapsuleColliders.\nUse Case: Collision detection.\nJustification: Dynamic colliders prevent the tube from clipping through walls.")]
     public float colliderRadius = 0.05f;
 
     /// <summary>
-    /// Clears existing components and sets up the procedural physics chain from this transform downwards.
+    /// Description: Clears existing components and sets up the procedural physics chain from this transform downwards.
+    /// Context: Can be triggered via Odin Inspector button in the editor.
+    /// Justification: Automates the setup process for level designers, saving hours of manual prefab configuration.
     /// </summary>
     [HorizontalGroup("Actions")]
     [Button(ButtonSizes.Large), GUIColor(0.4f, 0.8f, 0.4f)]
@@ -46,7 +57,9 @@ public class ProceduralTubePhysics : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes all Rigidbody, ConfigurableJoint, and CapsuleCollider components from child objects.
+    /// Description: Removes all Rigidbody, ConfigurableJoint, and CapsuleCollider components from child objects.
+    /// Context: Can be triggered via Odin Inspector button.
+    /// Justification: Provides a clean slate before regenerating the physics chain, ensuring no duplicate components or orphaned joints.
     /// </summary>
     [HorizontalGroup("Actions")]
     [Button(ButtonSizes.Large), GUIColor(0.8f, 0.4f, 0.4f)]
@@ -71,7 +84,9 @@ public class ProceduralTubePhysics : MonoBehaviour
     }
 
     /// <summary>
-    /// Recursively traverses the hierarchy to add and configure physics components.
+    /// Description: Recursively traverses the hierarchy to add and configure physics components.
+    /// Context: Internal helper called by Setup().
+    /// Justification: By iterating down the bone hierarchy, it correctly chains ConfigurableJoints from parent to child, automatically calculating collider lengths based on bone distances.
     /// </summary>
     /// <param name="current">The current transform being processed.</param>
     /// <param name="parentRb">The Rigidbody of the parent object to connect the joint to.</param>

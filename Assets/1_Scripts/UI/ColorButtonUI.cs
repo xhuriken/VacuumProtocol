@@ -5,53 +5,53 @@ using DG.Tweening;
 using Shapes;
 
 /// <summary>
-/// Controls lobby color selection buttons utilizing custom Freya Holmér Vector Shapes (Rectangle).
-/// Handles smooth outline size morphing and magnetic cursor attraction for the plain inner shape.
-/// Includes dynamic visual raycast diagnostics to identify hover blockages in the scene.
+/// Description: Controls lobby color selection buttons utilizing custom Freya Holmér Vector Shapes (Rectangle).
+/// Context: Attached to a color selection button UI element.
+/// Justification: Handles smooth outline size morphing and magnetic cursor attraction for a rich interactive experience.
 /// </summary>
 public class ColorButtonUI : UICustomButtonBase
 {
     [Header("Shapes References")]
-    [Tooltip("The outline rectangle shape component.")]
+    [Tooltip("Role: The outline rectangle shape component.\nUse Case: Visuals.\nJustification: Used for the outer animated border.")]
     [SerializeField]
     private Rectangle _outlineShape;
 
-    [Tooltip("The plain inner rectangle shape component.")]
+    [Tooltip("Role: The plain inner rectangle shape component.\nUse Case: Visuals.\nJustification: Colored based on the palette to display the choice.")]
     [SerializeField]
     private Rectangle _plainShape;
 
     [Header("Base Dimensions")]
-    [Tooltip("Base width of the outline rectangle.")]
+    [Tooltip("Role: Base width of the outline rectangle.\nUse Case: Animation baseline.\nJustification: Keeps the idle shape consistent.")]
     [SerializeField]
     private float _baseWidth = 75f;
 
-    [Tooltip("Base height of the outline rectangle.")]
+    [Tooltip("Role: Base height of the outline rectangle.\nUse Case: Animation baseline.\nJustification: Keeps the idle shape consistent.")]
     [SerializeField]
     private float _baseHeight = 75f;
 
     [Header("Hover Multipliers")]
-    [Tooltip("Width scale multiplier on pointer hover.")]
+    [Tooltip("Role: Width scale multiplier on pointer hover.\nUse Case: Animation.\nJustification: Determines how much the shape stretches on hover.")]
     [SerializeField]
     private float _hoverWidthMultiplier = 1.15f;
 
-    [Tooltip("Height scale multiplier on pointer hover.")]
+    [Tooltip("Role: Height scale multiplier on pointer hover.\nUse Case: Animation.\nJustification: Determines how much the shape stretches on hover.")]
     [SerializeField]
     private float _hoverHeightMultiplier = 1.15f;
 
-    [Tooltip("Duration of outline resizing and bounce animations.")]
+    [Tooltip("Role: Duration of outline resizing and bounce animations.\nUse Case: Animation pacing.\nJustification: Determines the tween length in seconds.")]
     [SerializeField]
     private float _animationDuration = 0.15f;
 
     [Header("Magnetic Proximity Options")]
-    [Tooltip("Radius in screen pixels within which the magnetic attraction pulls the inner plain shape.")]
+    [Tooltip("Role: Radius in screen pixels for magnetic attraction.\nUse Case: Interaction.\nJustification: Determines how close the mouse must be to pull the shape.")]
     [SerializeField]
     private float _magneticRadius = 150f;
 
-    [Tooltip("Maximum local offset distance the inner plain shape can move towards the mouse.")]
+    [Tooltip("Role: Maximum local offset distance.\nUse Case: Interaction limit.\nJustification: Prevents the inner shape from flying entirely out of bounds.")]
     [SerializeField]
     private float _maxMagneticOffset = 12f;
 
-    [Tooltip("Smoothing factor for inner plain shape movement interpolation.")]
+    [Tooltip("Role: Smoothing factor for movement.\nUse Case: Interpolation.\nJustification: Makes the magnetic follow effect feel organic instead of snappy.")]
     [SerializeField]
     private float _magneticSmoothSpeed = 12f;
 
@@ -63,7 +63,9 @@ public class ColorButtonUI : UICustomButtonBase
     private static bool _hasLoggedDiagnosticHeader = false;
 
     /// <summary>
-    /// Unity Awake callback. Performs validation checks and caches initial visual states.
+    /// Description: Unity Awake callback. Performs validation checks and caches initial visual states.
+    /// Context: Initialization.
+    /// Justification: Required to store the original scale/position before any tweens modify them.
     /// </summary>
     protected override void Awake()
     {
@@ -97,7 +99,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Unity Start callback. Validates presence of critical scene dependencies.
+    /// Description: Unity Start callback. Validates presence of critical scene dependencies.
+    /// Context: Initialization.
+    /// Justification: Throws errors if EventSystem or MouseManager are missing.
     /// </summary>
     private void Start()
     {
@@ -125,7 +129,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Smoothly resets scale, positions, and kills active tweens to prevent visual bugs when disabled.
+    /// Description: Smoothly resets scale, positions, and kills active tweens to prevent visual bugs when disabled.
+    /// Context: Unity lifecycle event.
+    /// Justification: If disabled mid-tween, the button would remain stuck in a distorted state upon re-enable.
     /// </summary>
     protected override void OnDisable()
     {
@@ -135,8 +141,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Unity Update callback. Calculates screen proximity to mouse and applies magnetic pull to the inner shape.
-    /// Runs dynamic diagnostics to help developer uncover UGUI graphic raycast blocks.
+    /// Description: Calculates screen proximity to mouse and applies magnetic pull to the inner shape.
+    /// Context: Frame loop.
+    /// Justification: Achieves the premium liquid magnetic feel. Also runs UGUI raycast diagnostics.
     /// </summary>
     private void Update()
     {
@@ -182,7 +189,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Runs a recursive raycast test from current mouse coordinates to detect graphic blockages.
+    /// Description: Runs a recursive raycast test from current mouse coordinates to detect graphic blockages.
+    /// Context: Called periodically in Update.
+    /// Justification: Assists in debugging when hidden invisible panels consume raycasts intended for this button.
     /// </summary>
     private void RunDiagnosticTracker()
     {
@@ -255,7 +264,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Sets the color of both the outline and plain vector shapes.
+    /// Description: Sets the color of both the outline and plain vector shapes.
+    /// Context: Called by UIColorsPalettes during initialization.
+    /// Justification: Required to colorize the Vector Shapes dynamically.
     /// </summary>
     /// <param name="color">The color to apply.</param>
     public void SetButtonColor(Color color)
@@ -274,7 +285,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Animates the outline shape size and plain scale when pointer enters button bounds.
+    /// Description: Animates the outline shape size and plain scale when pointer enters button bounds.
+    /// Context: EventSystem callback.
+    /// Justification: Provides tactile expansion feedback on hover.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public override void OnPointerEnter(PointerEventData eventData)
@@ -297,7 +310,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Resets outline shape size and plain scale when pointer leaves button bounds.
+    /// Description: Resets outline shape size and plain scale when pointer leaves button bounds.
+    /// Context: EventSystem callback.
+    /// Justification: Restores the normal idle state.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public override void OnPointerExit(PointerEventData eventData)
@@ -318,7 +333,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Shrinks visual elements on pointer down to provide premium tactile press feedback.
+    /// Description: Shrinks visual elements on pointer down to provide premium tactile press feedback.
+    /// Context: EventSystem callback.
+    /// Justification: Visually confirms the physical button press action.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public override void OnPointerDown(PointerEventData eventData)
@@ -341,7 +358,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Springs visual elements back to their appropriate hover or idle scales on pointer release.
+    /// Description: Springs visual elements back to their appropriate hover or idle scales on pointer release.
+    /// Context: EventSystem callback.
+    /// Justification: Reverts the click shrinkage smoothly.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public override void OnPointerUp(PointerEventData eventData)
@@ -366,7 +385,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Smoothly tweens the outline rectangle's Width and Height properties using DOTween.
+    /// Description: Smoothly tweens the outline rectangle's Width and Height properties using DOTween.
+    /// Context: Animation helper.
+    /// Justification: Centralizes the size tweens to avoid duplicate code.
     /// </summary>
     /// <param name="targetWidth">Target width to tween to.</param>
     /// <param name="targetHeight">Target height to tween to.</param>
@@ -395,7 +416,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Halts all active DOTween animations targeting shapes.
+    /// Description: Halts all active DOTween animations targeting shapes.
+    /// Context: Cleanup.
+    /// Justification: Prevents conflicting tweens if actions happen rapidly.
     /// </summary>
     private void KillAllTweens()
     {
@@ -411,7 +434,9 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
-    /// Resets all visual shapes to their initial inspector dimensions and positions.
+    /// Description: Resets all visual shapes to their initial inspector dimensions and positions.
+    /// Context: Cleanup.
+    /// Justification: Crucial to return to a baseline state when disabling.
     /// </summary>
     private void ResetToDefaults()
     {

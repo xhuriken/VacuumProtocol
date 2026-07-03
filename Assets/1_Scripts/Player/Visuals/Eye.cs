@@ -2,24 +2,31 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Controls eye orientation using Quaternions to avoid Euler-related axis issues.
-/// Uses the initial editor rotation as the reference for "looking straight ahead".
+/// Description: Controls eye orientation using Quaternions to avoid Euler-related axis issues.
+/// Context: Attached to the physical eye bone in the player's head.
+/// Justification: Gives the player a sense of life and focus by physically pointing their eye at the highest priority entity in view.
 /// </summary>
 public class Eye : NetworkBehaviour
 {
     [Header("References")]
-    [SerializeField, Tooltip("Reference to the script detecting targets.")]
+    [SerializeField, Tooltip("Role: Reference to the script detecting targets.\nUse Case: Target acquisition.\nJustification: Decouples the physical rotation logic from the detection logic.")]
     private PlayerViewRange _playerViewRange;
 
     [Header("Settings")]
-    [SerializeField, Tooltip("How fast the eye follows the target.")]
+    [SerializeField, Tooltip("Role: How fast the eye follows the target.\nUse Case: Slerp speed.\nJustification: Simulates biological saccadic movement constraints.")]
     private float _rotationSpeed = 8f;
 
+    [Tooltip("Role: Enable eye debug logs.\nUse Case: Target tracking debug.\nJustification: Verifies if the eye logic is properly receiving the target from ViewRange.")]
     [SerializeField] private bool _showDebugLogs = true;
 
     private Quaternion _initialLocalRotation;
     private Quaternion _targetLocalRotation;
 
+    /// <summary>
+    /// Description: Start callback. Caches initial orientation.
+    /// Context: Lifecycle event.
+    /// Justification: Storing the initial rotation as our "looking forward" reference makes the script bone-orientation agnostic.
+    /// </summary>
     private void Start()
     {
         // Store the initial rotation as our "looking forward" reference.
@@ -28,6 +35,11 @@ public class Eye : NetworkBehaviour
         _targetLocalRotation = _initialLocalRotation;
     }
 
+    /// <summary>
+    /// Description: Update callback. Triggers rotation math.
+    /// Context: Update lifecycle event.
+    /// Justification: Only the local player calculates their own eye movement for responsiveness and to save network bandwidth.
+    /// </summary>
     private void Update()
     {
         // Only the local player calculates their own eye movement for responsiveness.
@@ -38,7 +50,9 @@ public class Eye : NetworkBehaviour
     }
 
     /// <summary>
-    /// Determines the rotation needed to look at the highest priority target.
+    /// Description: Determines the rotation needed to look at the highest priority target.
+    /// Context: Called during Update.
+    /// Justification: Calculates a target quaternion in local space based on the original offset, preventing gimbal lock and weird twisting.
     /// </summary>
     private void CalculateTargetRotation()
     {
@@ -69,7 +83,9 @@ public class Eye : NetworkBehaviour
     }
 
     /// <summary>
-    /// Smoothly rotates the eye towards the target rotation.
+    /// Description: Smoothly rotates the eye towards the target rotation.
+    /// Context: Called during Update.
+    /// Justification: Uses Slerp to create an organic, non-linear tracking motion.
     /// </summary>
     private void ApplyRotation()
     {

@@ -9,36 +9,57 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Controls the lobby UI, manages the player list, and handles the game start logic.
+/// Description: Controls the lobby UI, manages the player list, and handles the game start logic.
+/// Context: Attached to a persistent GameObject in the Lobby scene.
+/// Justification: Coordinates between the SteamLobby backend and the visible UI frontend.
 /// </summary>
 public class LobbyController : MonoBehaviour
 {
     /// <summary>
-    /// Singleton instance of the LobbyController.
+    /// Description: Singleton instance of the LobbyController.
+    /// Context: Set on Awake.
+    /// Justification: Allows external UI scripts and network callbacks to easily trigger UI refreshes without heavy FindObjectOfType calls.
     /// </summary>
     public static LobbyController Instance;
 
     [Header("UI Elements")]
+    [Tooltip("Role: Displays the Steam lobby's name.\nUse Case: UI Update.\nJustification: Confirms to the user which lobby they joined.")]
     public TextMeshProUGUI LobbyNameText;
 
     [Header("Player Data")]
+    [Tooltip("Role: Container for all player UI items.\nUse Case: Instantiation parent.\nJustification: A VerticalLayoutGroup usually manages this to list players.")]
     public GameObject PlayerListViewContent;
+    
+    [Tooltip("Role: The prefab for a single player in the list.\nUse Case: Instantiation.\nJustification: Contains the Steam avatar, name, and ready status.")]
     public GameObject PlayerListItemPrefab;
+    
+    [Tooltip("Role: Reference to the local player's network object.\nUse Case: Local state checks.\nJustification: Used to read the local Ready state for the button.")]
     public GameObject LocalPlayerObject;
 
     [Header("Lobby State")]
+    [Tooltip("Role: Tracks the Steam Lobby ID.\nUse Case: State tracking.\nJustification: Exposed for inspector debugging.")]
     public ulong CurrentLobbyId;
+    
+    [Tooltip("Role: Tracks if the host's player item has been created.\nUse Case: Initialization flag.\nJustification: Ensures we don't duplicate the host in the list.")]
     public bool PlayerItemCreated = false;
+    
     private List<PlayerListItem> PlayerListItems = new List<PlayerListItem>();
+    
+    [Tooltip("Role: Reference to the local player's controller script.\nUse Case: Network commands.\nJustification: Required to send CmdStartGame or CmdSetReady.")]
     public PlayerObjectController LocalPlayerController;
 
     [Header("Ready System")]
+    [Tooltip("Role: Custom button component for starting the game.\nUse Case: Disabling/enabling the start button.\nJustification: Only interactable for the host when everyone is ready.")]
     public UICustomButtonBase StartGameButton;
+    
+    [Tooltip("Role: Text showing the Ready button status.\nUse Case: UI feedback.\nJustification: Switches between 'Plug' (Ready) and 'Unplug' (Not Ready).")]
     public TextMeshProUGUI ReadyButtonText;
 
     private MyNetworkManager _manager;
     /// <summary>
-    /// Accessor for the custom Network Manager.
+    /// Description: Accessor for the custom Network Manager.
+    /// Context: Lazy initialization.
+    /// Justification: Safely retrieves the manager without requiring manual assignment in the inspector.
     /// </summary>
     private MyNetworkManager Manager
     {
@@ -55,7 +76,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Toggles the ready state of the local player.
+    /// Description: Toggles the ready state of the local player.
+    /// Context: Called by the UI Ready button OnClick event.
+    /// Justification: Only the local player can dictate their own ready state to the server.
     /// </summary>
     public void ReadyPlayer()
     {
@@ -63,7 +86,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Starts the game for all connected players.
+    /// Description: Starts the game for all connected players.
+    /// Context: Called by the Host's UI Start button OnClick event.
+    /// Justification: Initiates the scene transition via the NetworkManager.
     /// </summary>
     public void StartGame()
     {
@@ -71,7 +96,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates the visual state of the ready button based on the local player's status.
+    /// Description: Updates the visual state of the ready button based on the local player's status.
+    /// Context: Called when local ready state changes.
+    /// Justification: Provides immediate visual feedback to the player.
     /// </summary>
     public void UpdateButton()
     {
@@ -88,7 +115,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Checks if all players are ready. Enables the start button if the host.
+    /// Description: Checks if all players are ready. Enables the start button if the host.
+    /// Context: Called after any player's ready state is updated.
+    /// Justification: Prevents the host from starting the game prematurely.
     /// </summary>
     public void CheckIfAllReady()
     {
@@ -125,7 +154,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Fetches and updates the lobby name from Steam data.
+    /// Description: Fetches and updates the lobby name from Steam data.
+    /// Context: Called when the local player gains authority in the lobby.
+    /// Justification: Ensures the lobby displays the correct Steam persona name of the host.
     /// </summary>
     public void UpdateLobbyName()
     {
@@ -134,7 +165,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Orchestrates the synchronization of the player list UI.
+    /// Description: Orchestrates the synchronization of the player list UI.
+    /// Context: Called anytime a player joins, leaves, or changes ready status.
+    /// Justification: Acts as the main update loop for the visual lobby roster.
     /// </summary>
     public void UpdatePlayerList()
     {
@@ -145,7 +178,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Finds and assigns the local player object in the scene.
+    /// Description: Finds and assigns the local player object in the scene.
+    /// Context: Called during local player authorization.
+    /// Justification: We need a direct reference to the local controller to read its Ready state and issue commands.
     /// </summary>
     public void FindLocalPlayer()
     {
@@ -154,7 +189,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Creates UI items for all players currently in the manager (Host logic).
+    /// Description: Creates UI items for all players currently in the manager (Host logic).
+    /// Context: Called during initial list population.
+    /// Justification: The host needs to generate the UI for themselves and any immediate peers upon lobby creation.
     /// </summary>
     public void CreateHostPlayerItem()
     {
@@ -188,7 +225,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Creates UI items for players not yet represented in the UI (Client logic).
+    /// Description: Creates UI items for players not yet represented in the UI (Client logic).
+    /// Context: Called when syncing the list and finding a mismatch.
+    /// Justification: Dynamically adds late-joiners to the visual roster.
     /// </summary>
     public void CreateClientPlayerItem()
     {
@@ -223,7 +262,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates the data displayed in existing player list UI items.
+    /// Description: Updates the data displayed in existing player list UI items.
+    /// Context: Called when a player's name or ready status changes.
+    /// Justification: Ensures the UI matches the network state without destroying and recreating the GameObjects.
     /// </summary>
     public void UpdatePlayerItem()
     {
@@ -249,7 +290,9 @@ public class LobbyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes UI items for players who have left the lobby.
+    /// Description: Removes UI items for players who have left the lobby.
+    /// Context: Called when the UI list size exceeds the network manager list size.
+    /// Justification: Cleans up the roster when someone disconnects.
     /// </summary>
     public void RemovePlayerItem()
     {

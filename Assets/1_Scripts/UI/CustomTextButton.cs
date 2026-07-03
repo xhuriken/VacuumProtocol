@@ -6,38 +6,38 @@ using DG.Tweening;
 using Febucci.UI.Core;
 
 /// <summary>
-/// A custom shape-based UI button that supports text and line/dot shape visual structures.
-/// Features high-fidelity DOTween animations, anti-spam execution guards, and Febucci typewriter triggers.
-/// Inherits from <see cref="UICustomButtonBase"/> to integrate seamlessly with the UGUI EventSystem.
+/// Description: A custom shape-based UI button that supports text and line/dot shape visual structures.
+/// Context: Attached to standard UI Button objects in the canvas.
+/// Justification: Features high-fidelity DOTween animations, anti-spam execution guards, and Febucci typewriter triggers.
 /// </summary>
 public class CustomTextButton : UICustomButtonBase
 {
     #region Serialized Fields & References
 
     [Header("Shapes References")]
-    [Tooltip("The left decorative line shape component.")]
+    [Tooltip("Role: The left decorative line shape component.\nUse Case: Visuals.\nJustification: Animated on hover.")]
     [SerializeField]
     private Line _leftLine;
 
-    [Tooltip("The main container rectangle shape component.")]
+    [Tooltip("Role: The main container rectangle shape component.\nUse Case: Visuals.\nJustification: Forms the core button body.")]
     [SerializeField]
     private Rectangle _rect;
 
-    [Tooltip("The decorative dots shape component/parent.")]
+    [Tooltip("Role: The decorative dots shape component/parent.\nUse Case: Visuals.\nJustification: Contains animated child discs for tech aesthetic.")]
     [SerializeField]
     private GameObject _dots;
 
     [Header("Text References")]
-    [Tooltip("The TextMeshPro text component of the button.")]
+    [Tooltip("Role: The TextMeshPro text component.\nUse Case: Displaying the button label.\nJustification: Required to show what the button does.")]
     [SerializeField]
     private TextMeshProUGUI _buttonText;
 
     [Header("Animation Durations")]
-    [Tooltip("Duration of hover transitions.")]
+    [Tooltip("Role: Duration of hover transitions.\nUse Case: Animation pacing.\nJustification: Standardizes how fast the elements react to mouse over.")]
     [SerializeField]
     private float _hoverDuration = 0.3f;
 
-    [Tooltip("Duration of click flash/shimmer transitions.")]
+    [Tooltip("Role: Duration of click flash/shimmer transitions.\nUse Case: Animation pacing.\nJustification: Standardizes how fast the elements react to click.")]
     [SerializeField]
     private float _clickDuration = 0.25f;
 
@@ -75,22 +75,30 @@ public class CustomTextButton : UICustomButtonBase
     #region Public Properties
 
     /// <summary>
-    /// Gets the left line shape component.
+    /// Description: Gets the left line shape component.
+    /// Context: Property accessor.
+    /// Justification: Allows external scripts to read the Line object.
     /// </summary>
     public Line LeftLine => _leftLine;
 
     /// <summary>
-    /// Gets the main container rectangle shape component.
+    /// Description: Gets the main container rectangle shape component.
+    /// Context: Property accessor.
+    /// Justification: Allows external scripts to read the Rect object.
     /// </summary>
     public Rectangle Rect => _rect;
 
     /// <summary>
-    /// Gets the decorative dots shape component/parent.
+    /// Description: Gets the decorative dots shape component/parent.
+    /// Context: Property accessor.
+    /// Justification: Allows external scripts to read the Dots GameObject.
     /// </summary>
     public GameObject Dots => _dots;
 
     /// <summary>
-    /// Gets the TextMeshPro text component of the button.
+    /// Description: Gets the TextMeshPro text component of the button.
+    /// Context: Property accessor.
+    /// Justification: Allows external scripts to read the Text object.
     /// </summary>
     public TextMeshProUGUI ButtonText => _buttonText;
 
@@ -99,7 +107,9 @@ public class CustomTextButton : UICustomButtonBase
     #region Unity Lifecycle Callbacks
 
     /// <summary>
-    /// Unity Awake callback. Performs base validation and fetches the Febucci typewriter player.
+    /// Description: Unity Awake callback. Performs base validation and fetches the Febucci typewriter player.
+    /// Context: Initialization.
+    /// Justification: Required to prepare the animated text and child shapes.
     /// </summary>
     protected override void Awake()
     {
@@ -125,7 +135,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Unity Start callback. Caches default states and initializes the visual element positions/colors.
+    /// Description: Unity Start callback. Caches default states and initializes the visual element positions/colors.
+    /// Context: Initialization.
+    /// Justification: Ensures all tweens return to their correct starting values.
     /// </summary>
     protected virtual void Start()
     {
@@ -134,7 +146,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Automatically cleans up any residual tweens when disabled to prevent execution leaks.
+    /// Description: Automatically cleans up any residual tweens when disabled.
+    /// Context: Unity lifecycle event.
+    /// Justification: Prevents execution leaks and visual bugs when the UI is toggled.
     /// </summary>
     protected override void OnDisable()
     {
@@ -147,7 +161,9 @@ public class CustomTextButton : UICustomButtonBase
     #region EventSystem Interface Overrides
 
     /// <summary>
-    /// Handles pointer enter event, triggering hover entry visual animations.
+    /// Description: Handles pointer enter event, triggering hover entry visual animations.
+    /// Context: EventSystem callback.
+    /// Justification: Fires the complex UI hover effect.
     /// </summary>
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerEnter(PointerEventData eventData)
@@ -158,7 +174,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Handles pointer exit event, triggering hover exit visual animations.
+    /// Description: Handles pointer exit event, triggering hover exit visual animations.
+    /// Context: EventSystem callback.
+    /// Justification: Reverts the complex UI hover effect.
     /// </summary>
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerExit(PointerEventData eventData)
@@ -169,7 +187,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Handles pointer down event, triggering click animations at the exact moment of pressing down.
+    /// Description: Handles pointer down event, triggering click animations at the exact moment of pressing down.
+    /// Context: EventSystem callback.
+    /// Justification: Provides immediate visual feedback for the press.
     /// </summary>
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerDown(PointerEventData eventData)
@@ -183,7 +203,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Handles pointer up event, triggering release visual animations.
+    /// Description: Handles pointer up event, triggering release visual animations.
+    /// Context: EventSystem callback.
+    /// Justification: Handles the return state after a press.
     /// </summary>
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerUp(PointerEventData eventData)
@@ -194,7 +216,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Handles pointer click event. Custom click effects are fired on PointerDown instead for instant tactile feedback.
+    /// Description: Handles pointer click event. Custom click effects are fired on PointerDown instead for instant tactile feedback.
+    /// Context: EventSystem callback.
+    /// Justification: Base class handles the actual onClick invocation.
     /// </summary>
     /// <param name="eventData">Pointer event data from UGUI EventSystem.</param>
     public override void OnPointerClick(PointerEventData eventData)
@@ -208,7 +232,9 @@ public class CustomTextButton : UICustomButtonBase
     #region Caching & Initialization Helpers
 
     /// <summary>
-    /// Caches all default coordinates, offsets, and colors to guarantee stable mathematical transformations.
+    /// Description: Caches all default coordinates, offsets, and colors to guarantee stable mathematical transformations.
+    /// Context: Called during Start.
+    /// Justification: Animations need a baseline to reset to.
     /// </summary>
     private void CacheOriginalStates()
     {
@@ -262,7 +288,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Configures the initial visibility states: Rect is invisible, Line is visible, Text is visible.
+    /// Description: Configures the initial visibility states: Rect is invisible, Line is visible, Text is visible.
+    /// Context: Called during Start.
+    /// Justification: Prepares the button for its default idle look.
     /// </summary>
     private void InitializeDefaultVisuals()
     {
@@ -312,7 +340,9 @@ public class CustomTextButton : UICustomButtonBase
     #region Core Tween Animations
 
     /// <summary>
-    /// Animates elements smoothly on hover enter, with full spam tween cancellation.
+    /// Description: Animates elements smoothly on hover enter, with full spam tween cancellation.
+    /// Context: Called by OnPointerEnter.
+    /// Justification: Houses the core DOTween sequence for hover.
     /// </summary>
     private void AnimateHoverEnter()
     {
@@ -415,7 +445,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Restores default states smoothly when the hover exits, preventing glitches.
+    /// Description: Restores default states smoothly when the hover exits, preventing glitches.
+    /// Context: Called by OnPointerExit.
+    /// Justification: Houses the core DOTween sequence for hover exit.
     /// </summary>
     private void AnimateHoverExit()
     {
@@ -495,7 +527,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Handles pointer release transitions.
+    /// Description: Handles pointer release transitions.
+    /// Context: Called by OnPointerUp.
+    /// Justification: Return animation handled gracefully by hover transitions.
     /// </summary>
     private void AnimateRelease()
     {
@@ -503,7 +537,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Executes a stunning scintillation/flash effect on the Rectangle component upon click.
+    /// Description: Executes a stunning scintillation/flash effect on the Rectangle component upon click.
+    /// Context: Called by OnPointerDown.
+    /// Justification: Houses the core DOTween sequence for clicks.
     /// </summary>
     private void AnimateClick()
     {
@@ -644,7 +680,9 @@ public class CustomTextButton : UICustomButtonBase
     #region Interactable State Transitions
 
     /// <summary>
-    /// Overrides the interactability change callback to trigger custom fade-out and fade-in transitions.
+    /// Description: Overrides the interactability change callback to trigger custom fade-out and fade-in transitions.
+    /// Context: Invoked when Interactable property changes.
+    /// Justification: visually reflects the disabled state.
     /// </summary>
     /// <param name="isInteractable">True if the button is now interactable, false otherwise.</param>
     protected override void OnInteractableChanged(bool isInteractable)
@@ -659,8 +697,9 @@ public class CustomTextButton : UICustomButtonBase
     }
 
     /// <summary>
-    /// Animates the text, rect, and dots colors to greyed-out/semi-transparent values when disabled, 
-    /// and smoothly restores original colors when re-enabled.
+    /// Description: Animates the text, rect, and dots colors to greyed-out/semi-transparent values when disabled, and smoothly restores original colors when re-enabled.
+    /// Context: Called by OnInteractableChanged.
+    /// Justification: Provides clear feedback that the button cannot be pressed.
     /// </summary>
     /// <param name="isInteractable">True if active, false if disabled.</param>
     private void AnimateInteractableTransition(bool isInteractable)
@@ -766,7 +805,9 @@ public class CustomTextButton : UICustomButtonBase
     #region Cleanup & Safety Guards
 
     /// <summary>
-    /// Safely terminates all running tweens on shapes and transform components to prevent state pollution.
+    /// Description: Safely terminates all running tweens on shapes and transform components to prevent state pollution.
+    /// Context: Utility method.
+    /// Justification: Required before starting new tweens to prevent overlapping animations.
     /// </summary>
     private void KillActiveTweens()
     {

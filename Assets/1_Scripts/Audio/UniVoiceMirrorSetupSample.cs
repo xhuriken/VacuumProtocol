@@ -7,11 +7,12 @@ using Adrenak.UniVoice.Outputs;
 using UnityEngine;
 
 /// <summary>
-/// Handles the initialization and lifecycle of UniVoice with Mirror networking.
+/// Description: Handles the initialization and lifecycle of UniVoice with Mirror networking.
+/// Context: Placed in the first scene of the project to initialize VoIP globally.
+/// Justification: Centralizes the setup of audio servers, client sessions, microphone capture, and filters (VAD, Concentus).
 /// Setup instructions:
 /// - Import Mirror and add 'UNIVOICE_NETWORK_MIRROR' to compilation symbols.
 /// - (Optional) Import RNNoise4Unity and add 'UNIVOICE_FILTER_RNNOISE4UNITY' for noise suppression.
-/// - Place this component in the first scene of your project.
 /// </summary>
 public class UniVoiceMirrorSetupSample : MonoBehaviour
 {
@@ -37,9 +38,19 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     /// </summary>
     public static SimpleVad LocalVad { get; private set; }
 
-    [SerializeField] bool useConcentusEncodeAndDecode = true;
-    [SerializeField] bool useVad = true;
+    [SerializeField] 
+    [Tooltip("Role: Toggle for Concentus Opus Encoding.\nUse Case: Bandwidth optimization.\nJustification: Opus encoding drastically reduces network payload sizes for VoIP streams.")]
+    bool useConcentusEncodeAndDecode = true;
 
+    [SerializeField] 
+    [Tooltip("Role: Toggle for Voice Activity Detection.\nUse Case: Noise gating.\nJustification: VAD prevents sending silence or background noise, saving bandwidth and preventing echo.")]
+    bool useVad = true;
+
+    /// <summary>
+    /// Description: Triggers the global setup if not already initialized.
+    /// Context: Start lifecycle event.
+    /// Justification: Ensures UniVoice is only initialized once per application session to prevent duplicate network bindings.
+    /// </summary>
     void Start()
     {
         if (HasSetUp)
@@ -50,6 +61,11 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
         HasSetUp = Setup();
     }
 
+    /// <summary>
+    /// Description: Checks and corrects the Host ID if Steamworks integration breaks it.
+    /// Context: Update lifecycle event, running every frame.
+    /// Justification: A known issue with Mirror/Steamworks sets the Host ID to -1, which breaks local audio processing in UniVoice. We forcibly patch it to 0.
+    /// </summary>
     void Update()
     {
         // Mirror/Steamworks Fix: Sometimes the Host ID is incorrectly set to -1.
@@ -69,7 +85,9 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     }
 
     /// <summary>
-    /// Orchestrates the setup of both server and client components.
+    /// Description: Orchestrates the setup of both server and client components.
+    /// Context: Called once during Start().
+    /// Justification: A wrapper method to sequence the audio server and client session creations safely.
     /// </summary>
     /// <returns>True if setup succeeded.</returns>
     bool Setup()
@@ -99,7 +117,9 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     }
 
     /// <summary>
-    /// Initializes the Mirror-specific audio server.
+    /// Description: Initializes the Mirror-specific audio server.
+    /// Context: Part of the global Setup sequence.
+    /// Justification: Wraps the UniVoice server creation in a preprocessor directive to ensure it only compiles if Mirror is present.
     /// </summary>
     /// <returns>True if successful.</returns>
     bool SetupAudioServer()
@@ -125,7 +145,9 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     }
 
     /// <summary>
-    /// Initializes the Mirror-specific audio client session, microphone, and filters.
+    /// Description: Initializes the Mirror-specific audio client session, microphone, and filters.
+    /// Context: Part of the global Setup sequence.
+    /// Justification: Binds the active microphone, sets up network event listeners, and chains the VAD and Concentus filters to the input/output streams.
     /// </summary>
     /// <returns>True if successful.</returns>
     bool SetupClientSession()

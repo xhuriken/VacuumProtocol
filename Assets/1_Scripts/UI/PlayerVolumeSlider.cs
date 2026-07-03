@@ -2,33 +2,31 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Placed on each PlayerListItem prefab in the lobby.
-/// Binds a Slider to the per-peer volume multiplier stored in SettingsData.
-///
-/// Storage key: Steam64 ID (ulong) — persistent across sessions.
-/// Runtime key:  Mirror ConnectionId (int)  — used only to locate the UniVoice AudioSource at runtime.
-///
-/// The slider operates on a [0, 2] range: 0 = muted, 1.0 = 100% (default), 2.0 = 200%.
-/// The slider is hidden/disabled for the local player's own card.
+/// Description: Binds a Slider to the per-peer volume multiplier stored in SettingsData.
+/// Context: Placed on each PlayerListItem prefab in the lobby.
+/// Justification: Allows the player to individually adjust or mute other players' voice chat.
 /// </summary>
 public class PlayerVolumeSlider : MonoBehaviour
 {
     /// <summary>
-    /// Mirror ConnectionId of the remote player: used at runtime to locate the UniVoice AudioSource.
-    /// Session-local — NOT used as the storage key.
+    /// Description: Mirror ConnectionId of the remote player.
+    /// Context: Passed during initialization.
+    /// Justification: Used at runtime to locate the UniVoice AudioSource. Session-local.
     /// </summary>
     [Header("Player Data (set at runtime)")]
-    [Tooltip("Mirror ConnectionId — session-local, used only to find the UniVoice audio output at runtime.")]
+    [Tooltip("Role: The network connection ID.\nUse Case: Locating the audio stream.\nJustification: Required to target the specific player's UniVoice output.")]
     public int ConnectionId = -1;
 
     /// <summary>
-    /// Steam64 ID of the remote player: used as the persistent storage key in SettingsData.
+    /// Description: Steam64 ID of the remote player.
+    /// Context: Passed during initialization.
+    /// Justification: Used as the persistent storage key in SettingsData so preferences survive restarts.
     /// </summary>
-    [Tooltip("Steam64 ID — persistent across sessions, used as the storage key for saved volume preferences.")]
+    [Tooltip("Role: The Steam64 ID.\nUse Case: Saving preferences.\nJustification: Persistent across sessions.")]
     public ulong SteamId = 0;
 
     [Header("UI Reference")]
-    [Tooltip("The Slider UI element (range: 0 to 2). Must be assigned in the Prefab Inspector.")]
+    [Tooltip("Role: The Slider UI element.\nUse Case: Adjusting volume.\nJustification: Must be assigned in the Prefab Inspector.")]
     [SerializeField] private Slider _volumeSlider;
 
     [Header("Debug")]
@@ -56,12 +54,13 @@ public class PlayerVolumeSlider : MonoBehaviour
     }
 
     /// <summary>
-    /// Initializes this volume slider for a specific player.
-    /// Call this immediately after instantiating the PlayerListItem prefab.
+    /// Description: Initializes this volume slider for a specific player.
+    /// Context: Call this immediately after instantiating the PlayerListItem prefab.
+    /// Justification: Binds the correct peer identifiers before the slider becomes active.
     /// </summary>
     /// <param name="connectionId">Mirror ConnectionId — runtime key for UniVoice audio output.</param>
     /// <param name="steamId">Steam64 ID — persistent storage key in SettingsData.</param>
-    /// <param name="isLocalPlayer">If true, the slider is hidden and disabled (no point adjusting yourself).</param>
+    /// <param name="isLocalPlayer">If true, the slider is hidden and disabled.</param>
     public void SetPeerIdentity(int connectionId, ulong steamId, bool isLocalPlayer)
     {
         ConnectionId = connectionId;
@@ -92,7 +91,9 @@ public class PlayerVolumeSlider : MonoBehaviour
     }
 
     /// <summary>
-    /// Reads the saved multiplier for this peer from SettingsData (keyed by SteamId) and syncs the slider.
+    /// Description: Reads the saved multiplier for this peer from SettingsData (keyed by SteamId) and syncs the slider.
+    /// Context: Internal initialization/enable hook.
+    /// Justification: Ensures the UI correctly reflects previously saved volumes.
     /// </summary>
     private void RefreshFromSettings()
     {
@@ -110,8 +111,9 @@ public class PlayerVolumeSlider : MonoBehaviour
     }
 
     /// <summary>
-    /// Called whenever the slider is moved.
-    /// Persists the new multiplier (by SteamId) and applies it immediately to the UniVoice stream (by ConnectionId).
+    /// Description: Called whenever the slider is moved.
+    /// Context: Bound to the Slider UI event.
+    /// Justification: Persists the new multiplier and applies it immediately to the UniVoice stream.
     /// </summary>
     /// <param name="value">New slider value in [0, 2] range.</param>
     private void OnSliderChanged(float value)

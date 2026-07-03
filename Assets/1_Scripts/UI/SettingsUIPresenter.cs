@@ -8,8 +8,9 @@ using Adrenak.UniVoice;
 using System.Reflection;
 
 /// <summary>
-/// Presenter that bridges UI components with SettingsManager properties.
-/// Handles Sliders, Dropdowns, and a live microphone volume indicator (RMS) with thread-safety.
+/// Description: Presenter that bridges UI components with SettingsManager properties.
+/// Context: Attached to the Settings Panel UI object.
+/// Justification: Handles Sliders, Dropdowns, and a live microphone volume indicator (RMS) with thread-safety.
 /// </summary>
 public class SettingsUIPresenter : MonoBehaviour
 {
@@ -28,7 +29,7 @@ public class SettingsUIPresenter : MonoBehaviour
     [SerializeField] private Toggle _micTestToggle;
 
     [Header("Auto VAD Mode")]
-    [Tooltip("When enabled, bypasses the manual sensitivity slider and uses UniVoice's default VAD algorithm.")]
+    [Tooltip("Role: Toggles auto VAD mode.\nUse Case: Settings configuration.\nJustification: When enabled, bypasses the manual sensitivity slider and uses UniVoice's default algorithm.")]
     [SerializeField] private Toggle _autoVadToggle;
     [SerializeField] private Slider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
@@ -331,7 +332,9 @@ public class SettingsUIPresenter : MonoBehaviour
     }
 
     /// <summary>
-    /// Greys out the sensitivity slider and its reference when Auto VAD is enabled.
+    /// Description: Greys out the sensitivity slider and its reference when Auto VAD is enabled.
+    /// Context: State synchronization.
+    /// Justification: Prevents the user from trying to change a slider that has no effect.
     /// </summary>
     private void UpdateSensitivitySliderInteractability()
     {

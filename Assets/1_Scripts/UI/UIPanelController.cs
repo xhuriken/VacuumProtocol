@@ -3,16 +3,21 @@ using UnityEngine;
 using DG.Tweening;
 
 /// <summary>
-/// Controls the showing, hiding, and scaling transition animations of a UI panel using DOTween.
-/// Requires a CanvasGroup component to manage fading and input block states.
+/// Description: Controls the showing, hiding, and scaling transition animations of a UI panel using DOTween.
+/// Context: Attached to any UGUI Panel intended to be toggled.
+/// Justification: Centralizes UI animation logic and CanvasGroup interactability states.
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class UIPanelController : MonoBehaviour
 {
     [Header("Transition Settings")]
+    [Tooltip("Role: Animation duration.\nUse Case: Fading and scaling pacing.\nJustification: Keeps transitions uniform.")]
     [SerializeField] private float _transitionDuration = 0.3f;
+    [Tooltip("Role: Flag for scale bounce.\nUse Case: Disabling scale FX.\nJustification: Some flat panels shouldn't bounce.")]
     [SerializeField] private bool _useScaleAnimation = true;
+    [Tooltip("Role: Minimum scale.\nUse Case: Starting point of scale bounce.\nJustification: Determines how shrunk the panel is before opening.")]
     [SerializeField] private Vector3 _hiddenScale = new Vector3(0.8f, 0.8f, 0.8f);
+    [Tooltip("Role: Flag to open at Start.\nUse Case: Default visibility.\nJustification: Allows a panel to be visibly open immediately.")]
     [SerializeField] private bool _startOpened = false;
 
     private CanvasGroup _canvasGroup;
@@ -22,17 +27,23 @@ public class UIPanelController : MonoBehaviour
     private bool _isOpened = false;
 
     /// <summary>
-    /// Event raised when the panel completes its opening animation.
+    /// Description: Event raised when the panel completes its opening animation.
+    /// Context: Fired by DOTween sequence end.
+    /// Justification: Allows external scripts to know when UI is fully ready.
     /// </summary>
     public event Action OnPanelOpened;
 
     /// <summary>
-    /// Event raised when the panel completes its closing animation.
+    /// Description: Event raised when the panel completes its closing animation.
+    /// Context: Fired by DOTween sequence end.
+    /// Justification: Allows external scripts to know when UI is fully hidden.
     /// </summary>
     public event Action OnPanelClosed;
 
     /// <summary>
-    /// Gets whether this panel is currently opened.
+    /// Description: Gets whether this panel is currently opened.
+    /// Context: State flag.
+    /// Justification: Checked before triggering open/close logic to prevent redundant tweens.
     /// </summary>
     public bool IsOpened => _isOpened;
 
@@ -54,7 +65,9 @@ public class UIPanelController : MonoBehaviour
     }
 
     /// <summary>
-    /// Opens the panel smoothly with a fade-in and optional scale animation.
+    /// Description: Opens the panel smoothly with a fade-in and optional scale animation.
+    /// Context: Called by UI Buttons or Controllers.
+    /// Justification: Primary way to bring a panel into view.
     /// </summary>
     public void Show()
     {
@@ -89,7 +102,9 @@ public class UIPanelController : MonoBehaviour
     }
 
     /// <summary>
-    /// Closes the panel smoothly with a fade-out and optional scale-down animation.
+    /// Description: Closes the panel smoothly with a fade-out and optional scale-down animation.
+    /// Context: Called by UI Buttons or Controllers.
+    /// Justification: Primary way to dismiss a panel.
     /// </summary>
     public void Hide()
     {

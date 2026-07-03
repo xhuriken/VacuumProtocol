@@ -488,3 +488,30 @@
 
 
 
+
+## Codebase Audit - Phase 1: Core & Audio Systems (July 2026)
+- **Modified Files**: IEntity.cs, ISettingsConsumer.cs, SettingsData.cs, SettingsManager.cs, MouthAnimator.cs, UniVoiceMirrorSetupSample.cs, UniVoicePlayerAudio.cs, VacuumAudioController.cs, VoiceSettingsConsumer.cs.
+- **Why**: Enforcement of strict code standards. Missing architectural context made future maintenance risky.
+- **Problem solved**: Added exhaustive XML <summary> tags detailing Description, Context, and Justification for all methods and properties. Added explicit [Tooltip] attributes with Role, Use Case, and Justification to all serialized variables to ensure clear intent directly in the Unity Inspector.
+
+
+## Codebase Audit - Phase 2: Gameplay & Physics Systems (July 2026)
+- **Modified Files**: Collectible.cs, ProceduralTubePhysics.cs, VacuumSuctionZone.cs.
+- **Why**: Enforcement of strict code standards and improved observability for level designers.
+- **Problem solved**: Added exhaustive XML <summary> tags detailing Description, Context, and Justification for all methods and properties. Added explicit [Tooltip] attributes with Role, Use Case, and Justification to all serialized variables, which is particularly critical for the heavily math-based ProceduralTubePhysics and VacuumSuctionZone scripts.
+
+
+## Codebase Audit - Phase 3: Player Systems (July 2026)
+- **Modified Files**: InputSettingsConsumer.cs, PhysicalHeadController.cs, PlayerArmsController.cs, PlayerController.cs, PlayerInputHandler.cs, PlayerInventory.cs, PlayerJumpComponent.cs, PlayerLookComponent.cs, PlayerMovementComponent.cs, PlayerVacuumController.cs, Eye.cs, PlayerCustomization.cs, PlayerViewRange.cs, Wheels.cs, ModelMigrator.cs.
+- **Why**: Ensure standard practices across the heavily-populated player control domain. Complex networked input handlers require thorough explanation.
+- **Problem solved**: Added XML summaries (Description, Context, Justification) and Tooltips (Role, Use Case, Justification) to demystify complex procedural physics (Arms/Head) and network sync logic (Vacuum/Customization). This reduces onboarding time for developers modifying player mechanics.
+
+
+## Codebase Audit - Phase 4: Networking (July 2026)
+- **Modified Files**: MyNetworkManager.cs, SteamLobby.cs, LobbyController.cs, LobbyCustomizationUI.cs, PlayerListItem.cs, PlayerObjectController.cs.
+- **Why**: Solidify the networking core. Multiplayer synchronization is the most fragile part of the project.
+- **Problem solved**: Added XML summaries and Tooltips to map out the Steamworks-to-Mirror handshake, Lobby UI refresh cycles, and [SyncVar] hooks. This ensures future modifications to the lobby don't accidentally break Steam integration or client-host state mismatch.
+## Codebase Audit - Phase 5: UI Systems (July 2026)
+- **Modified Files**: ColorButtonUI.cs, CustomTextButton.cs, UICustomButtonBase.cs, UIColorsPalettes.cs, InGameMenuController.cs, UIPanelController.cs, UINavigationGroup.cs, OpenURLButton.cs, CustomCursorFollower.cs, MouseManager.cs, PlayerVolumeSlider.cs, SettingsUIPresenter.cs.
+- **Why**: Finalize the strict code standards implementation on the last remaining subsystem: the User Interface. The custom vector graphics UI and menu navigation controllers are highly customized and require thorough explanation for future maintainability.
+- **Problem solved**: Added strict XML summaries (Description, Context, Justification) and Tooltips (Role, Use Case, Justification) across all UI scripts. Created `documentation/UI_System.md` to provide a high-level architectural overview of the vector UI integrations (Shapes), menu navigation, and input helpers, thereby successfully concluding the complete codebase audit.

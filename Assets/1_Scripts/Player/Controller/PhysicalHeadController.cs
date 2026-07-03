@@ -3,23 +3,25 @@ using UnityEngine;
 namespace VacuumProtocol.Player
 {
     /// <summary>
-    /// Controls the physical head using a ConfigurableJoint to simulate a vertical spring-crouch and a "boing boing" wiggle.
+    /// Description: Controls the physical head using a ConfigurableJoint to simulate a vertical spring-crouch and a "boing boing" wiggle.
+    /// Context: Attached to the player's head mesh, separate from the camera.
+    /// Justification: Gives the player character's head physical weight and momentum when moving or crouching, rather than snapping rigidly to the camera rotation.
     /// </summary>
     [RequireComponent(typeof(ConfigurableJoint))]
     public class PhysicalHeadController : MonoBehaviour
     {
         [Header("Follow Settings")]
-        [Tooltip("The camera transform steered by the player's mouse look.")]
+        [Tooltip("Role: The camera transform to track.\nUse Case: Look target.\nJustification: The head needs to physically spring towards the direction the player is aiming the camera.")]
         [SerializeField] private Transform _cameraTransform;
 
-        [Tooltip("Ratio of camera look rotation that the head should follow.")]
+        [Tooltip("Role: Ratio of camera look rotation that the head should follow.\nUse Case: Turning stiffness.\nJustification: A ratio < 1 means the head doesn't snap instantly, creating a slight lag/drag effect.")]
         [SerializeField] private float _followRatio = 0.7f;
 
         [Header("Arc Settings")]
-        [Tooltip("Radius of the virtual circle arc representing the neck bend.")]
+        [Tooltip("Role: Radius of the virtual circle arc representing the neck bend.\nUse Case: Looking up/down.\nJustification: Simulates the cervical vertebrae arc so the head doesn't just rotate in place, but physically shifts forward/backward.")]
         [SerializeField] private float _arcRadius = 0.2f;
 
-        [Tooltip("Downward sag multiplier when the head bends in pitch.")]
+        [Tooltip("Role: Downward sag multiplier when the head bends in pitch.\nUse Case: Looking down.\nJustification: Adds extra weight simulation so the head drops slightly when looking down.")]
         [SerializeField] private float _sagFactor = 0.05f;
 
         private ConfigurableJoint _joint;
@@ -27,7 +29,9 @@ namespace VacuumProtocol.Player
         private float _crouchYOffset = 0f;
 
         /// <summary>
-        /// Gets the current crouch vertical offset of the head.
+        /// Description: Gets the current crouch vertical offset of the head.
+        /// Context: Read by UI or debug systems to track current crouch state.
+        /// Justification: Exposed for external scripts to know the physical offset state without calculating it.
         /// </summary>
         public float CrouchYOffset
         {
@@ -37,6 +41,11 @@ namespace VacuumProtocol.Player
             }
         }
 
+        /// <summary>
+        /// Description: Unparents the head from the body and sets up collision rules.
+        /// Context: Start lifecycle event.
+        /// Justification: The head must be detached from the body hierarchy at runtime so that its ConfigurableJoint can act freely in world space without inheriting parent transforms recursively.
+        /// </summary>
         private void Start()
         {
             // Cache the configurable joint component.
@@ -63,7 +72,9 @@ namespace VacuumProtocol.Player
         }
 
         /// <summary>
-        /// Updates the target crouch vertical offset.
+        /// Description: Updates the target crouch vertical offset.
+        /// Context: Called by PlayerMovementComponent when the crouch button is held.
+        /// Justification: Applies a downward target offset to the joint, which will cause the physics spring to bounce the head downwards.
         /// </summary>
         /// <param name="crouchOffset">The offset along the Y axis.</param>
         public void SetCrouchOffset(float crouchOffset)
@@ -71,6 +82,11 @@ namespace VacuumProtocol.Player
             _crouchYOffset = crouchOffset;
         }
 
+        /// <summary>
+        /// Description: Continuously updates the joint's target position and rotation to follow the camera.
+        /// Context: FixedUpdate physics event.
+        /// Justification: Must be done in FixedUpdate because we are modifying a physics joint's target state.
+        /// </summary>
         private void FixedUpdate()
         {
             // If the original parent (player body) was destroyed, destroy this detached head.
@@ -89,7 +105,9 @@ namespace VacuumProtocol.Player
         }
 
         /// <summary>
-        /// Calculates and applies the target rotation and target position to the joint.
+        /// Description: Calculates and applies the target rotation and target position to the joint.
+        /// Context: Called every FixedUpdate.
+        /// Justification: Uses trigonometry to calculate the correct translation offset along the Z and Y axes based on the pitch angle, simulating a realistic neck.
         /// </summary>
         private void ApplyJointTargetState()
         {

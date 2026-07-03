@@ -2,32 +2,32 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Attached to a trigger volume (e.g. SphereCollider) representing the vacuum suction field.
-/// Applies target pull forces, handles visual shrinking as objects approach the nozzle,
-/// and triggers item absorption when they reach the nozzle.
+/// Description: Attached to a trigger volume (e.g. SphereCollider) representing the vacuum suction field.
+/// Context: Exists as a child of the Player prefab, usually at the end of the vacuum nozzle.
+/// Justification: Handles the complex physics interactions of pulling rigidbodies towards a point, applying visual squish/shrink effects, and bridging the collision to the player's inventory system.
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class VacuumSuctionZone : MonoBehaviour
 {
     [Header("Suction Settings")]
-    [Tooltip("Base pull force multiplier applied to Rigidbody objects inside the zone.")]
+    [Tooltip("Role: Base pull force multiplier.\nUse Case: Physics attraction.\nJustification: Determines how fast objects fly towards the nozzle.")]
     [SerializeField]
     private float _suctionForce = 25f;
 
-    [Tooltip("Distance from nozzle at which objects begin shrinking in scale.")]
+    [Tooltip("Role: Distance threshold for shrinking.\nUse Case: Visual feedback.\nJustification: Starts scaling the object down so it fits into the small vacuum hole visually.")]
     [SerializeField]
     private float _shrinkStartDistance = 1.0f;
 
-    [Tooltip("Distance from nozzle at which objects are fully absorbed into the inventory.")]
+    [Tooltip("Role: Distance threshold for absorption.\nUse Case: Inventory triggers.\nJustification: When the object is this close, we consider it 'sucked up' and destroy/disable it in the world.")]
     [SerializeField]
     private float _absorbDistance = 0.25f;
 
-    [Tooltip("The Transform representing the nozzle tip where items converge. Defaults to this transform if null.")]
+    [Tooltip("Role: The transform representing the nozzle tip.\nUse Case: Target position.\nJustification: The mathematical point all objects are pulled towards. Separated from the collider center to allow offset suction zones.")]
     [SerializeField]
     private Transform _nozzleTransform;
 
     [Header("Debug")]
-    [Tooltip("Draws helper wireframes in the Editor scene view.")]
+    [Tooltip("Role: Enable editor wireframes.\nUse Case: Level design.\nJustification: Helps visualize the shrink and absorb radii to ensure they make sense for the nozzle mesh.")]
     [SerializeField]
     private bool _drawGizmos = true;
 
@@ -42,7 +42,9 @@ public class VacuumSuctionZone : MonoBehaviour
     public bool IsActive { get; set; } = false;
 
     /// <summary>
-    /// Awake callback. Initialise trigger references.
+    /// Description: Awake callback. Initializes trigger references.
+    /// Context: Lifecycle event.
+    /// Justification: Caches references to avoid GetComponent calls during the physics loop.
     /// </summary>
     private void Awake()
     {
@@ -59,7 +61,9 @@ public class VacuumSuctionZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Update callback. If the zone was deactivated, restore scales of any objects currently inside.
+    /// Description: Update callback. If the zone was deactivated, restores scales of any objects currently inside.
+    /// Context: Lifecycle event.
+    /// Justification: If the player stops vacuuming while an object is halfway sucked in (and thus half size), we must restore its scale so it drops to the floor normally.
     /// </summary>
     private void Update()
     {
@@ -70,7 +74,9 @@ public class VacuumSuctionZone : MonoBehaviour
     }
 
     /// <summary>
-    /// OnTriggerStay callback. Processes attraction forces and scale shrinking.
+    /// Description: OnTriggerStay callback. Processes attraction forces and scale shrinking.
+    /// Context: Unity Physics callback, fires every FixedUpdate while a collider remains in the trigger volume.
+    /// Justification: Continuous force application ensures objects smoothly ride the gravity well towards the nozzle. Handles shrinking locally before delegating absorption to the PlayerVacuumController.
     /// </summary>
     private void OnTriggerStay(Collider other)
     {
@@ -133,7 +139,9 @@ public class VacuumSuctionZone : MonoBehaviour
     }
 
     /// <summary>
-    /// OnTriggerExit callback. Restore object scale if it manages to break free of the vacuum flow.
+    /// Description: OnTriggerExit callback. Restores object scale if it manages to break free of the vacuum flow.
+    /// Context: Unity Physics callback.
+    /// Justification: Ensures objects don't remain permanently tiny if they bounce out of the suction zone.
     /// </summary>
     private void OnTriggerExit(Collider other)
     {
@@ -146,7 +154,9 @@ public class VacuumSuctionZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Restores the original scales of all tracked objects and clears the dictionary.
+    /// Description: Restores the original scales of all tracked objects and clears the dictionary.
+    /// Context: Internal helper called during deactivation.
+    /// Justification: A clean sweep to prevent memory leaks and ghost references when the suction zone shuts down.
     /// </summary>
     private void ResetAllTrackedScales()
     {
@@ -161,7 +171,9 @@ public class VacuumSuctionZone : MonoBehaviour
     }
 
     /// <summary>
-    /// OnDrawGizmos callback. Visualizes suction thresholds in the Unity editor.
+    /// Description: OnDrawGizmos callback. Visualizes suction thresholds in the Unity editor.
+    /// Context: Unity Editor drawing callback.
+    /// Justification: Crucial for visualizing the invisible physics interactions and tuning the `_shrinkStartDistance` and `_absorbDistance` variables.
     /// </summary>
     private void OnDrawGizmos()
     {

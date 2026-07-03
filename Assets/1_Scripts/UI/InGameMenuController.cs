@@ -4,15 +4,16 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Listens for the Escape key to toggle the in-game Pause Panel.
-/// Integrates sub-panel hiding (like the Settings Panel) to ensure correct closing order.
+/// Description: Listens for the Escape key to toggle the in-game Pause Panel.
+/// Context: Attached to an invisible Input Manager object in gameplay scenes.
+/// Justification: Integrates sub-panel hiding (like the Settings Panel) to ensure correct closing order.
 /// </summary>
 public class InGameMenuController : MonoBehaviour
 {
-    [Tooltip("The main pause menu panel that displays options when the game is paused.")]
+    [Tooltip("Role: The main pause menu panel.\nUse Case: Displaying options when paused.\nJustification: Required to show resume/quit buttons.")]
     [SerializeField] private UIPanelController _pausePanel;
 
-    [Tooltip("Optional reference to the settings panel to close it if the player hits Escape while it is active.")]
+    [Tooltip("Role: The settings sub-panel.\nUse Case: Handling nested UI closing.\nJustification: Closes it if the player hits Escape while it is active.")]
     [SerializeField] private UIPanelController _settingsPanel;
 
     private void Update()
@@ -38,8 +39,9 @@ public class InGameMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Toggles the pause menu visibility.
-    /// If the settings sub-panel is currently active, closes it first.
+    /// Description: Toggles the pause menu visibility.
+    /// Context: Triggered by Escape key or UI buttons.
+    /// Justification: If the settings sub-panel is currently active, it correctly closes it first.
     /// </summary>
     public void TogglePauseMenu()
     {

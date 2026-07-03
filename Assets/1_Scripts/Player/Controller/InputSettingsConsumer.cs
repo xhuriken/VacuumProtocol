@@ -2,15 +2,22 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Decoupled settings consumer that applies and manages key rebinding overrides using Unity's New Input System.
+/// Description: Decoupled settings consumer that applies and manages key rebinding overrides using Unity's New Input System.
+/// Context: Attached to a persistent manager or input handler.
+/// Justification: Follows the observer pattern to apply control changes automatically when the global settings update, keeping input handling isolated from UI logic.
 /// </summary>
 public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
 {
-    [Tooltip("The Input Action Asset containing the bindings to override.")]
+    [Tooltip("Role: The Input Action Asset containing the bindings to override.\nUse Case: Input rebinding.\nJustification: Modifies the in-memory overrides of this asset without permanently altering the source file.")]
     [SerializeField] private InputActionAsset _inputActions;
 
     private string _lastAppliedBindingsJson;
 
+    /// <summary>
+    /// Description: Start callback. Validates and registers the consumer.
+    /// Context: Lifecycle event.
+    /// Justification: Required to start listening to the SettingsManager for updates.
+    /// </summary>
     private void Start()
     {
         if (_inputActions == null)
@@ -23,6 +30,11 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
         SettingsManager.Instance.RegisterConsumer(this);
     }
 
+    /// <summary>
+    /// Description: OnDestroy callback. Unregisters the consumer safely.
+    /// Context: Lifecycle event.
+    /// Justification: Prevents memory leaks and null reference exceptions if this object is destroyed but the singleton manager persists.
+    /// </summary>
     private void OnDestroy()
     {
         if (SettingsManager.HasInstance)
@@ -32,7 +44,9 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Reads custom action map override data and rebinds controls.
+    /// Description: Reads custom action map override data and rebinds controls.
+    /// Context: ISettingsConsumer implementation. Called by SettingsManager.
+    /// Justification: Safely parses JSON overrides and applies them without freezing the main thread if the strings haven't changed.
     /// </summary>
     /// <param name="settings">The updated settings data.</param>
     public void OnSettingsUpdated(SettingsData settings)
@@ -63,7 +77,9 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Resets all overrides in the input actions asset back to default.
+    /// Description: Resets all overrides in the input actions asset back to default.
+    /// Context: Called via UI button event.
+    /// Justification: Wipes the overrides from memory and pushes the empty string back to the SettingsManager for saving.
     /// </summary>
     public void ResetToDefaultBindings()
     {
@@ -80,7 +96,9 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Starts interactive rebind procedure for a specific action.
+    /// Description: Starts interactive rebind procedure for a specific action.
+    /// Context: Called by UI rebinding scripts.
+    /// Justification: Uses the Unity Input System's built-in interactive rebinding flow, safely blocking mouse clicks from accidentally being mapped as keyboard keys.
     /// </summary>
     /// <param name="actionToRebind">The InputAction to remap.</param>
     /// <param name="bindingIndex">The binding slot index.</param>

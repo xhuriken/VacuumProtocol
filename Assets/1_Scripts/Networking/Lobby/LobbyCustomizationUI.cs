@@ -7,16 +7,18 @@ using VacuumProtocol.Player.Visuals;
 namespace VacuumProtocol.Networking.Lobby
 {
     /// <summary>
-    /// UI Script to be attached to the Lobby Canvas.
-    /// Handles sending UI events (buttons, sliders) to the local player's PlayerCustomization script.
+    /// Description: UI Script to be attached to the Lobby Canvas. Handles sending UI events to the local player's PlayerCustomization script.
+    /// Context: Runs in the Lobby scene.
+    /// Justification: Bridges standard UGUI events (buttons, text fields) to network commands, allowing offline preview dummies.
     /// </summary>
     public class LobbyCustomizationUI : MonoBehaviour
     {
         [Header("Scene References")]
-        [Tooltip("Drag your dummy scene player here! If empty, it will auto-find the network player.")]
+        [Tooltip("Role: The local dummy player in the scene.\nUse Case: Offline previews.\nJustification: Allows customizing without needing an active network connection.")]
         public PlayerCustomization PreviewPlayer;
 
         [Header("Debug")]
+        [Tooltip("Role: Toggle for debug logs.\nUse Case: Troubleshooting.\nJustification: Customization UI can spam console during rapid color switching.")]
         public bool EnableDebugLogs = true;
 
         // ----------------------------------------------------
@@ -24,8 +26,9 @@ namespace VacuumProtocol.Networking.Lobby
         // ----------------------------------------------------
 
         /// <summary>
-        /// Call this from a UI Button (On Click) and pass the Color you want.
-        /// E.g. A Red button passes Color.red.
+        /// Description: Call this from a UI Button (On Click) and pass the Color you want.
+        /// Context: Unity UI Event.
+        /// Justification: Standard way to apply a pure Unity Color to the customization system.
         /// </summary>
         public void SetPlayerColor(Color newColor)
         {
@@ -40,8 +43,9 @@ namespace VacuumProtocol.Networking.Lobby
         }
 
         /// <summary>
-        /// Unity's Inspector Button OnClick doesn't support the Color type. 
-        /// Use this method instead and pass a string (e.g. "#FF0000" or "red").
+        /// Description: Unity's Inspector Button OnClick doesn't support the Color type. Use this method instead and pass a string.
+        /// Context: Unity UI Event (InputField or string-based Button).
+        /// Justification: Allows players to paste raw Hex codes directly into the UI.
         /// </summary>
         public void SetPlayerColorHex(string hexColor)
         {
@@ -70,8 +74,9 @@ namespace VacuumProtocol.Networking.Lobby
         }
 
         /// <summary>
-        /// Call this from a UI Button (On Click) and pass the integer value of the Enum.
-        /// E.g. 0 for C, 4 for E, 7 for G, etc.
+        /// Description: Call this from a UI Button (On Click) and pass the integer value of the Enum.
+        /// Context: Unity UI Event.
+        /// Justification: Binds the UI audio pitch buttons to the MusicalNote enum.
         /// </summary>
         public void SetPlayerNote(int noteIndex)
         {
@@ -91,7 +96,9 @@ namespace VacuumProtocol.Networking.Lobby
         }
 
         /// <summary>
-        /// Call this from an EventTrigger (Pointer Down) on a UI Button to preview the vacuum sound.
+        /// Description: Call this from an EventTrigger (Pointer Down) on a UI Button to preview the vacuum sound.
+        /// Context: Unity UI Event.
+        /// Justification: Tests the chosen audio settings dynamically before entering a game.
         /// </summary>
         public void StartPreviewVacuum()
         {
@@ -105,7 +112,9 @@ namespace VacuumProtocol.Networking.Lobby
         }
 
         /// <summary>
-        /// Call this from an EventTrigger (Pointer Up) on the same UI Button.
+        /// Description: Call this from an EventTrigger (Pointer Up) on the same UI Button.
+        /// Context: Unity UI Event.
+        /// Justification: Stops the preview sound once the button is released.
         /// </summary>
         public void StopPreviewVacuum()
         {

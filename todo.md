@@ -389,3 +389,35 @@
 - [x] Run compilation checks.
 - [x] Log modifications in `DEVELOPMENT_LOG.md`.
 
+
+## Current Task: Complete Codebase Audit & Documentation (Phase 1)
+- [x] Audit Core Systems (`IEntity.cs`, `ISettingsConsumer.cs`, `SettingsData.cs`, `SettingsManager.cs`)
+- [x] Audit Audio Systems (`MouthAnimator.cs`, `UniVoiceMirrorSetupSample.cs`, `UniVoicePlayerAudio.cs`, `VacuumAudioController.cs`, `VoiceSettingsConsumer.cs`)
+- [x] Update `DEVELOPMENT_LOG.md` for Phase 1
+- [x] Update documentation (`Voice_System.md`, `Settings_System.md`)
+
+## Current Task: Complete Codebase Audit & Documentation (Phase 2)
+- [x] Audit Gameplay Systems (`Collectible.cs`)
+- [x] Audit Physics Systems (`ProceduralTubePhysics.cs`, `VacuumSuctionZone.cs`)
+- [x] Update `DEVELOPMENT_LOG.md` for Phase 2
+- [x] Update documentation (`Entities.md`, `Procedural_Systems.md`)
+
+## Current Task: Complete Codebase Audit & Documentation (Phase 3: Player Systems)
+- [x] Audit Controller scripts (`InputSettingsConsumer.cs`, `PhysicalHeadController.cs`, `PlayerArmsController.cs`, `PlayerController.cs`, `PlayerInputHandler.cs`, `PlayerInventory.cs`, `PlayerJumpComponent.cs`, `PlayerLookComponent.cs`, `PlayerMovementComponent.cs`, `PlayerVacuumController.cs`)
+- [x] Audit Visual scripts (`Eye.cs`, `PlayerCustomization.cs`, `PlayerViewRange.cs`, `Wheels.cs`)
+- [x] Update `DEVELOPMENT_LOG.md` for Phase 3
+- [x] Update documentation (`Movement_and_Physics.md`, `Head_and_Vision_Mechanics.md`, `Vacuum_System.md`, `Visual_Polish.md`)
+
+## Current Task: Complete Codebase Audit & Documentation (Phase 4: Networking)
+- [x] Audit Lobby scripts (LobbyController.cs, LobbyCustomizationUI.cs, PlayerListItem.cs, PlayerObjectController.cs, SteamLobby.cs, SteamManager.cs)
+- [x] Audit Manager scripts (MyNetworkManager.cs)
+- [x] Update DEVELOPMENT_LOG.md for Phase 4
+- [x] Update documentation (Network_and_Lobby.md)
+
+## Current Task: Complete Codebase Audit & Documentation (Phase 5: UI Systems)
+- [x] Audit Vector UI scripts (ColorButtonUI.cs, CustomTextButton.cs, UICustomButtonBase.cs, UIColorsPalettes.cs)
+- [x] Audit Menu/Navigation scripts (InGameMenuController.cs, UIPanelController.cs, UINavigationGroup.cs, OpenURLButton.cs)
+- [x] Audit Utility/Mouse scripts (CustomCursorFollower.cs, MouseManager.cs, PlayerVolumeSlider.cs, SettingsUIPresenter.cs)
+- [x] Update DEVELOPMENT_LOG.md for Phase 5
+- [x] Update documentation (UI_System.md)
+

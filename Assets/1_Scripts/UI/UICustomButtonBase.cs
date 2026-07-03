@@ -3,53 +3,70 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// Reusable base toolkit class for custom interactive UI elements.
-/// Retrieves standard pointer events from Unity EventSystem and exposes virtual lifecycle hooks.
+/// Description: Reusable base toolkit class for custom interactive UI elements.
+/// Context: Inherited by ColorButtonUI and CustomTextButton.
+/// Justification: Centralizes UGUI EventSystem callbacks (enter, exit, down, up, click) so child classes only need to override what they need.
 /// </summary>
 public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
 {
     /// <summary>
-    /// Event triggered when the custom button is successfully clicked.
+    /// Description: Event triggered when the custom button is successfully clicked.
+    /// Context: Invoked on PointerClick.
+    /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
     public Button.ButtonClickedEvent onClick = new Button.ButtonClickedEvent();
 
     /// <summary>
-    /// Event triggered when the pointer enters the button bounds.
+    /// Description: Event triggered when the pointer enters the button bounds.
+    /// Context: Invoked on PointerEnter.
+    /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
     public Button.ButtonClickedEvent onPointerEnter = new Button.ButtonClickedEvent();
 
     /// <summary>
-    /// Event triggered when the pointer leaves the button bounds.
+    /// Description: Event triggered when the pointer leaves the button bounds.
+    /// Context: Invoked on PointerExit.
+    /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
     public Button.ButtonClickedEvent onPointerExit = new Button.ButtonClickedEvent();
 
     /// <summary>
-    /// Event triggered when the pointer is pressed down.
+    /// Description: Event triggered when the pointer is pressed down.
+    /// Context: Invoked on PointerDown.
+    /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
     public Button.ButtonClickedEvent onPointerDown = new Button.ButtonClickedEvent();
 
     /// <summary>
-    /// Event triggered when the pointer is released.
+    /// Description: Event triggered when the pointer is released.
+    /// Context: Invoked on PointerUp.
+    /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
     public Button.ButtonClickedEvent onPointerUp = new Button.ButtonClickedEvent();
 
     [Header("Interactable State")]
+    [Tooltip("Role: Controls button interactivity.\nUse Case: Disabling the button.\nJustification: Used when a button should be visible but not clickable.")]
     [SerializeField]
     private bool _interactable = true;
 
     [Header("Debug")]
+    [Tooltip("Role: Toggles debug logs for UI interactions.\nUse Case: Testing.\nJustification: Useful for checking if EventSystem raycasts are hitting the button.")]
     [SerializeField]
     protected bool _enableDebugLogs = false;
 
     private bool _isHovered = false;
 
     /// <summary>
-    /// Gets whether the pointer is currently hovering over the button bounds.
+    /// Description: Gets whether the pointer is currently hovering over the button bounds.
+    /// Context: State variable updated by enter/exit handlers.
+    /// Justification: Required to know if hover animations should be playing.
     /// </summary>
     public bool IsHovered => _isHovered;
 
     /// <summary>
-    /// Gets or sets whether this button is interactable. Modifying this triggers the virtual OnInteractableChanged hook.
+    /// Description: Gets or sets whether this button is interactable. Modifying this triggers the virtual OnInteractableChanged hook.
+    /// Context: Public accessor.
+    /// Justification: Ensures state transitions happen automatically when the property is changed via code.
     /// </summary>
     public bool Interactable
     {
@@ -65,7 +82,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Virtual lifecycle hook triggered when the button's interactability changes.
+    /// Description: Virtual lifecycle hook triggered when the button's interactability changes.
+    /// Context: Called by the Interactable setter.
+    /// Justification: Allows child classes to define custom visual transitions for disabled states.
     /// </summary>
     /// <param name="isInteractable">The new interactability state.</param>
     protected virtual void OnInteractableChanged(bool isInteractable)
@@ -74,7 +93,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.
+    /// Description: Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.
+    /// Context: Initialization.
+    /// Justification: Prevents developer error by automatically adding a raycast target if missing.
     /// </summary>
     protected virtual void Awake()
     {
@@ -96,7 +117,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Automatically resets the hover state when the component is disabled.
+    /// Description: Automatically resets the hover state when the component is disabled.
+    /// Context: Unity OnDisable callback.
+    /// Justification: Prevents the button from getting stuck in a hovered state if deactivated while hovered.
     /// </summary>
     protected virtual void OnDisable()
     {
@@ -104,7 +127,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Handles pointer enter event, invoking callbacks.
+    /// Description: Handles pointer enter event, invoking callbacks.
+    /// Context: EventSystem callback.
+    /// Justification: Base functionality for hover logic.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerEnter(PointerEventData eventData)
@@ -116,7 +141,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Handles pointer exit event, invoking callbacks.
+    /// Description: Handles pointer exit event, invoking callbacks.
+    /// Context: EventSystem callback.
+    /// Justification: Base functionality for hover exit logic.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerExit(PointerEventData eventData)
@@ -128,7 +155,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Handles pointer down event, invoking callbacks.
+    /// Description: Handles pointer down event, invoking callbacks.
+    /// Context: EventSystem callback.
+    /// Justification: Base functionality for press down logic.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerDown(PointerEventData eventData)
@@ -139,7 +168,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Handles pointer up event, invoking callbacks.
+    /// Description: Handles pointer up event, invoking callbacks.
+    /// Context: EventSystem callback.
+    /// Justification: Base functionality for release logic.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerUp(PointerEventData eventData)
@@ -150,7 +181,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     }
 
     /// <summary>
-    /// Handles pointer click event, invoking the onClick event if left clicked.
+    /// Description: Handles pointer click event, invoking the onClick event if left clicked.
+    /// Context: EventSystem callback.
+    /// Justification: Base functionality for standard button clicks.
     /// </summary>
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerClick(PointerEventData eventData)

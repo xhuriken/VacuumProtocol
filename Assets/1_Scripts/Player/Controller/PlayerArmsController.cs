@@ -2,65 +2,64 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Controls the physics-based movement of the player's arms.
-/// Integrates with the PlayerInputHandler to extend individual arms on left/right click.
-/// Applies target forces and alignment torques to the hand (last child of the arm chain)
-/// to point in the direction of the player's head, relying on Unity ConfigurableJoints for natural joint behavior.
+/// Description: Controls the physics-based movement of the player's arms.
+/// Context: Integrates with the PlayerInputHandler to extend individual arms on left/right click.
+/// Justification: Applies target forces and alignment torques to the hand (last child of the arm chain) to point in the direction of the player's head, relying on Unity ConfigurableJoints for natural joint behavior rather than rigid inverse kinematics.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
 public class PlayerArmsController : NetworkBehaviour
 {
     [Header("Arm Hierarchy Root Transforms")]
-    [Tooltip("The root transform of the Left Arm.")]
+    [Tooltip("Role: The root transform of the Left Arm.\nUse Case: Hierarchy traversal.\nJustification: Used to calculate the arm's maximum physical reach distance dynamically.")]
     [SerializeField]
     private Transform _leftArmRoot;
 
-    [Tooltip("The root transform of the Right Arm.")]
+    [Tooltip("Role: The root transform of the Right Arm.\nUse Case: Hierarchy traversal.\nJustification: Used to calculate the arm's maximum physical reach distance dynamically.")]
     [SerializeField]
     private Transform _rightArmRoot;
 
     [Header("Head/Camera Reference")]
-    [Tooltip("The transform representing the player's head or look source. Auto-discovered if null.")]
+    [Tooltip("Role: The transform representing the player's head or look source.\nUse Case: Target direction vector.\nJustification: The arms use this forward vector to determine where to reach.")]
     [SerializeField]
     private Transform _headTransform;
 
     [Header("Physics Tuning Parameters")]
-    [Tooltip("The force multiplier applied to pull the hands toward the target position.")]
+    [Tooltip("Role: The force multiplier applied to pull the hands toward the target position.\nUse Case: Spring stiffness.\nJustification: High values snap the arm instantly, low values make it sluggish.")]
     [SerializeField]
     private float _extendForce = 350f;
 
-    [Tooltip("Linear damping applied to the hands to stabilize extension and prevent jitter.")]
+    [Tooltip("Role: Linear damping applied to the hands.\nUse Case: Stabilize extension.\nJustification: Prevents jitter and infinite bouncing when the arm reaches its target.")]
     [SerializeField]
     private float _extendDamping = 12f;
 
-    [Tooltip("Torque multiplier applied to align the hands with the head looking direction.")]
+    [Tooltip("Role: Torque multiplier applied to align the hands.\nUse Case: Pointing the nozzle.\nJustification: Ensures the nozzle physically faces where the player is looking, rather than tumbling freely.")]
     [SerializeField]
     private float _alignmentTorque = 20f;
 
-    [Tooltip("Angular damping applied to hand alignment torque to prevent oscillation.")]
+    [Tooltip("Role: Angular damping applied to hand alignment torque.\nUse Case: Stabilize rotation.\nJustification: Prevents the hand from oscillating rapidly around its target angle.")]
     [SerializeField]
     private float _alignmentDamping = 3f;
 
     [Header("Real-time Tweakable Reaching Settings")]
-    [Tooltip("Multiplier applied to the arm's base physical length to determine reach distance.")]
+    [Tooltip("Role: Multiplier applied to the arm's base physical length.\nUse Case: Reach distance limit.\nJustification: Allows tuning the maximum extension distance without changing the bone structure.")]
     [SerializeField]
     private float _reachLengthFactor = 1.0f;
 
-    [Tooltip("Extra forward distance offset applied to the target reach position.")]
+    [Tooltip("Role: Extra forward distance offset applied to the target reach position.\nUse Case: Depth adjustment.\nJustification: Useful for pushing the hands slightly past their physical limit to ensure the joints pull completely taut.")]
     [SerializeField]
     private float _forwardOffset = 0f;
 
-    [Tooltip("Vertical height offset applied to the target reach position.")]
+    [Tooltip("Role: Vertical height offset applied to the target reach position.\nUse Case: Height adjustment.\nJustification: Lowers the hands so they don't block the camera view.")]
     [SerializeField]
     private float _verticalOffset = -0.1f;
 
-    [Tooltip("Additional manual rotation offset (Pitch, Yaw, Roll) applied to the hand rotation.")]
+    [Tooltip("Role: Additional manual rotation offset applied to the hand rotation.\nUse Case: Grip offset.\nJustification: Allows rotating the vacuum nozzle if the bone is not aligned exactly with the forward axis.")]
     [SerializeField]
     private Vector3 _handRotationOffset = Vector3.zero;
 
 
     [Header("Debug & Diagnostics")]
-    [Tooltip("Enables diagnostic logging for arm movement lifecycle states.")]
+    [Tooltip("Role: Enables diagnostic logging for arm movement lifecycle states.\nUse Case: Network tracing.\nJustification: Helps diagnose client-to-server sync issues with arm inputs.")]
     [SerializeField]
     private bool _enableDebugLogs = true;
 
@@ -121,7 +120,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Awake callback. Caches the input handler and registers core components.
+    /// Description: Awake callback. Caches the input handler.
+    /// Context: Lifecycle event.
+    /// Justification: Guaranteed to run before Start, making input available for initial state setup.
     /// </summary>
     private void Awake()
     {
@@ -129,7 +130,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Start callback. Handles auto-discovery of references and calculates arm properties.
+    /// Description: Start callback. Handles auto-discovery of references and calculates arm properties.
+    /// Context: Lifecycle event.
+    /// Justification: Discovers the camera and dynamically calculates the total bone length so designers don't have to manually update lengths if they change the 3D model.
     /// </summary>
     private void Start()
     {
@@ -198,8 +201,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Update callback. Polls player input to trigger synced state updates across the server.
-    /// Only processed for the local player who owns the input authority.
+    /// Description: Update callback. Polls player input to trigger synced state updates across the server.
+    /// Context: Update lifecycle event. Only processed for the local player.
+    /// Justification: Converts continuous input holding into discrete state changes that are sent via Mirror Commands only when the state flips, saving bandwidth.
     /// </summary>
     private void Update()
     {
@@ -229,9 +233,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// FixedUpdate callback. Processes dynamic joint physics forces on all clients.
-    /// Every player (local or remote) runs local physical simulations of target reaching
-    /// driven by the synced replication states.
+    /// Description: FixedUpdate callback. Processes dynamic joint physics forces on all clients.
+    /// Context: Physics lifecycle event.
+    /// Justification: Every player (local or remote) runs local physical simulations of target reaching driven by the synced replication states, providing smooth movement without network jitter.
     /// </summary>
     private void FixedUpdate()
     {
@@ -249,8 +253,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Computes and applies spring/damping attraction forces and look-alignment torques
-    /// to the hand Rigidbody to pull the physical joint chain towards the looking target (center line).
+    /// Description: Computes and applies spring/damping attraction forces and look-alignment torques.
+    /// Context: Called by FixedUpdate.
+    /// Justification: Pulls the physical joint chain towards the looking target (center line) while dampening the forces to avoid violent snapping.
     /// </summary>
     /// <param name="handRb">The Rigidbody of the last child segment in the arm.</param>
     /// <param name="armLength">The maximum physical length of the arm hierarchy.</param>
@@ -306,8 +311,9 @@ public class PlayerArmsController : NetworkBehaviour
 
 
     /// <summary>
-    /// Recursively traverses a hierarchy to find the deepest child node that contains a Rigidbody,
-    /// falling back to the deepest child if no Rigidbody is found.
+    /// Description: Recursively traverses a hierarchy to find the deepest child node that contains a Rigidbody.
+    /// Context: Initialization helper.
+    /// Justification: Robustly finds the "hand" or "nozzle" without requiring a direct explicit reference, adapting to different rigged models automatically.
     /// </summary>
     /// <param name="parent">The starting root Transform.</param>
     /// <returns>The deepest child Transform with a Rigidbody, or the absolute deepest child.</returns>
@@ -328,7 +334,9 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Measures the total length of a single-child linear hierarchy by summing distance gaps.
+    /// Description: Measures the total length of a single-child linear hierarchy by summing distance gaps.
+    /// Context: Initialization helper.
+    /// Justification: Pre-calculating the physical max length prevents the extend forces from trying to pull the arm further than its joints allow, which would cause physics stretching or tearing.
     /// </summary>
     /// <param name="root">The root Transform of the arm.</param>
     /// <returns>The sum of segment distances in meters.</returns>

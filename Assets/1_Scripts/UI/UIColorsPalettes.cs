@@ -6,28 +6,32 @@ using Sirenix.OdinInspector;
 using VacuumProtocol.Networking.Lobby;
 
 /// <summary>
-/// Manages the lobby robot color selection palette by coloring 16 buttons
-/// and attaching smooth DOTween scale animations for hover and click states.
+/// Description: Manages the lobby robot color selection palette by coloring 16 buttons and attaching smooth DOTween scale animations.
+/// Context: Attached to a persistent UI element in the lobby.
+/// Justification: Generates and handles a uniform color palette for players to pick from.
 /// </summary>
 public class UIColorsPalettes : MonoBehaviour
 {
 
     [Header("Color Palette Options")]
-    [Tooltip("The list of 16 editable Unity Colors available in the lobby palette.")]
+    [Tooltip("Role: Array of colors.\nUse Case: Assigning colors to buttons.\nJustification: Provides exactly 16 color choices.")]
     [SerializeField]
     private Color[] _colors = new Color[16];
 
     [Header("Debug")]
+    [Tooltip("Role: Flag to output logs.\nUse Case: Tracking initialization.\nJustification: Helps diagnose missing connections.")]
     [SerializeField]
     private bool _enableDebugLogs = false;
 
     [Header("Lobby Integration")]
-    [Tooltip("Reference to the Lobby Customization UI script in the scene.")]
+    [Tooltip("Role: The Lobby Customization UI script.\nUse Case: Sending the chosen color.\nJustification: Acts as the intermediary to the local network player.")]
     [SerializeField]
     private LobbyCustomizationUI _lobbyCustomizationUI;
 
     /// <summary>
-    /// Unity Start callback. Triggers the initialization of the color palette buttons.
+    /// Description: Unity Start callback. Triggers the initialization of the color palette buttons.
+    /// Context: Initialization.
+    /// Justification: Must wait for Awake to finish on child buttons.
     /// </summary>
     private void Start()
     {
@@ -35,7 +39,9 @@ public class UIColorsPalettes : MonoBehaviour
     }
 
     /// <summary>
-    /// Unity Update callback. Kept for legacy compatibility if needed.
+    /// Description: Unity Update callback. Kept for legacy compatibility if needed.
+    /// Context: Frame loop.
+    /// Justification: Reserved for future update logic.
     /// </summary>
     private void Update()
     {
@@ -44,8 +50,9 @@ public class UIColorsPalettes : MonoBehaviour
     
 
     /// <summary>
-    /// Programmatically calculates a quantized gradient of 16 colors
-    /// consisting of grayscale tones and vibrant HSV rainbow hues.
+    /// Description: Programmatically calculates a quantized gradient of 16 colors consisting of grayscale tones and vibrant HSV rainbow hues.
+    /// Context: Can be run from Inspector button.
+    /// Justification: Generates a mathematically perfect spectrum for the user.
     /// </summary>
     [Button("Generate Quantized 16-Color Palette")]
     private void GenerateQuantizedPalette()
@@ -73,8 +80,9 @@ public class UIColorsPalettes : MonoBehaviour
     }
 
     /// <summary>
-    /// Automatically retrieves all child custom shape buttons, assigns them their respective colors,
-    /// sets up click handlers to communicate with LobbyCustomizationUI, and drives custom shape animations.
+    /// Description: Automatically retrieves all child custom shape buttons and assigns them their respective colors.
+    /// Context: Invoked by Start.
+    /// Justification: Sets up click handlers to communicate with LobbyCustomizationUI.
     /// </summary>
     [Button("Initialize Palette")]
     private void InitializePalette()

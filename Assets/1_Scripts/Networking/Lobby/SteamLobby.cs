@@ -5,12 +5,16 @@ using UnityEngine;
 using UnityEngine.UI;
 //https://www.youtube.com/watch?v=7Eoc8U8TWa8&list=PLfFBezYu5hogMS3QeJkM1FQfl3s1sCzwV&index=6
 /// <summary>
-/// Manages Steam lobby creation, joining, and integration with Mirror network manager.
+/// Description: Manages Steam lobby creation, joining, and integration with Mirror network manager.
+/// Context: Attached to the NetworkManager. Runs on Start.
+/// Justification: Bridges the gap between Steamworks.NET matchmaking callbacks and Mirror's hosting/joining functionality.
 /// </summary>
 public class SteamLobby : MonoBehaviour
 {
     /// <summary>
-    /// Singleton instance of the SteamLobby.
+    /// Description: Singleton instance of the SteamLobby.
+    /// Context: Used by UI scripts to access the active lobby data.
+    /// Justification: We only ever have one lobby active at a time per game instance.
     /// </summary>
     public static SteamLobby Instance;
 
@@ -20,13 +24,21 @@ public class SteamLobby : MonoBehaviour
     protected Callback<LobbyEnter_t> LobbyEntered;
 
     /// <summary>
-    /// The unique ID of the currently joined Steam lobby.
+    /// Description: The unique ID of the currently joined Steam lobby.
+    /// Context: Used by UI scripts to fetch lobby metadata.
+    /// Justification: Required for all subsequent SteamMatchmaking API calls regarding the current lobby.
     /// </summary>
+    [Tooltip("Role: The active Steam lobby ID.\nUse Case: API interactions.\nJustification: Exposed for inspector debugging.")]
     public ulong CurrentLobbyId;
     
     private const string HostAddressKey = "HostAddress";
     private MyNetworkManager manager;
 
+    /// <summary>
+    /// Description: Initializes Steam callbacks and references.
+    /// Context: Unity Start lifecycle event.
+    /// Justification: We must bind Steamworks delegates immediately to ensure we don't miss incoming lobby invites or creation responses.
+    /// </summary>
     private void Start()
     {
         if(!SteamManager.Initialized) { return; }
@@ -41,7 +53,9 @@ public class SteamLobby : MonoBehaviour
     }
 
     /// <summary>
-    /// Initiates the creation of a Steam lobby.
+    /// Description: Initiates the creation of a Steam lobby.
+    /// Context: Called by the "Host Game" UI button.
+    /// Justification: Instructs Steam servers to allocate a new lobby for friends to join.
     /// </summary>
     public void HostLobby()
     {
@@ -49,7 +63,9 @@ public class SteamLobby : MonoBehaviour
     }
 
     /// <summary>
-    /// Handler for when a Steam lobby is successfully created.
+    /// Description: Handler for when a Steam lobby is successfully created.
+    /// Context: Invoked by Steam callback.
+    /// Justification: This is where we safely start the Mirror Host, now that Steam has confirmed the lobby exists.
     /// </summary>
     /// <param name="callback">Data containing the lobby creation result.</param>
     private void OnLobbyCreated(LobbyCreated_t callback)
@@ -71,7 +87,9 @@ public class SteamLobby : MonoBehaviour
     }
 
     /// <summary>
-    /// Handler for when a join request is received (e.g., through Steam friends list).
+    /// Description: Handler for when a join request is received (e.g., through Steam friends list).
+    /// Context: Invoked by Steam callback when accepting an invite.
+    /// Justification: Tells the Steam client to attempt joining the target lobby ID.
     /// </summary>
     /// <param name="callback">Data containing the lobby ID to join.</param>
     private void OnJoinRequest(GameLobbyJoinRequested_t callback)
@@ -81,7 +99,9 @@ public class SteamLobby : MonoBehaviour
     }
 
     /// <summary>
-    /// Handler for when the player successfully enters a Steam lobby.
+    /// Description: Handler for when the player successfully enters a Steam lobby.
+    /// Context: Invoked by Steam callback after a successful join attempt.
+    /// Justification: We extract the host's Steam ID from the lobby data and tell Mirror to connect to it.
     /// </summary>
     /// <param name="callback">Data containing the lobby entry result.</param>
     private void OnLobbyEntered(LobbyEnter_t callback)
