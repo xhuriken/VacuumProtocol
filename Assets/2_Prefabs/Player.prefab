@@ -824,7 +824,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4332768075447479085, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -4052028561174940780, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       propertyPath: m_Layer
@@ -860,7 +860,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3650354212203793489, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6190915956649590825, guid: 38b730cf21a9b67408c23317cb89f759, type: 3}
       propertyPath: m_LocalScale.x
@@ -2282,6 +2282,7 @@ MonoBehaviour:
   BasePitch: 0.58
   RootNote: 7
   SemitoneShift: 0
+  _enableDebugLogs: 0
 --- !u!169 &4546216201233503031
 AudioLowPassFilter:
   m_ObjectHideFlags: 0

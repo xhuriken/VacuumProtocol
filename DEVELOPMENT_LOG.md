@@ -515,3 +515,57 @@
 - **Modified Files**: ColorButtonUI.cs, CustomTextButton.cs, UICustomButtonBase.cs, UIColorsPalettes.cs, InGameMenuController.cs, UIPanelController.cs, UINavigationGroup.cs, OpenURLButton.cs, CustomCursorFollower.cs, MouseManager.cs, PlayerVolumeSlider.cs, SettingsUIPresenter.cs.
 - **Why**: Finalize the strict code standards implementation on the last remaining subsystem: the User Interface. The custom vector graphics UI and menu navigation controllers are highly customized and require thorough explanation for future maintainability.
 - **Problem solved**: Added strict XML summaries (Description, Context, Justification) and Tooltips (Role, Use Case, Justification) across all UI scripts. Created `documentation/UI_System.md` to provide a high-level architectural overview of the vector UI integrations (Shapes), menu navigation, and input helpers, thereby successfully concluding the complete codebase audit.
+
+## [2026-07-03] - Key Rebinding System & Multi-Menu Navigation
+
+### Technical Justification & Details
+- **Feature Request**: Implement key binding settings menu to let players customize their keyboard and mouse inputs, and support multi-category settings sub-menus.
+- **Architecture**:
+  - Designed `ControlRebindUIPresenter.cs` to coordinate a list of `RebindRowUI.cs` row entries.
+  - Enhanced `InputSettingsConsumer.cs` to support interactive rebinding callbacks (onComplete, onCancel) and Escape-key cancellation flow.
+  - Upgraded `UINavigationGroup.cs` to natively listen to the Escape key to close active sub-panels dynamically (allowing Escape to act as "Back").
+  - Fixed duplicate field declarations in `CustomCursorFollower.cs` to restore compiling project state.
+- **Persistence**: Rebinding overrides continue to be serialized to JSON and saved in `SettingsData` via `SettingsManager.UpdateSettings`.
+
+### Code Modified/Added
+- [NEW] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/RebindRowUI.cs)
+- [NEW] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/ControlRebindUIPresenter.cs)
+- [MODIFY] [InputSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs) (Interactive overloads)
+- [MODIFY] [UINavigationGroup.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/UINavigationGroup.cs) (Escape key back navigation)
+- [MODIFY] [CustomCursorFollower.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/CustomCursorFollower.cs) (Fixed duplicate fields compilation error)
+- [NEW] [walkthrough.md](file:///C:/Users/celestin/.gemini/antigravity-ide/brain/d23a534e-7777-4755-8e9f-c4cada1843ed/walkthrough.md) (Editor setup walkthrough)
+
+## [2026-07-06] - Key Rebinding Upgrades, Left/Right Menu Sides & Duplicate Conflict Warnings
+
+### Technical Justification & Details
+- **Feature Request**: Resolve NullReferenceException on CustomTextButton, implement individual key reset, implement duplicate key conflict highlighting in Red, and support Left/Right concurrent panels in the UINavigationGroup.
+- **NullReference Fix**: 
+  - `OnDisable` triggers `KillActiveTweens()`. If the GameObject starts deactivated or gets deactivated before `Start()`, original states haven't been cached yet (`CacheOriginalStates()` runs in `Start()`). Thus, `_originalChildColors` is null, causing a NullReferenceException when indexing it in `KillActiveTweens()`.
+  - Added an `_isCached` boolean flag to guard all original state restorations in `KillActiveTweens()` and `AnimateInteractableTransition()`.
+- **Left / Right Multi-Panel Navigation**:
+  - Added `PanelSide` Side setting to `UIPanelController` (categories: `Left` and `Right`).
+  - Redesigned `UINavigationGroup` history tracking to split left and right panel groups, allowing a Left sub-menu panel (e.g. Settings Category) and a Right content panel (e.g. Controls or Audio) to stay visible simultaneously.
+  - Automatically closes any open Right panel when returning back to the default Left panel (e.g. Main Menu).
+  - Refactored history navigation to only push/pop Left panels, ensuring the Escape key/Back action always operates on Left panels.
+- **Specific Key Reset**:
+  - Added `ResetBindingToDefault(string actionName, int bindingIndex)` to `InputSettingsConsumer.cs` to remove single-binding overrides.
+  - Hooked up `_rowResetButton` onClick listener in `RebindRowUI.cs` to trigger specific binding resets.
+- **Conflict Highlighting**:
+  - Implemented `CheckForDuplicateBindings()` in `ControlRebindUIPresenter.cs` that scans for active key conflicts across all rows.
+  - Changes the key text label color to **Red** for duplicate/conflicting key assignments.
+- **Strict Code Auditing & Comments**:
+  - Added XML documentation summaries to all private/internal variables across modified UI scripts.
+  - Added detailed code comments inside method bodies in B1 English to clarify algorithms.
+- **Logging Gating**:
+  - Added `_enableDebugLogs` serialized boolean field (defaulting to `false`) in `InputSettingsConsumer.cs` and guarded all standard `Debug.Log` calls to comply with the project's log reduction standard.
+
+### Code Modified/Added
+- [MODIFY] [CustomTextButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/CustomTextButton.cs) (Added `_isCached` state safety guards)
+- [MODIFY] [UIPanelController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/UIPanelController.cs) (Added PanelSide enum and Side property)
+- [MODIFY] [UINavigationGroup.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/UINavigationGroup.cs) (Implemented concurrent Left/Right panel and Left-only history stack)
+- [MODIFY] [InputSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Controller/InputSettingsConsumer.cs) (Added ResetBindingToDefault method, _enableDebugLogs field, debug guards & B1 comments)
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/RebindRowUI.cs) (Added reset button, duplicate coloring, B1 comments and XML variable summaries)
+- [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/ControlRebindUIPresenter.cs) (Added duplicate scanning logic, B1 comments and XML summaries)
+- [MODIFY] [walkthrough.md](file:///C:/Users/celestin/.gemini/antigravity-ide/brain/d23a534e-7777-4755-8e9f-c4cada1843ed/walkthrough.md) (Updated walkthrough)
+
+

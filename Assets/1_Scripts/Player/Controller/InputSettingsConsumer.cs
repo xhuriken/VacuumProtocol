@@ -11,6 +11,9 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     [Tooltip("Role: The Input Action Asset containing the bindings to override.\nUse Case: Input rebinding.\nJustification: Modifies the in-memory overrides of this asset without permanently altering the source file.")]
     [SerializeField] private InputActionAsset _inputActions;
 
+    [Tooltip("Role: Enable or disable verbose debug log printing.\nUse Case: Debugging.\nJustification: Follows the workspace logging guidelines to reduce console spam.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     private string _lastAppliedBindingsJson;
 
     /// <summary>
@@ -68,7 +71,10 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
         try
         {
             _inputActions.LoadBindingOverridesFromJson(_lastAppliedBindingsJson);
-            Debug.Log("[InputSettingsConsumer] Controls successfully re-bound from overrides.");
+            if (_enableDebugLogs)
+            {
+                Debug.Log("[InputSettingsConsumer] Controls successfully re-bound from overrides.");
+            }
         }
         catch (System.Exception ex)
         {
@@ -92,7 +98,42 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
             data.ControlBindingsOverrideJson = string.Empty;
         });
         
-        Debug.Log("[InputSettingsConsumer] All bindings reset to default.");
+        if (_enableDebugLogs)
+        {
+            Debug.Log("[InputSettingsConsumer] All bindings reset to default.");
+        }
+    }
+
+    /// <summary>
+    /// Description: Resets a specific action binding override back to default.
+    /// Context: Called by RebindRowUI reset button.
+    /// Justification: Restores the default configuration for a single key.
+    /// </summary>
+    /// <param name="actionPathOrName">The name or path of the input action.</param>
+    /// <param name="bindingIndex">The index of the binding to reset.</param>
+    public void ResetBindingToDefault(string actionPathOrName, int bindingIndex)
+    {
+        // Search the action object by name
+        var action = FindAction(actionPathOrName);
+        if (action == null || bindingIndex < 0 || bindingIndex >= action.bindings.Count) return;
+
+        // Strip rebind override back to default key
+        action.RemoveBindingOverride(bindingIndex);
+
+        // Serialize updated bindings to JSON format
+        string overridesJson = _inputActions.SaveBindingOverridesAsJson();
+        
+        // Push the new bindings override map to SettingsManager
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.ControlBindingsOverrideJson = overridesJson;
+        });
+
+        // Log operation output
+        if (_enableDebugLogs)
+        {
+            Debug.Log($"[InputSettingsConsumer] Reset action '{action.name}' index {bindingIndex} to default.");
+        }
     }
 
     /// <summary>
@@ -125,5 +166,107 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
                 Debug.Log($"[InputSettingsConsumer] Successfully remapped action '{actionToRebind.name}' index {bindingIndex}.");
             })
             .Start();
+    }
+
+    /// <summary>
+    /// Description: Finds an InputAction within the asset by name or path.
+    /// Context: Internal helper.
+    /// Justification: Centralizes action retrieval and logging for safety.
+    /// </summary>
+    /// <param name="actionPathOrName">The name or path of the input action.</param>
+    /// <returns>The found InputAction, or null.</returns>
+    public InputAction FindAction(string actionPathOrName)
+    {
+        if (_inputActions == null) return null;
+        return _inputActions.FindAction(actionPathOrName);
+    }
+
+    /// <summary>
+    /// Description: Gets the human-readable display string of a binding.
+    /// Context: Called by UI to refresh button labels.
+    /// Justification: Integrates Unity Input System's localization/naming.
+    /// </summary>
+    /// <param name="actionPathOrName">The name or path of the action.</param>
+    /// <param name="bindingIndex">The index of the binding.</param>
+    /// <returns>The human-readable display string, or empty string.</returns>
+    public string GetBindingDisplayString(string actionPathOrName, int bindingIndex)
+    {
+        var action = FindAction(actionPathOrName);
+        if (action == null || bindingIndex < 0 || bindingIndex >= action.bindings.Count)
+        {
+            return string.Empty;
+        }
+        return action.GetBindingDisplayString(bindingIndex);
+    }
+
+    /// <summary>
+    /// Description: Starts interactive rebind procedure with callbacks for completion/cancellation and custom options.
+    /// Context: Called by UI rebinding scripts.
+    /// Justification: Provides granular UX state control to show/hide "listening" status in the UI, and supports canceling via Escape.
+    /// </summary>
+    /// <param name="actionToRebind">The InputAction to remap.</param>
+    /// <param name="bindingIndex">The binding slot index.</param>
+    /// <param name="onComplete">Callback triggered when rebinding succeeds.</param>
+    /// <param name="onCancel">Callback triggered when rebinding is canceled.</param>
+    public void RebindActionInteractive(InputAction actionToRebind, int bindingIndex, System.Action onComplete, System.Action onCancel)
+    {
+        if (actionToRebind == null) return;
+
+        actionToRebind.Disable();
+
+        var operation = actionToRebind.PerformInteractiveRebinding(bindingIndex)
+            .WithControlsExcluding("Mouse") // Avoid accidental mouse clicks remapping keys
+            .WithCancelingThrough("<Keyboard>/escape") // Exclude escape from being bound, use it to cancel instead
+            .OnComplete(op =>
+            {
+                actionToRebind.Enable();
+                op.Dispose();
+
+                // Save overrides back into SettingsManager
+                string overridesJson = _inputActions.SaveBindingOverridesAsJson();
+                SettingsManager.Instance.UpdateSettings(data =>
+                {
+                    data.ControlBindingsOverrideJson = overridesJson;
+                });
+                
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[InputSettingsConsumer] Successfully remapped action '{actionToRebind.name}' index {bindingIndex}.");
+                }
+                onComplete?.Invoke();
+            })
+            .OnCancel(op =>
+            {
+                actionToRebind.Enable();
+                op.Dispose();
+                
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[InputSettingsConsumer] Rebind canceled for action '{actionToRebind.name}' index {bindingIndex}.");
+                }
+                onCancel?.Invoke();
+            })
+            .Start();
+    }
+
+    /// <summary>
+    /// Description: Starts interactive rebind procedure using action string path.
+    /// Context: Called by UI rebinding scripts.
+    /// Justification: Overload for string actions to simplify UI script logic.
+    /// </summary>
+    /// <param name="actionPathOrName">The name or path of the action.</param>
+    /// <param name="bindingIndex">The index of the binding.</param>
+    /// <param name="onComplete">Callback triggered when rebinding succeeds.</param>
+    /// <param name="onCancel">Callback triggered when rebinding is canceled.</param>
+    public void RebindActionInteractive(string actionPathOrName, int bindingIndex, System.Action onComplete, System.Action onCancel)
+    {
+        var action = FindAction(actionPathOrName);
+        if (action == null)
+        {
+            Debug.LogError($"[InputSettingsConsumer] Action '{actionPathOrName}' not found.");
+            onCancel?.Invoke();
+            return;
+        }
+        RebindActionInteractive(action, bindingIndex, onComplete, onCancel);
     }
 }

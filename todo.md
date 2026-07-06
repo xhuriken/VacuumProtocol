@@ -421,3 +421,14 @@
 - [x] Update DEVELOPMENT_LOG.md for Phase 5
 - [x] Update documentation (UI_System.md)
 
+## Current Feature: Key Rebinding System
+- [x] Create implementation plan and obtain user approval.
+- [x] Implement interactive rebinding callbacks and cancel options in `InputSettingsConsumer.cs`.
+- [x] Create `RebindRowUI.cs` to handle individual key rows in UI.
+- [x] Create `ControlRebindUIPresenter.cs` to orchestrate keybinding UI.
+- [x] Implement Escape key back navigation support inside `UINavigationGroup.cs`.
+- [x] Fix NullReferenceException on CustomTextButton when deactivated on start.
+- [x] Verify functionality (key mapping, escaping, resetting to defaults).
+- [x] Update `DEVELOPMENT_LOG.md` and `todo.md` tasks.
+
+

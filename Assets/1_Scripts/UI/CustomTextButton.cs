@@ -69,6 +69,7 @@ public class CustomTextButton : UICustomButtonBase
     private Vector3[] _originalChildPositions;
 
     private Sequence _clickFlashSequence;
+    private bool _isCached = false;
 
     #endregion
 
@@ -285,6 +286,7 @@ public class CustomTextButton : UICustomButtonBase
                 }
             }
         }
+        _isCached = true;
     }
 
     /// <summary>
@@ -704,6 +706,8 @@ public class CustomTextButton : UICustomButtonBase
     /// <param name="isInteractable">True if active, false if disabled.</param>
     private void AnimateInteractableTransition(bool isInteractable)
     {
+        if (!_isCached) return;
+
         float duration = 0.25f;
 
         if (isInteractable)
@@ -821,7 +825,10 @@ public class CustomTextButton : UICustomButtonBase
             DOTween.Kill(_rect);
             _rect.transform.DOKill();
             // Restore scale state cleanly when resetting
-            _rect.transform.localScale = _originalRectLocalScale;
+            if (_isCached)
+            {
+                _rect.transform.localScale = _originalRectLocalScale;
+            }
         }
 
         if (_dots != null)
@@ -843,8 +850,11 @@ public class CustomTextButton : UICustomButtonBase
         if (_mainDisc != null)
         {
             DOTween.Kill(_mainDisc);
-            _mainDisc.Color = _originalMainDiscColor;
-            _mainDisc.Radius = _originalMainDiscRadius;
+            if (_isCached)
+            {
+                _mainDisc.Color = _originalMainDiscColor;
+                _mainDisc.Radius = _originalMainDiscRadius;
+            }
         }
 
         if (_childDiscs != null)
@@ -856,9 +866,12 @@ public class CustomTextButton : UICustomButtonBase
                     Disc child = _childDiscs[i];
                     DOTween.Kill(child);
                     child.transform.DOKill();
-                    child.Color = _originalChildColors[i];
-                    child.Radius = _originalChildRadii[i];
-                    child.transform.localPosition = _originalChildPositions[i];
+                    if (_isCached && _originalChildColors != null && i < _originalChildColors.Length)
+                    {
+                        child.Color = _originalChildColors[i];
+                        child.Radius = _originalChildRadii[i];
+                        child.transform.localPosition = _originalChildPositions[i];
+                    }
                 }
             }
         }

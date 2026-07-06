@@ -255,6 +255,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.wooshii.hierarchydecorator": {
+      "version": "https://github.com/WooshiiDev/HierarchyDecorator.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "59c42a126779f0153bcd304ffae4753ee19147d2"
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,

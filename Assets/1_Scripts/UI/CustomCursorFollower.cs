@@ -11,9 +11,6 @@ public class CustomCursorFollower : MonoBehaviour
     private RectTransform _rectTransform;
     private Canvas _canvas;
 
-    private RectTransform _rectTransform;
-    private Canvas _canvas;
-
     /// <summary>
     /// Description: Unity Awake callback. Caches necessary components.
     /// Context: Initialization.
