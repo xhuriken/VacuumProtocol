@@ -568,4 +568,75 @@
 - [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/ControlRebindUIPresenter.cs) (Added duplicate scanning logic, B1 comments and XML summaries)
 - [MODIFY] [walkthrough.md](file:///C:/Users/celestin/.gemini/antigravity-ide/brain/d23a534e-7777-4755-8e9f-c4cada1843ed/walkthrough.md) (Updated walkthrough)
 
+## [2026-07-07] - Codebase Folder Reorganization & Assets Root Cleanup
 
+### Technical Justification & Details
+- **Feature Request**: Reorganize the project's folder structure, especially scripts, and clean up the root `Assets/` directory.
+- **Organization & Cleanliness**:
+  - Moved generic utility scripts to `Assets/1_Scripts/Utils/`.
+  - Subdivided player controllers and visuals into `Assets/1_Scripts/Player/Movement/`, `Assets/1_Scripts/Player/Input/`, and `Assets/1_Scripts/Player/Mechanics/`.
+  - Relocated editor utility scripts (such as `ModelMigrator.cs`) into an `Editor/` subdirectory under `Assets/1_Scripts/Player/Editor/`. This ensures that they compile only in editor contexts and prevents build packaging errors.
+  - Subdivided UI scripts into `Assets/1_Scripts/UI/Core/`, `Assets/1_Scripts/UI/Components/`, and `Assets/1_Scripts/UI/Menus/` to separate core vector graphics math from actual buttons and high-level menu controllers.
+  - Separated networking voice scripts from general audio scripts, relocating voice scripts to `Assets/1_Scripts/Audio/Voice/` and general game audio script and animator script to `Assets/1_Scripts/Audio/Controllers/`.
+  - Moved loose Physic Materials (`ArmPart`, `NoFrixion`) from the `Assets/` root to a new dedicated `Assets/6_Physics/` directory.
+  - Relocated the Input Actions asset from `Assets/` root to a clean configuration folder under `Assets/Input/`.
+- **References Preservation**:
+  - Moved script files and their associated `.meta` files simultaneously to keep Unity GUID references intact across all scenes and prefabs.
+  - Updated the compile references inside `Assembly-CSharp.csproj` and `Assembly-CSharp-Editor.csproj` to match the new file locations on disk, allowing successful compiler build verification. Added exclusions for first-pass plugin scripts to prevent duplicate compilation.
+
+### Code Modified/Added
+- [NEW] [6_Physics](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/6_Physics) (New folder for physics materials)
+- [NEW] [Input](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/Input) (New folder for input actions configuration)
+- [MODIFY] [ArmPart.physicMaterial](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/6_Physics/ArmPart.physicMaterial) (Moved from Assets/ root)
+- [MODIFY] [NoFrixion.physicMaterial](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/6_Physics/NoFrixion.physicMaterial) (Moved from Assets/ root)
+- [MODIFY] [InputSystem_Actions.inputactions](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/Input/InputSystem_Actions.inputactions) (Moved from Assets/ root)
+- [MODIFY] [InfiniteRotate.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Utils/InfiniteRotate.cs) (Moved)
+- [MODIFY] [PlayerController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerController.cs) (Moved)
+- [MODIFY] [PlayerMovementComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerMovementComponent.cs) (Moved)
+- [MODIFY] [PlayerJumpComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerJumpComponent.cs) (Moved)
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Moved)
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Moved)
+- [MODIFY] [PlayerInputHandler.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Input/PlayerInputHandler.cs) (Moved)
+- [MODIFY] [InputSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Input/InputSettingsConsumer.cs) (Moved)
+- [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs) (Moved)
+- [MODIFY] [PlayerVacuumController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerVacuumController.cs) (Moved)
+- [MODIFY] [PlayerInventory.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerInventory.cs) (Moved)
+- [MODIFY] [ModelMigrator.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Editor/ModelMigrator.cs) (Moved to Editor folder)
+- [MODIFY] [UICustomButtonBase.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/UICustomButtonBase.cs) (Moved)
+- [MODIFY] [MouseManager.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/MouseManager.cs) (Moved)
+- [MODIFY] [CustomCursorFollower.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/CustomCursorFollower.cs) (Moved)
+- [MODIFY] [ColorButtonUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/ColorButtonUI.cs) (Moved)
+- [MODIFY] [CustomTextButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/CustomTextButton.cs) (Moved)
+- [MODIFY] [OpenURLButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/OpenURLButton.cs) (Moved)
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Moved)
+- [MODIFY] [UIColorsPalettes.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UIColorsPalettes.cs) (Moved)
+- [MODIFY] [InGameMenuController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/InGameMenuController.cs) (Moved)
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs) (Moved)
+- [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/ControlRebindUIPresenter.cs) (Moved)
+- [MODIFY] [UIPanelController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/UIPanelController.cs) (Moved)
+- [MODIFY] [UINavigationGroup.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/UINavigationGroup.cs) (Moved)
+- [MODIFY] [PlayerVolumeSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/PlayerVolumeSlider.cs) (Moved)
+- [MODIFY] [UniVoiceMirrorSetupSample.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Voice/UniVoiceMirrorSetupSample.cs) (Moved)
+- [MODIFY] [UniVoicePlayerAudio.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Voice/UniVoicePlayerAudio.cs) (Moved)
+- [MODIFY] [VoiceSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Voice/VoiceSettingsConsumer.cs) (Moved)
+- [MODIFY] [VacuumAudioController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Controllers/VacuumAudioController.cs) (Moved)
+- [MODIFY] [MouthAnimator.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Controllers/MouthAnimator.cs) (Moved)
+- [MODIFY] [Assembly-CSharp.csproj](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assembly-CSharp.csproj) (Updated script paths & filtered plugin duplicates)
+- [MODIFY] [Assembly-CSharp-Editor.csproj](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assembly-CSharp-Editor.csproj) (Updated script paths)
+
+## [2026-07-07] - Rebind Mouse Buttons & Concurrent Rebind Row Lock Fix
+
+### Technical Justification & Details
+- **Bug Fix (Mouse Rebinding)**:
+  - Allowed Left Click and Right Click to be bound during rebinding by removing the coarse `.WithControlsExcluding("Mouse")` filter in `InputSettingsConsumer.cs`.
+  - Excluded only mouse axes that could accidentally trigger a rebind upon simple cursor movement: `.WithControlsExcluding("<Mouse>/position")`, `.WithControlsExcluding("<Mouse>/delta")`, and `.WithControlsExcluding("<Mouse>/scroll")`.
+  - Introduced a one-frame safety delay using a Coroutine in `InputSettingsConsumer.cs` before starting the `PerformInteractiveRebinding` operation. This ensures that the mouse click event which triggered the "Rebind" button is completely processed and cleared from the Input System event queue, preventing it from immediately registering and auto-completing the rebind.
+- **Bug Fix (Concurrent Row Lock)**:
+  - Exposed the public `IsListening` state on `RebindRowUI.cs`.
+  - Added `IsAnyRowRebinding()` in `ControlRebindUIPresenter.cs` to check if any managed row is currently waiting for input.
+  - Guarded `StartRebindingProcess` in `RebindRowUI.cs` so that if another row is already actively waiting for input, the click is ignored, preventing concurrent overlapping "...Press Key..." states.
+
+### Code Modified/Added
+- [MODIFY] [InputSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Input/InputSettingsConsumer.cs) (Allowed mouse button inputs, filtered mouse movements/scroll, and added one-frame coroutine delay)
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Exposed IsListening property and added concurrent rebind lock check)
+- [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/ControlRebindUIPresenter.cs) (Implemented IsAnyRowRebinding check across all active rows)

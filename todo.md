@@ -431,4 +431,17 @@
 - [x] Verify functionality (key mapping, escaping, resetting to defaults).
 - [x] Update `DEVELOPMENT_LOG.md` and `todo.md` tasks.
 
+## Current Feature: Codebase Folder Reorganization
+- [x] Create folder structure for scripts, physics, and input.
+- [x] Move physic materials to Assets/6_Physics/ and input settings to Assets/Input/.
+- [x] Move script files and their associated .meta files to their respective target folders.
+- [x] Perform compilation checks and clean up empty folder structures.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
 
+## Current Feature: Key Rebinding Mouse Input & Concurrent Lock Fix
+- [x] Implement single-row lock in ControlRebindUIPresenter to prevent concurrent rebinding clicks.
+- [x] Expose IsListening state in RebindRowUI and integrate presenter lock checks on rebind click.
+- [x] Refactor InputSettingsConsumer to allow mouse button rebinds (Left/Right Click) while excluding position/delta/scroll.
+- [x] Add one-frame delay in InputSettingsConsumer using a Coroutine to prevent the initiating mouse click from auto-triggering the rebind.
+- [x] Verify build compiles and functions without errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.

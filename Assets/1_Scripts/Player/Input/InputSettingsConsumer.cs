@@ -201,21 +201,23 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     /// <summary>
     /// Description: Starts interactive rebind procedure with callbacks for completion/cancellation and custom options.
-    /// Context: Called by UI rebinding scripts.
+    /// Context: Internal helper called by the delayed coroutine.
     /// Justification: Provides granular UX state control to show/hide "listening" status in the UI, and supports canceling via Escape.
     /// </summary>
     /// <param name="actionToRebind">The InputAction to remap.</param>
     /// <param name="bindingIndex">The binding slot index.</param>
     /// <param name="onComplete">Callback triggered when rebinding succeeds.</param>
     /// <param name="onCancel">Callback triggered when rebinding is canceled.</param>
-    public void RebindActionInteractive(InputAction actionToRebind, int bindingIndex, System.Action onComplete, System.Action onCancel)
+    private void RebindActionInteractiveImmediate(InputAction actionToRebind, int bindingIndex, System.Action onComplete, System.Action onCancel)
     {
         if (actionToRebind == null) return;
 
         actionToRebind.Disable();
 
         var operation = actionToRebind.PerformInteractiveRebinding(bindingIndex)
-            .WithControlsExcluding("Mouse") // Avoid accidental mouse clicks remapping keys
+            .WithControlsExcluding("<Mouse>/position") // Allow mouse clicks but exclude cursor position axis rebinds
+            .WithControlsExcluding("<Mouse>/delta")    // Exclude mouse drag/movement axis
+            .WithControlsExcluding("<Mouse>/scroll")   // Exclude mouse scroll wheel
             .WithCancelingThrough("<Keyboard>/escape") // Exclude escape from being bound, use it to cancel instead
             .OnComplete(op =>
             {
@@ -250,9 +252,9 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Description: Starts interactive rebind procedure using action string path.
+    /// Description: Starts interactive rebind procedure using action string path with a one-frame safety delay.
     /// Context: Called by UI rebinding scripts.
-    /// Justification: Overload for string actions to simplify UI script logic.
+    /// Justification: Exposes the string-based interface for UI rows. Waiting one frame ensures that the mouse click used to press the UI button is cleared from the input event queue before the rebind operation starts listening.
     /// </summary>
     /// <param name="actionPathOrName">The name or path of the action.</param>
     /// <param name="bindingIndex">The index of the binding.</param>
@@ -267,6 +269,21 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
             onCancel?.Invoke();
             return;
         }
-        RebindActionInteractive(action, bindingIndex, onComplete, onCancel);
+
+        // Start rebind with a coroutine to wait 1 frame for the click to complete
+        StartCoroutine(RebindActionCoroutine(action, bindingIndex, onComplete, onCancel));
+    }
+
+    /// <summary>
+    /// Description: Coroutine that delays interactive rebinding by one frame.
+    /// Context: Rebinding lifecycle.
+    /// Justification: Clears the click event from the input event queue to prevent immediate registration of the initiating click.
+    /// </summary>
+    private System.Collections.IEnumerator RebindActionCoroutine(InputAction actionToRebind, int bindingIndex, System.Action onComplete, System.Action onCancel)
+    {
+        // Wait one frame to clear the pointer/mouse click event that initiated the rebinding process
+        yield return null;
+
+        RebindActionInteractiveImmediate(actionToRebind, bindingIndex, onComplete, onCancel);
     }
 }

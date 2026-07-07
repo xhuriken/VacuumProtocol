@@ -187,4 +187,22 @@ public class ControlRebindUIPresenter : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Description: Checks if any row is currently listening for key input during rebinding.
+    /// Context: Interaction lock.
+    /// Justification: Prevents overlapping rebinding loops from different rows.
+    /// </summary>
+    /// <returns>True if a row is rebinding, false otherwise.</returns>
+    public bool IsAnyRowRebinding()
+    {
+        foreach (var row in _rebindRows)
+        {
+            if (row != null && row.IsListening)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

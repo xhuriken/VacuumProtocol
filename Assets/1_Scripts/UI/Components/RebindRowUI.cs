@@ -53,6 +53,13 @@ public class RebindRowUI : MonoBehaviour
     public int BindingIndex => _bindingIndex;
 
     /// <summary>
+    /// Description: Gets whether this row is actively listening for key input during rebinding.
+    /// Context: Read access.
+    /// Justification: Allows parent presenter and other rows to prevent concurrent rebind inputs.
+    /// </summary>
+    public bool IsListening => _isListening;
+
+    /// <summary>
     /// Description: Initializes the row with the input settings consumer.
     /// Context: Called by the parent presenter on setup.
     /// Justification: Injection dependency pattern avoids using FindObjectOfType.
@@ -128,6 +135,10 @@ public class RebindRowUI : MonoBehaviour
     {
         // Prevent launching rebinding twice on the same row
         if (_consumer == null || _isListening) return;
+
+        // Prevent launching rebinding if another row is already actively listening
+        var presenter = GetComponentInParent<ControlRebindUIPresenter>();
+        if (presenter != null && presenter.IsAnyRowRebinding()) return;
 
         _isListening = true;
 
