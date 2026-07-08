@@ -25,11 +25,32 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     /// </summary>
     public static bool IsAutoVad { get; private set; } = false;
 
+    /// <summary>
+    /// Description: Static reference to the active VoiceSettingsConsumer instance.
+    /// Context: Singleton pattern.
+    /// Justification: Allows static methods to access instance settings and debug logging flags.
+    /// </summary>
+    public static VoiceSettingsConsumer Instance { get; private set; }
+
+    [Header("Debug")]
+    [Tooltip("Role: Enable or disable verbose debug log printing.\nUse Case: Debugging.\nJustification: Allows toggling logs on/off in the inspector.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     private FieldInfo _vadConfigField;
     private string _lastAppliedDevice;
     private float _lastAppliedSensitivity = -1f;
     private float _lastAppliedMasterVolume = -1f;
     private float _lastAppliedVoiceVolume = -1f;
+
+    /// <summary>
+    /// Description: Unity Awake lifecycle event. Initializes singleton instance.
+    /// Context: Lifecycle.
+    /// Justification: Required for static logging access.
+    /// </summary>
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -45,6 +66,11 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void OnDestroy()
     {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+
         // Unregister from static callback to avoid stale instance references after destroy
         _onAutoVadChanged -= OnAutoVadChangedCallback;
 
@@ -103,7 +129,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     {
         IsAutoVad = enabled;
         _onAutoVadChanged?.Invoke();
-        Debug.Log($"[VoiceSettingsConsumer] Auto VAD mode set to: {enabled}");
+        if (Instance != null && Instance._enableDebugLogs)
+        {
+            Debug.Log($"[VoiceSettingsConsumer] Auto VAD mode set to: {enabled}");
+        }
     }
 
     private void OnAutoVadChangedCallback()
@@ -138,7 +167,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
                 config.ReleaseMs = 1000;
                 config.NoDropWindowMs = 400;
                 config.AttackMs = 20;
-                Debug.Log("[VoiceSettingsConsumer] Restored default UniVoice VAD config.");
+                if (_enableDebugLogs)
+                {
+                    Debug.Log("[VoiceSettingsConsumer] Restored default UniVoice VAD config.");
+                }
             }
         }
         catch (Exception ex)
@@ -203,7 +235,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             
             // Raise swap event so that UI presenters can re-subscribe to the new mic input's events
             OnMicInputSwapped?.Invoke();
-            Debug.Log($"[VoiceSettingsConsumer] Hot-swapped microphone input to: {deviceName}");
+            if (_enableDebugLogs)
+            {
+                Debug.Log($"[VoiceSettingsConsumer] Hot-swapped microphone input to: {deviceName}");
+            }
         }
         catch (Exception ex)
         {
@@ -240,7 +275,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
                 config.NoDropWindowMs = 200;
 
                 // Log the resolved threshold so the user can compare against audio peak logs
-                Debug.Log($"[VoiceSettingsConsumer] Sensitivity slider = {sensitivity:F3} -> SNR enter threshold = {targetDb:F2} dB  (exit = {config.SnrExitDb:F2} dB)");
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[VoiceSettingsConsumer] Sensitivity slider = {sensitivity:F3} -> SNR enter threshold = {targetDb:F2} dB  (exit = {config.SnrExitDb:F2} dB)");
+                }
             }
         }
         catch (Exception ex)
@@ -308,7 +346,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             var settings = SettingsManager.Instance.CurrentSettings;
             float baseVolume = settings.MasterVolume * settings.VoiceVolume;
             streamedOutput.Stream.UnityAudioSource.volume = baseVolume * multiplier;
-            Debug.Log($"[VoiceSettingsConsumer] Peer {peerId} volume -> {multiplier:F2}x (final = {baseVolume * multiplier:F3})");
+            if (Instance != null && Instance._enableDebugLogs)
+            {
+                Debug.Log($"[VoiceSettingsConsumer] Peer {peerId} volume -> {multiplier:F2}x (final = {baseVolume * multiplier:F3})");
+            }
         }
     }
 
@@ -329,7 +370,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
         if (_loopbackFilter != null)
         {
             _loopbackFilter.Enabled = enabled;
-            Debug.Log($"[VoiceSettingsConsumer] Local microphone loopback preview toggled to: {enabled}");
+            if (Instance != null && Instance._enableDebugLogs)
+            {
+                Debug.Log($"[VoiceSettingsConsumer] Local microphone loopback preview toggled to: {enabled}");
+            }
         }
     }
 
@@ -354,7 +398,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
                 // Initialize loopback filter after settings have been updated
                 SetupLoopbackFilter();
 
-                Debug.Log("[VoiceSettingsConsumer] VoIP ClientSession detected. Applied saved settings successfully.");
+                if (_enableDebugLogs)
+                {
+                    Debug.Log("[VoiceSettingsConsumer] VoIP ClientSession detected. Applied saved settings successfully.");
+                }
             }
             else
             {
@@ -382,7 +429,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             }
         }
         filters.Insert(insertIndex, _loopbackFilter);
-        Debug.Log("[VoiceSettingsConsumer] Hooked LocalLoopbackFilter into UniVoice InputFilters chain.");
+        if (_enableDebugLogs)
+        {
+            Debug.Log("[VoiceSettingsConsumer] Hooked LocalLoopbackFilter into UniVoice InputFilters chain.");
+        }
     }
 
     private void TeardownLoopbackFilter()
@@ -395,7 +445,10 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
             }
             _loopbackFilter.Dispose();
             _loopbackFilter = null;
-            Debug.Log("[VoiceSettingsConsumer] Disposed and removed LocalLoopbackFilter.");
+            if (_enableDebugLogs)
+            {
+                Debug.Log("[VoiceSettingsConsumer] Disposed and removed LocalLoopbackFilter.");
+            }
         }
     }
 }

@@ -445,3 +445,76 @@
 - [x] Add one-frame delay in InputSettingsConsumer using a Coroutine to prevent the initiating mouse click from auto-triggering the rebind.
 - [x] Verify build compiles and functions without errors.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Component & Settings UI Integration
+- [x] Create UICustomToggle.cs script using Shapes and DOTween.
+- [x] Modify SettingsUIPresenter.cs to use UICustomToggle.
+- [x] Run compilation checks to ensure 0 build errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Raycast Target Fix
+- [x] Add Awake validation to UICustomToggle.cs to automatically attach transparent Image for click raycasts.
+- [x] Verify build compiles and functions without errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: VoiceSettingsConsumer Log Gating & Image Raycast Clarification
+- [x] Add _enableDebugLogs field, static Instance property, and log gating inside VoiceSettingsConsumer.cs.
+- [x] Verify build compiles cleanly with zero compile errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Hover & Color Customizations
+- [x] Add _handleOnColor, _handleOffColor, and _trackHoverHeightOffset parameters in UICustomToggle.cs.
+- [x] Store original track height and animate track height on hover enter/exit.
+- [x] Shift color animations to the handle/disc rather than the track background.
+- [x] Fix default offset value to be suited for uGUI pixels (default to 25f).
+- [x] Verify build compiles and functions without errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Handle Center Alignment Fix
+- [x] Cache initial handle local X position on Start as the center point.
+- [x] Calculate ON/OFF positions relative to initial handle X position.
+- [x] Verify build compiles and functions without errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Slider Integration (Menu Paramètres)
+- [x] Create UICustomSlider.cs implementing mouse dragging and support for modular handle-only or fill-only overlays.
+- [x] Modify SettingsUIPresenter.cs to use UICustomSlider for volume, sensitivity, and mic indicators.
+- [x] Add UICustomSlider.cs compile target to Assembly-CSharp.csproj.
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+- [x] Change track and fill shape components from Rectangle to Line in UICustomSlider.cs.
+- [x] Adapt UICustomSlider.cs logic to use Line.Thickness and compute Line.Start/Line.End dynamically based on RectTransform.rect.
+- [x] Synchronize handle position calculation with the exact Line/RectTransform coordinate space to resolve offset issues.
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Track Background Rect
+- [x] Add _trackBackground Rectangle field and original height caching in UICustomToggle.cs.
+- [x] Update hover height animations in UICustomToggle.cs to affect both _track and _trackBackground.
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Slider Hover & Drag Polish (Resolving TODOs)
+- [x] Add _handleDragBloomMultiplier and _handleHoverRadiusMultiplier fields in UICustomSlider.cs.
+- [x] Implement IPointerUpHandler and handle caching/resetting original color and radius.
+- [x] Animate handle radius on pointer enter/exit, and handle bloom (color factor) on pointer down/up.
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Hover & Transition Bloom
+- [x] Add _handleHoverRadiusMultiplier and _handleTransitionBloomMultiplier fields to UICustomToggle.cs.
+- [x] Cache original handle radius on Start in UICustomToggle.cs.
+- [x] Implement handle radius animations on hover (PointerEnter/Exit) and handle bloom flash sequence on toggle value transition.
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Slider Disabled State (Grey out)
+- [x] Fix compile typo "e sois grisé." at the end of UICustomSlider.cs.
+- [x] Add _disabledTrackColor, _disabledFillColor, and _disabledHandleColor fields to UICustomSlider.cs.
+- [x] Cache original track and fill colors in Start(), and update interactable property setter to trigger UpdateInteractableVisuals().
+- [x] Verify build compiles cleanly with zero compilation errors.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+
+
+

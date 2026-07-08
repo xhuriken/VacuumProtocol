@@ -15,23 +15,22 @@ using System.Reflection;
 public class SettingsUIPresenter : MonoBehaviour
 {
     [Header("Audio UI Elements")]
-    [SerializeField] private Slider _masterVolumeSlider;
-    [SerializeField] private Slider _voiceVolumeSlider;
-    [SerializeField] private Slider _micSensitivitySlider;
+    [SerializeField] private UICustomSlider _masterVolumeSlider;
+    [SerializeField] private UICustomSlider _voiceVolumeSlider;
+    [SerializeField] private UICustomSlider _micSensitivitySlider;
     [SerializeField] private TMP_Dropdown _microphoneDropdown;
 
     [Header("Microphone Level Indicator")]
-    [SerializeField] private Slider _micLevelIndicator;
-    [SerializeField] private Image _micLevelFillImage;
+    [SerializeField] private UICustomSlider _micLevelIndicator;
     [SerializeField] private Color _silenceColor = new Color(0.341f, 0.235f, 0.251f, 1.000f);
     [SerializeField] private Color _talkingColor = new Color(0.000f, 1.000f, 0.251f, 1.000f);
     [SerializeField] private float _indicatorSmoothSpeed = 10f;
-    [SerializeField] private Toggle _micTestToggle;
+    [SerializeField] private UICustomToggle _micTestToggle;
 
     [Header("Auto VAD Mode")]
     [Tooltip("Role: Toggles auto VAD mode.\nUse Case: Settings configuration.\nJustification: When enabled, bypasses the manual sensitivity slider and uses UniVoice's default algorithm.")]
-    [SerializeField] private Toggle _autoVadToggle;
-    [SerializeField] private Slider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
+    [SerializeField] private UICustomToggle _autoVadToggle;
+    [SerializeField] private UICustomSlider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
     [Header("Debug")]
     [SerializeField] private bool _enableDebugLogs = false;
@@ -242,11 +241,11 @@ public class SettingsUIPresenter : MonoBehaviour
 
         // Map SNR to the linear [0..1] range of the indicator
         float normalizedVal = (snrDb - snrMin) / snrRange;
-        _micLevelIndicator.value = Mathf.Clamp01(normalizedVal);
-
-        // Visual feedback matching Discord: change indicator color when speaking vs silent
-        if (_micLevelFillImage != null)
+        if (_micLevelIndicator != null)
         {
+            _micLevelIndicator.value = Mathf.Clamp01(normalizedVal);
+
+            // Visual feedback matching Discord: change indicator color when speaking vs silent
             bool isSpeaking = false;
             if (UniVoiceMirrorSetupSample.LocalVad != null)
             {
@@ -258,7 +257,7 @@ public class SettingsUIPresenter : MonoBehaviour
                 isSpeaking = _micLevelIndicator.value > _micSensitivitySlider.value;
             }
 
-            _micLevelFillImage.color = isSpeaking ? _talkingColor : _silenceColor;
+            _micLevelIndicator.fillColor = isSpeaking ? _talkingColor : _silenceColor;
         }
     }
 

@@ -640,3 +640,138 @@
 - [MODIFY] [InputSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Input/InputSettingsConsumer.cs) (Allowed mouse button inputs, filtered mouse movements/scroll, and added one-frame coroutine delay)
 - [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Exposed IsListening property and added concurrent rebind lock check)
 - [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/ControlRebindUIPresenter.cs) (Implemented IsAnyRowRebinding check across all active rows)
+
+## [2026-07-07] - Custom Shapes-Based Toggle Component & Settings UI Integration
+
+### Technical Justification & Details
+- **Feature Request**: Remplacer les boutons bascule (Toggle) d'Unity classiques par des composants de type Shapes (méthode hybride) dans le menu Audio.
+- **UICustomToggle implementation**:
+  - Created `UICustomToggle.cs` which inherits from `MonoBehaviour` and implements pointer interaction interfaces (`IPointerClickHandler`, `IPointerEnterHandler`, `IPointerExitHandler`).
+  - Utilizes `Shapes.Rectangle` for the track background and `Shapes.Disc` for the slider knob/handle.
+  - Applies smooth horizontal local movement to the handle using DOTween's `DOLocalMoveX` and morphs the track color using a generic `DOTween.To` tween to avoid direct extension method dependency conflicts.
+  - Supports instant snapping (`animate = false`) for programmatic updates (e.g. menu setup on initialization) to prevent visual sliding artifacts when first opening the settings panel.
+- **Presenter Integration**:
+  - Replaced native `Toggle` fields (`_micTestToggle`, `_autoVadToggle`) in `SettingsUIPresenter.cs` with `UICustomToggle`.
+  - The API calls (`isOn` and event listener bindings) map perfectly to our custom class, ensuring minimal refactoring overhead and zero behavioral differences.
+
+### Code Modified/Added
+- [NEW] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (New custom vector Shapes-based toggle component)
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs) (Changed toggle fields to UICustomToggle)
+- [MODIFY] [Assembly-CSharp.csproj](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assembly-CSharp.csproj) (Added UICustomToggle compile target reference)
+
+## [2026-07-07] - Custom Toggle Raycast Target Fix
+
+### Technical Justification & Details
+- **Bug Fix**:
+  - uGUI's `EventSystem` requires a component inheriting from `UnityEngine.UI.Graphic` (like `Image`) with `raycastTarget` set to `true` to detect mouse hovers and click inputs. Because the custom shapes are drawn via the Shapes package rather than standard uGUI meshes, pointer events were not being triggered.
+  - Added an `Awake()` validation check in `UICustomToggle.cs` that automatically checks for a `Graphic` component on the Toggle's GameObject. If missing, it dynamically attaches a transparent `Image` (`Color(0,0,0,0)`) with `raycastTarget = true`. This mirrors the behavior of `UICustomButtonBase.cs` and guarantees that mouse click inputs are captured immediately without requiring colliders or manual inspector configuration.
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Added UnityEngine.UI import and automatic transparent Image generation on Awake)
+
+## [2026-07-07] - Custom Toggle Visual & Animation Updates
+
+### Technical Justification & Details
+- **Toggle Customizations**:
+  - Re-mapped the toggle state colors to morph the **handle disc** (`_handle.Color`) instead of the track background.
+  - Replaced the handle scale animation on hover with a **track height expansion animation** (`_track.Height`). The script caches the original track height on `Start()` and tweens it to `_originalTrackHeight + _trackHoverHeightOffset` using DOTween.
+  - Adjusted the default `_handleLocalXOffset` from `0.4f` (suited for meter-scale world objects) to `25.0f` (pixels) to work beautifully inside uGUI coordinates.
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Re-engineered hover height animations, handle-based color changes, and uGUI-adapted offset values)
+
+## [2026-07-07] - Custom Toggle Handle Center Alignment Fix
+
+### Technical Justification & Details
+- **Bug Fix**:
+  - Overwriting the handle's absolute horizontal coordinate with `_handleLocalXOffset` caused alignment issues if the handle's pivot or design center in the editor was not exactly `X = 0`.
+  - Updated `UICustomToggle.cs` to cache the initial local X coordinate of the handle (`_initialHandleX`) during `Start()`.
+  - Transition offsets are now computed relative to this cached design center: `_initialHandleX + _handleLocalXOffset` for the active state and `_initialHandleX - _handleLocalXOffset` for the inactive state. This ensures that the handle slides symmetrically relative to its editor layout design.
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Cached initial handle local position and made target slider X calculations relative to it)
+
+## [2026-07-07] - Custom Shapes-Based Slider Integration
+
+### Technical Justification & Details
+- **Feature Request**: Replace standard Unity UI Sliders in the settings menu with a custom vector Shapes-based slider (`UICustomSlider.cs`).
+- **UICustomSlider implementation**:
+  - Implements `IPointerDownHandler`, `IDragHandler`, `IPointerEnterHandler`, `IPointerExitHandler`.
+  - Converts pointer screen points to local RectTransform coordinates using `RectTransformUtility.ScreenPointToLocalPointInRectangle`.
+  - Supports modular configurations: handles cases where `_fill` (Rectangle) is null (handle-only, like sensitivity threshold) and where `_handle` (Disc) is null (fill-only, like live mic volume indicator).
+  - Exposes `fillColor` property to allow dynamic scripting changes to the fill Rectangle's color.
+- **Presenter Integration**:
+  - Replaced the five native `Slider` fields (`_masterVolumeSlider`, `_voiceVolumeSlider`, `_micSensitivitySlider`, `_micLevelIndicator`, `_autoVadSensitivitySliderRef`) with `UICustomSlider`.
+  - Removed `_micLevelFillImage` from the fields and updated the live voice indicator code to set `fillColor` on `_micLevelIndicator` directly, simplifying the inspector layout.
+
+### Code Modified/Added
+- [NEW] [UICustomSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSlider.cs) (New custom vector Shapes-based slider component)
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs) (Changed slider fields to UICustomSlider and simplified level fill color mapping)
+- [MODIFY] [Assembly-CSharp.csproj](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assembly-CSharp.csproj) (Added UICustomSlider compile target reference)
+## [2026-07-08] - Custom Shapes-Based Slider Line Transition & Handle Realignment
+
+### Technical Justification & Details
+- **Slider Track & Fill Migration**:
+  - Replaced the Shapes `Rectangle` components for `_track` and `_fill` with `Shapes.Line` components in `UICustomSlider.cs`.
+  - Rectangle elements draw relative to their center/pivot which caused them to scale outwards in both directions when their width changed. By switching to `Line`, we define explicit `Start` and `End` local points, allowing the fill to grow cleanly from left-to-right.
+  - Adjusted hover state animations to manipulate `Line.Thickness` instead of `Rectangle.Height`.
+- **Coordinate System Alignment & Handle Correction**:
+  - Realigned track, fill, and handle positioning to compute coordinates relative to the same source: the `RectTransform` local bounding box (`rectTransform.rect`).
+  - The track line now stretches from `xMin` to `xMax`.
+  - The fill line starts at `xMin` and ends at `Mathf.Lerp(xMin, maxX, pct)`.
+  - The handle sits at the same `Mathf.Lerp(xMin, maxX, pct)` coordinate (with custom handle margins applied).
+  - This solves the issue where the handle was misaligned relative to the track bounds and appeared in the middle of the slider when the value was at maximum.
+
+### Code Modified/Added
+- [MODIFY] [UICustomSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSlider.cs) (Re-engineered track and fill using Shapes Line, adapted hover thickness tweens, and realigned coordinate math to match uGUI boundaries)
+
+## [2026-07-08] - Custom Shapes-Based Toggle Track Background Rect
+
+### Technical Justification & Details
+- **Toggle Customization**:
+  - Added a new `Rectangle` reference `_trackBackground` in `UICustomToggle.cs` to act as the fill/background inside the toggle's border/track.
+  - Caches the initial height of the track background (`_originalTrackBackgroundHeight`) on `Start()`.
+  - Animates the height of `_trackBackground` symmetrically with the main `_track` component during hover enter and hover exit transitions (leveraging DOTween).
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Added background track shape and synchronized its hover animations with the outer track)
+
+## [2026-07-08] - Custom Shapes-Based Slider Hover & Drag Polish
+
+### Technical Justification & Details
+- **Slider Handle Polish**:
+  - Implemented the `IPointerUpHandler` interface in `UICustomSlider.cs` to accurately detect release events.
+  - Caches the initial handle `Color` (`_originalHandleColor`) and `Radius` (`_originalHandleRadius`) on `Start()`.
+  - Added visual configuration fields `_handleDragBloomMultiplier` (defaults to 1.5f) and `_handleHoverRadiusMultiplier` (defaults to 1.2f).
+  - Configured `OnPointerEnter` and `OnPointerExit` to animate `_handle.Radius` using DOTween to simulate hover expansion.
+  - Configured `OnPointerDown` and `OnPointerUp` to animate `_handle.Color` by applying/resetting the drag bloom multiplier, creating a premium glowing juice effect.
+
+### Code Modified/Added
+- [MODIFY] [UICustomSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSlider.cs) (Resolved slider TODO comments: implemented hover radius scaling and drag bloom multiplier animations using DOTween)
+
+## [2026-07-08] - Custom Shapes-Based Toggle Hover & Transition Bloom
+
+### Technical Justification & Details
+- **Toggle Handle Polish**:
+  - Caches the initial handle `Radius` (`_originalHandleRadius`) on `Start()`.
+  - Added visual configuration fields `_handleHoverRadiusMultiplier` (defaults to 1.2f) and `_handleTransitionBloomMultiplier` (defaults to 1.5f).
+  - Configured `OnPointerEnter` and `OnPointerExit` to animate `_handle.Radius` using DOTween to simulate hover expansion.
+  - Configured `UpdateVisuals` (when animating transitions) to briefly flash the handle's `Color` with the HDR bloom multiplier during the horizontal slide translation, settling back down to the target ON/OFF color at the end.
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Added hover handle radius scaling and a DOTween sequence to flash HDR bloom on the handle color during state transitions)
+
+## [2026-07-08] - Custom Shapes-Based Slider Disabled State (Grey out)
+
+### Technical Justification & Details
+- **Slider Typo Fix**:
+  - Removed the compile-breaking typo `"e sois grisé."` that was accidentally appended to the end of `UICustomSlider.cs`.
+- **Disabled State Visual Transition**:
+  - Added visual configuration fields `_disabledTrackColor`, `_disabledFillColor`, and `_disabledHandleColor` in `UICustomSlider.cs` to allow full inspector styling for non-interactable states.
+  - Caches the initial/active track and fill colors (`_originalTrackColor`, `_originalFillColor`) on `Start()`.
+  - Refactored `fillColor` property so setting fill color dynamically while disabled preserves the configured value in cache and only applies it visually upon slider re-activation.
+  - Implemented `UpdateInteractableVisuals` which animates (with DOTween) or instantly sets the components' colors to their respective disabled or active values when the `interactable` property is toggled.
+
+### Code Modified/Added
+- [MODIFY] [UICustomSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSlider.cs) (Cleaned up trailing typo, cached original track/fill colors, added disabled state color configurations, and hooked up DOTween visual transitions on interactable state changes)
+

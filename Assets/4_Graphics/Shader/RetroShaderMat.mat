@@ -64,7 +64,7 @@ Material:
     - _ScanningLineAmount: -0.01
     - _blinkSpeed: 50
     - _noiseScale2: 50
-    - _scanSpeed: 7.5
+    - _scanSpeed: 1
     - _scanningLines: 43.13
     m_Colors:
     - _NoiseSpeed: {r: -4.26, g: 1.96, b: 0, a: 0}
