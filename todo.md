@@ -543,3 +543,14 @@
 - [x] Modify `VoiceSettingsConsumer.cs` to synchronize `IsAutoVad` on update and write changes to `SettingsManager`.
 - [x] Verify project compilation and successful build.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.
+
+## Current Feature: Control Rebind UI Custom Reset Button & Simple Button Polish
+- [x] Refactor `ControlRebindUIPresenter.cs` to use `UICustomButtonBase` instead of standard UGUI `Button` for the reset button.
+- [x] Polish `UICustomSimpleButton.cs` to fix color and dotted outline stuck bugs when spamming clicks/hovers.
+- [x] Implement smooth 0.2s DOTween transition animation for the dash spacing of the dotted border (from 0 to current spacing, and vice versa).
+- [x] Add `OnEnable()` visual reset lifecycle wrapper in `UICustomSimpleButton.cs` to ensure fresh state initialization.
+- [x] Fix stuck hover bug when buttons are disabled by resetting `_isHovered` in `UICustomButtonBase.Interactable` and clearing hover visual variables in `UICustomSimpleButton.AnimateInteractableTransition`.
+- [x] Allow click animations to play fully on rebind rows by removing the `Interactable = false` lock on the active button in `RebindRowUI.cs`.
+- [x] Optimize `RebindRowUI.RefreshDisplay()` to only set text when it changes, preventing typewriter animations from re-triggering on all rows.
+- [x] Verify project compilation and successful build.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.

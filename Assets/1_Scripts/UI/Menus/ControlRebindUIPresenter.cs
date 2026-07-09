@@ -18,7 +18,7 @@ public class ControlRebindUIPresenter : MonoBehaviour
     [SerializeField] private List<RebindRowUI> _rebindRows = new List<RebindRowUI>();
 
     [Tooltip("Role: Button that resets all custom bindings back to defaults.\nUse Case: Control reset.\nJustification: Clears overrides in one click for player convenience.")]
-    [SerializeField] private Button _resetButton;
+    [SerializeField] private UICustomButtonBase _resetButton;
 
     /// <summary>
     /// Description: Unity OnEnable callback. Initializes UI rows and registers listeners.

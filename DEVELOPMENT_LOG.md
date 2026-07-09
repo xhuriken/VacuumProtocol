@@ -843,3 +843,33 @@
 ### Code Modified/Added
 - [MODIFY] [SettingsData.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/SettingsData.cs) (Added serialized field and property for IsAutoVad settings).
 - [MODIFY] [VoiceSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Voice/VoiceSettingsConsumer.cs) (Synchronized IsAutoVad loading and saving through SettingsManager).
+
+## [2026-07-09] - Control Rebind UI Custom Reset Button & Simple Button Polish
+### Technical Justification & Details
+- **Polymorphic Reset Button Support**:
+  - Refactored `ControlRebindUIPresenter.cs`'s field `_resetButton` from standard UGUI `Button` to the base class `UICustomButtonBase`. This allows assigning any custom vector button component (e.g. `UICustomSimpleButton`) modularly to reset bindings in the Controls UI.
+- **Visual State and Color Resets**:
+  - Fixed color stuck bugs in `UICustomSimpleButton.cs` when spam clicking or hover exiting. Updated `KillActiveTweens()` to safely reset the rectangle and text color back to their active baseline (`_originalRectColor`, `Color.white`) or disabled baseline colors depending on the `Interactable` state.
+- **Smooth Dotted Transition Animation**:
+  - Replaced the immediate basic boolean toggle of the dashed border on hover with a smooth, 0.2s duration float tween of `_rect.DashSpacing`. The border is now kept dashed by default at runtime with `DashSpacing` initialized to `0f` (rendering as a continuous line), and is animated to `_dashSpacing` on hover enter and back to `0f` on hover exit.
+- **OnEnable Visual Caching Reset**:
+  - Implemented the `OnEnable` callback in `UICustomSimpleButton.cs` to call `InitializeDefaultVisuals()`, ensuring that any disabled buttons (such as when the Settings panel is closed) reset cleanly to their base visual states when reopened.
+
+### Code Modified/Added
+- [MODIFY] [ControlRebindUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/ControlRebindUIPresenter.cs) (Refactored reset button serialization to UICustomButtonBase).
+- [MODIFY] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (Polished visual state caching, implemented OnEnable resets, fixed stuck colors on tween cancels, and implemented smooth 0.2s dash spacing transitions).
+
+## [2026-07-09] - Rebind Row Interactivity & Typewriter Optimizations
+### Technical Justification & Details
+- **Micro-Animation Click Preservation**:
+  - Removed the `Interactable = false` lock on the active rebind button in `RebindRowUI.cs` when starting a key rebinding sequence. Disabling the button instantly cut off the click animation sequence mid-run. Since double-clicking or clicking other rows is already prevented programmatically via input state variables, removing the UGUI interactivity toggle allows the snappy scale and bloom click animation to execute fully.
+- **Duplicate Typewriter Animation Prevention**:
+  - Refactored `RebindRowUI.RefreshDisplay()` to perform a string comparison (`_bindingButtonText.text != newText`) before assigning the key label. Setting the text string on a TextMeshPro component automatically re-triggers any attached Febucci TextAnimator typewriter. Checking for changes prevents the typewriter animation from playing on all rows when resetting defaults or editing a single key.
+- **Stuck Hover Visual state Fix**:
+  - Modified the `Interactable` property setter in `UICustomButtonBase.cs` to instantly reset `_isHovered` to `false` when the button is disabled. This prevents the button from remembering a stale hover state if it is disabled while hovered.
+  - Modified `UICustomSimpleButton.cs`'s `AnimateInteractableTransition()` to reset hover variables (`_rect.DashSpacing = 0f`, `_rect.Thickness`, etc.) when `isInteractable` is `false`, ensuring visual parameters return to normal.
+
+### Code Modified/Added
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Optimized text refreshed comparison and bypassed button disabling during listening).
+- [MODIFY] [UICustomButtonBase.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/UICustomButtonBase.cs) (Cleared hover state flag on interactability change).
+- [MODIFY] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (Reset visual thickness and dash spacing parameters when disabled).

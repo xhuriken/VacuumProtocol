@@ -133,6 +133,21 @@ public class UICustomSimpleButton : UICustomButtonBase
     }
 
     /// <summary>
+    /// Description: Unity OnEnable callback. Resets visuals when re-enabled.
+    /// </summary>
+    private void OnEnable()
+    {
+        #if UNITY_EDITOR
+        if (!Application.isPlaying) return;
+        #endif
+
+        if (_isCached)
+        {
+            InitializeDefaultVisuals();
+        }
+    }
+
+    /// <summary>
     /// Description: Automatically cleans up active tweens when disabled.
     /// </summary>
     protected override void OnDisable()
@@ -217,16 +232,35 @@ public class UICustomSimpleButton : UICustomButtonBase
 
         if (_rect != null)
         {
-            _rect.Dashed = false;
+            _rect.Dashed = true; // Always dashed in play mode, controlled by DashSpacing
+            _rect.DashType = DashType.Basic;
+            _rect.DashSize = _dashSize;
+            _rect.DashSpacing = 0f; // Start as solid line (no space between dashes)
             _rect.Thickness = _originalThickness;
-            _rect.Color = _originalRectColor;
+            
+            // Set correct color based on current interactable state
+            if (Interactable)
+            {
+                _rect.Color = _originalRectColor;
+            }
+            else
+            {
+                _rect.Color = new Color(0.3f, 0.3f, 0.3f, 0.2f);
+            }
             _rect.transform.localScale = _originalRectLocalScale;
         }
 
         if (_buttonText != null)
         {
             _buttonText.transform.localScale = _originalTextScale;
-            _buttonText.color = Color.white;
+            if (Interactable)
+            {
+                _buttonText.color = Color.white;
+            }
+            else
+            {
+                _buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.4f);
+            }
         }
     }
 
@@ -265,11 +299,13 @@ public class UICustomSimpleButton : UICustomButtonBase
 
         if (_rect != null)
         {
-            // Activate dashed border style
             _rect.Dashed = true;
             _rect.DashType = DashType.Basic;
             _rect.DashSize = _dashSize;
-            _rect.DashSpacing = _dashSpacing;
+
+            // Animate dash spacing smoothly from 0 (or current) to _dashSpacing in 0.2s
+            DOTween.To(() => _rect.DashSpacing, x => _rect.DashSpacing = x, _dashSpacing, 0.2f)
+                .SetEase(Ease.OutCubic);
 
             // Animate thickness and outer growth offset
             DOTween.To(() => _rect.Thickness, x => _rect.Thickness = x, _originalThickness * _hoverThicknessMultiplier, _hoverDuration)
@@ -295,19 +331,16 @@ public class UICustomSimpleButton : UICustomButtonBase
 
         if (_rect != null)
         {
+            // Animate dash spacing smoothly back to 0 in 0.2s
+            DOTween.To(() => _rect.DashSpacing, x => _rect.DashSpacing = x, 0f, 0.2f)
+                .SetEase(Ease.OutCubic);
+
             DOTween.To(() => _rect.Thickness, x => _rect.Thickness = x, _originalThickness, _hoverDuration)
                 .SetEase(Ease.OutCubic);
         }
 
         DOTween.To(() => _currentSizeOffset, x => _currentSizeOffset = x, 0f, _hoverDuration)
-            .SetEase(Ease.OutCubic)
-            .OnComplete(() =>
-            {
-                if (_rect != null)
-                {
-                    _rect.Dashed = false;
-                }
-            });
+            .SetEase(Ease.OutCubic);
 
         if (_buttonText != null)
         {
@@ -405,6 +438,20 @@ public class UICustomSimpleButton : UICustomButtonBase
         }
         else
         {
+            // Reset hover state variables immediately when disabled to prevent sticking
+            _currentSizeOffset = 0f;
+            _currentDashOffset = 0f;
+            if (_rect != null)
+            {
+                _rect.DashSpacing = 0f;
+                _rect.Thickness = _originalThickness;
+                _rect.transform.localScale = _originalRectLocalScale;
+            }
+            if (_buttonText != null)
+            {
+                _buttonText.transform.localScale = _originalTextScale;
+            }
+
             Color disabledTextColor = new Color(0.5f, 0.5f, 0.5f, 0.4f);
             Color disabledShapeColor = new Color(0.3f, 0.3f, 0.3f, 0.2f);
 
@@ -432,6 +479,16 @@ public class UICustomSimpleButton : UICustomButtonBase
             if (_isCached)
             {
                 _rect.transform.localScale = _originalRectLocalScale;
+                
+                // Reset to correct color based on current interactable state
+                if (Interactable)
+                {
+                    _rect.Color = _originalRectColor;
+                }
+                else
+                {
+                    _rect.Color = new Color(0.3f, 0.3f, 0.3f, 0.2f);
+                }
             }
         }
 
@@ -441,6 +498,17 @@ public class UICustomSimpleButton : UICustomButtonBase
         {
             _buttonText.transform.DOKill();
             _buttonText.DOKill();
+            if (_isCached)
+            {
+                if (Interactable)
+                {
+                    _buttonText.color = Color.white;
+                }
+                else
+                {
+                    _buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.4f);
+                }
+            }
         }
 
         if (_clickFlashSequence != null && _clickFlashSequence.IsActive())

@@ -122,7 +122,11 @@ public class RebindRowUI : MonoBehaviour
         // Only update text if we are not actively listening for keyboard inputs
         if (!_isListening && _bindingButtonText != null)
         {
-            _bindingButtonText.text = _consumer.GetBindingDisplayString(_actionName, _bindingIndex);
+            string newText = _consumer.GetBindingDisplayString(_actionName, _bindingIndex);
+            if (_bindingButtonText.text != newText)
+            {
+                _bindingButtonText.text = newText;
+            }
         }
     }
 
@@ -148,11 +152,8 @@ public class RebindRowUI : MonoBehaviour
             _bindingButtonText.text = "...Press Key...";
         }
 
-        // Lock button during interaction
-        if (_rebindButton != null)
-        {
-            _rebindButton.Interactable = false;
-        }
+        // Lock button during interaction (disabled to allow click animation to play fully and avoid instant greying out)
+        // Note: double-clicks and other button clicks are already protected by _isListening and IsAnyRowRebinding checks
 
         // Trigger interactive rebind via input consumer
         _consumer.RebindActionInteractive(
@@ -173,11 +174,7 @@ public class RebindRowUI : MonoBehaviour
     {
         _isListening = false;
 
-        // Restore rebind button interactivity
-        if (_rebindButton != null)
-        {
-            _rebindButton.Interactable = true;
-        }
+        // Restore rebind button interactivity (unused since we no longer disable it)
 
         // Refresh label text
         RefreshDisplay();

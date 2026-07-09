@@ -76,6 +76,10 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
             if (_interactable != value)
             {
                 _interactable = value;
+                if (!_interactable)
+                {
+                    _isHovered = false; // Reset hover state immediately when becoming disabled
+                }
                 OnInteractableChanged(value);
             }
         }
