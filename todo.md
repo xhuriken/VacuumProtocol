@@ -551,6 +551,7 @@
 - [x] Add `OnEnable()` visual reset lifecycle wrapper in `UICustomSimpleButton.cs` to ensure fresh state initialization.
 - [x] Fix stuck hover bug when buttons are disabled by resetting `_isHovered` in `UICustomButtonBase.Interactable` and clearing hover visual variables in `UICustomSimpleButton.AnimateInteractableTransition`.
 - [x] Allow click animations to play fully on rebind rows by removing the `Interactable = false` lock on the active button in `RebindRowUI.cs`.
-- [x] Optimize `RebindRowUI.RefreshDisplay()` to only set text when it changes, preventing typewriter animations from re-triggering on all rows.
+- [x] Optimize `RebindRowUI.RefreshDisplay()` using a local text string cache to only set text when it changes, preventing typewriter animations from re-triggering on all rows.
+- [x] Fix hover-to-white color reset bug on active button text by removing the text color overwrite from `KillActiveTweens()` in `UICustomSimpleButton.cs`.
 - [x] Verify project compilation and successful build.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.

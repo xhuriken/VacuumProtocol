@@ -498,17 +498,6 @@ public class UICustomSimpleButton : UICustomButtonBase
         {
             _buttonText.transform.DOKill();
             _buttonText.DOKill();
-            if (_isCached)
-            {
-                if (Interactable)
-                {
-                    _buttonText.color = Color.white;
-                }
-                else
-                {
-                    _buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.4f);
-                }
-            }
         }
 
         if (_clickFlashSequence != null && _clickFlashSequence.IsActive())

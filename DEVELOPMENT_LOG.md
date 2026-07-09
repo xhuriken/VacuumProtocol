@@ -873,3 +873,16 @@
 - [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Optimized text refreshed comparison and bypassed button disabling during listening).
 - [MODIFY] [UICustomButtonBase.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/UICustomButtonBase.cs) (Cleared hover state flag on interactability change).
 - [MODIFY] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (Reset visual thickness and dash spacing parameters when disabled).
+
+## [2026-07-09] - Typewriter Caching & Hover Color Fixes
+### Technical Justification & Details
+- **Local Text Caching (`RebindRowUI.cs`)**:
+  - Implemented a private `_lastAssignedBindingText` string variable. Rather than checking TMPro's raw text (which can return formatting tags or be altered by TextAnimator), we compare the retrieved binding string with this local cache.
+  - TextMeshPro only receives text assignments when the binding text actually changes, preventing redundant TextAnimator typewriter triggers across all other rows.
+  - Cleared this cache inside `StartRebindingProcess` to allow immediate redraws if the user rebinds the same key or cancels the rebind.
+- **Conflict Text Hover Color Fix (`UICustomSimpleButton.cs`)**:
+  - Removed the `_buttonText.color = Color.white` overwrite from `KillActiveTweens()`. Setting text color to white on every pointer enter/exit overrode the duplicate key conflict highlight (red color). Visual color switches between active and disabled states are now correctly isolated inside `AnimateInteractableTransition()`.
+
+### Code Modified/Added
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Added local string caching to block redundant typewriter triggers and cleared it on rebind start).
+- [MODIFY] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (Removed text color overrides from the KillActiveTweens cleanup routine).

@@ -38,6 +38,8 @@ public class RebindRowUI : MonoBehaviour
     [Tooltip("Role: Caches the original text color defined in the inspector/prefab.\nUse Case: State reset.\nJustification: Needed to restore visual style after clearing duplicate conflicts.")]
     private Color _originalTextColor = Color.white;
 
+    private string _lastAssignedBindingText = string.Empty;
+
     /// <summary>
     /// Description: Gets the configured action name for this row.
     /// Context: Read access.
@@ -123,8 +125,9 @@ public class RebindRowUI : MonoBehaviour
         if (!_isListening && _bindingButtonText != null)
         {
             string newText = _consumer.GetBindingDisplayString(_actionName, _bindingIndex);
-            if (_bindingButtonText.text != newText)
+            if (_lastAssignedBindingText != newText)
             {
+                _lastAssignedBindingText = newText;
                 _bindingButtonText.text = newText;
             }
         }
@@ -146,6 +149,8 @@ public class RebindRowUI : MonoBehaviour
 
         _isListening = true;
 
+        _lastAssignedBindingText = string.Empty; // Reset cache to force next update
+        
         // Prompt user to press any key
         if (_bindingButtonText != null)
         {

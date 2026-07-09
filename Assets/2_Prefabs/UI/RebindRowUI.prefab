@@ -835,6 +835,22 @@ PrefabInstance:
       propertyPath: m_text
       value: ...Press Key...
       objectReference: {fileID: 0}
+    - target: {fileID: 7756757499840639898, guid: e9cddf6a5f1b4884bb2d32ea3b78c808, type: 3}
+      propertyPath: waitLong
+      value: 0.02
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756757499840639898, guid: e9cddf6a5f1b4884bb2d32ea3b78c808, type: 3}
+      propertyPath: waitMiddle
+      value: 0.02
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756757499840639898, guid: e9cddf6a5f1b4884bb2d32ea3b78c808, type: 3}
+      propertyPath: waitForNormalChars
+      value: 0.02
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756757499840639898, guid: e9cddf6a5f1b4884bb2d32ea3b78c808, type: 3}
+      propertyPath: avoidMultiplePunctuationWait
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8681858773608466484, guid: e9cddf6a5f1b4884bb2d32ea3b78c808, type: 3}
       propertyPath: width
       value: 260.03
