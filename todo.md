@@ -515,6 +515,31 @@
 - [x] Verify build compiles cleanly with zero compilation errors.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
 
+## Current Feature: Custom Shapes-Based ListView / ScrollView
+- [x] Create implementation plan and wait for user approval.
+- [x] Create `UICustomScrollbar.cs` supporting variable track sizes and directional setups (horizontal/vertical).
+- [x] Create `UICustomScrollView.cs` to wrap Unity `ScrollRect` and coordinate custom scrollbars via `LateUpdate`.
+- [x] Write XML Comments and conform to Microsoft CoreFX C# Standards.
+- [x] Update DEVELOPMENT_LOG.md and TODO.md to log tasks as completed.
 
+## Current Feature: Custom Shapes-Based Simple Button
+- [x] Create implementation plan and wait for user approval.
+- [x] Create `UICustomSimpleButton.cs` script supporting auto size-sync, hover dash rotation, outward thickness growth, and click pulse/bloom.
+- [x] Run compilation checks.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.
 
+## Current Feature: Rebind Row UI Custom Button Integration
+- [x] Refactor `RebindRowUI.cs` to accept custom button components (`UICustomButtonBase`) instead of standard UGUI buttons.
+- [x] Run compilation checks.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.
 
+## Current Feature: UI Shape Size Synchronization Helper
+- [x] Create `UIShapeSizeSync.cs` generic helper component.
+- [x] Run compilation checks.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.
+
+## Current Feature: Auto VAD Settings Serialization
+- [x] Add `_isAutoVad` serialized field and public `IsAutoVad` property to `SettingsData.cs`.
+- [x] Modify `VoiceSettingsConsumer.cs` to synchronize `IsAutoVad` on update and write changes to `SettingsManager`.
+- [x] Verify project compilation and successful build.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.

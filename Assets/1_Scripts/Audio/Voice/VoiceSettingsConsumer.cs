@@ -92,6 +92,13 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     {
         if (settings == null) return;
 
+        // Sync the Auto VAD setting first
+        if (settings.IsAutoVad != IsAutoVad)
+        {
+            IsAutoVad = settings.IsAutoVad;
+            _onAutoVadChanged?.Invoke();
+        }
+
         // Only swap microphone device if the selection has actually changed
         if (settings.ActiveMicrophoneDevice != _lastAppliedDevice)
         {
@@ -127,8 +134,16 @@ public class VoiceSettingsConsumer : MonoBehaviour, ISettingsConsumer
     /// <param name="enabled">True to use UniVoice default VAD; false to use manual slider value.</param>
     public static void SetAutoVad(bool enabled)
     {
-        IsAutoVad = enabled;
-        _onAutoVadChanged?.Invoke();
+        if (SettingsManager.HasInstance)
+        {
+            SettingsManager.Instance.UpdateSettings(settings => settings.IsAutoVad = enabled);
+        }
+        else
+        {
+            IsAutoVad = enabled;
+            _onAutoVadChanged?.Invoke();
+        }
+
         if (Instance != null && Instance._enableDebugLogs)
         {
             Debug.Log($"[VoiceSettingsConsumer] Auto VAD mode set to: {enabled}");

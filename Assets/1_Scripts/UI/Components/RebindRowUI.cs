@@ -17,10 +17,10 @@ public class RebindRowUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _bindingButtonText;
 
     [Tooltip("Role: The button that triggers the rebinding process.\nUse Case: Interaction.\nJustification: Starts listening for inputs when clicked.")]
-    [SerializeField] private Button _rebindButton;
+    [SerializeField] private UICustomButtonBase _rebindButton;
 
     [Tooltip("Role: The button that resets this specific binding to default.\nUse Case: Control reset.\nJustification: Restores the default key for this action.")]
-    [SerializeField] private Button _rowResetButton;
+    [SerializeField] private UICustomButtonBase _rowResetButton;
 
     [Header("Input Action Configuration")]
     [Tooltip("Role: The name/path of the action in the Input Action Asset.\nUse Case: Binding lookup.\nJustification: Maps this row to a specific action like 'Player/Jump'.")]
@@ -151,7 +151,7 @@ public class RebindRowUI : MonoBehaviour
         // Lock button during interaction
         if (_rebindButton != null)
         {
-            _rebindButton.interactable = false;
+            _rebindButton.Interactable = false;
         }
 
         // Trigger interactive rebind via input consumer
@@ -176,7 +176,7 @@ public class RebindRowUI : MonoBehaviour
         // Restore rebind button interactivity
         if (_rebindButton != null)
         {
-            _rebindButton.interactable = true;
+            _rebindButton.Interactable = true;
         }
 
         // Refresh label text

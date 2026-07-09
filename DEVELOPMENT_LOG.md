@@ -775,3 +775,71 @@
 ### Code Modified/Added
 - [MODIFY] [UICustomSlider.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSlider.cs) (Cleaned up trailing typo, cached original track/fill colors, added disabled state color configurations, and hooked up DOTween visual transitions on interactable state changes)
 
+## [2026-07-08] - Custom Shapes-Based ListView / ScrollView
+
+### Technical Justification & Details
+- **ScrollRect & Shapes Integration (KISS)**:
+  - Created a hybrid UI architecture leveraging Unity's native `ScrollRect` for stable physics (inertia, masking, touch dragging) alongside Freya Holmér's Shapes library for premium vector visuals.
+- **Custom Scrollbar Component (`UICustomScrollbar.cs`)**:
+  - Independent vector graphic scrollbar supporting horizontal and vertical directions.
+  - Dynamically calculates the handle size relative to the scrollable content proportion (`size` property).
+  - Includes hover states (thickness expansion) and active dragging states (HDR color bloom on click/drag) mapped via `IPointerDownHandler`, `IDragHandler`, etc.
+  - Automatically hides the track and handle when `size >= 1f` (content fits perfectly).
+- **Master ListView Component (`UICustomScrollView.cs`)**:
+  - Automatically links to the sibling `ScrollRect` and overrides default `verticalScrollbar` and `horizontalScrollbar` mapping to prevent standard Unity graphic conflicts.
+  - Uses `LateUpdate` to continually measure content vs viewport sizes, synchronizing the dynamic handle sizes directly to the custom scrollbars safely within Unity's layout pass flow.
+  - Two-way binding for normalized scroll values between the `ScrollRect` logic and our `UICustomScrollbar` UI scripts.
+
+### Code Modified/Added
+- [NEW] [UICustomScrollbar.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomScrollbar.cs) (Custom vector scrollbar rendering logic and event handlers).
+- [NEW] [UICustomScrollView.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomScrollView.cs) (Coordinator script linking standard ScrollRect to custom Shapes scrollbars).
+
+## [2026-07-09] - Custom Shapes-Based Simple Button
+### Technical Justification & Details
+- **Dynamic Size Synchronization**:
+  - Implemented the script with the `[ExecuteAlways]` attribute so it automatically updates the Shapes `Rectangle` components' width and height to match the `RectTransform` bounds, providing real-time UI feedback inside the Unity Editor without playing the scene.
+- **Outward Growth Calculation**:
+  - Developed a mathematical size compensation formula during hover expansion: when the rectangle border thickness increases, the width and height are padded by the exact thickness delta. This keeps the inner bounds of the button perfectly locked in place while the border expands purely outwards.
+- **Infinite Dash Rotation**:
+  - Configured the button to transition into a dashed border style (`Dashed = true`) on hover.
+  - Implemented seamless frame-rate independent rotation of the dash offset within the `Update()` lifecycle using standard modulo `1.0f` math.
+- **Tactile Click Feedback**:
+  - Transferred the high-fidelity DOTween click sequence from `CustomTextButton.cs`, implementing a snappy transform scale pulse (1.15x) paired with a high-intensity white bloom flash, fast blackout, and holographic flickering return sequence.
+- **Disabled State Handling**:
+  - Implemented the `OnInteractableChanged` event handler override to grey out the button text and rectangle shape components when `Interactable` is toggled.
+
+### Code Modified/Added
+- [NEW] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (New modular shape-based button supporting size-sync, hover dash rotation, outward growth, and snappy click sequence).
+
+## [2026-07-09] - Rebind Row UI Custom Button Integration
+### Technical Justification & Details
+- **Polymorphic Custom Button Support**:
+  - Refactored `RebindRowUI.cs` serialization fields `_rebindButton` and `_rowResetButton` to use the parent base class `UICustomButtonBase` instead of the standard UGUI `Button`. This allows assigning either `CustomTextButton` or `UICustomSimpleButton` modularly in the inspector.
+- **Interactable API Alignment**:
+  - Updated button interactivity state changes inside `RebindRowUI.cs` to invoke the public `Interactable` property (capital I) rather than the standard UGUI `interactable` field, ensuring correct DOTween transitions and disabling sequences run dynamically.
+
+### Code Modified/Added
+- [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Refactored serialization to UICustomButtonBase and aligned interactivity calls to use the capital Interactable property).
+
+## [2026-07-09] - UI Shape Size Synchronization Helper
+### Technical Justification & Details
+- **Reusable Size Sync Component**:
+  - Created `UIShapeSizeSync.cs` as a generic helper component for Shapes `Rectangle` components.
+  - Implements the `[ExecuteAlways]` attribute to automatically capture the parent `RectTransform` dimensions and apply them to the `Rectangle` shape's width and height.
+  - Avoids code repetition (SSOT) across custom UI components and simplifies layout designs without manual sizing configurations inside the Unity Editor.
+
+### Code Modified/Added
+- [NEW] [UIShapeSizeSync.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UIShapeSizeSync.cs) (Utility component for automatic synchronization of Shapes Rectangle bounds with local RectTransform dimensions).
+
+## [2026-07-09] - Auto VAD Settings Serialization
+### Technical Justification & Details
+- **Settings Serialization Support**:
+  - Added `_isAutoVad` serialized boolean field and a public `IsAutoVad` property to `SettingsData.cs`. This allows persisting the Auto VAD toggle state to disk (via JSON PlayerPrefs serialization) along with the rest of the game settings.
+- **Consumer State Synchronization**:
+  - Modified `VoiceSettingsConsumer.cs`'s `OnSettingsUpdated` method to check for changes to `IsAutoVad`. If the setting has changed, it updates the local state and triggers the `_onAutoVadChanged` action callback to restore default or manual VAD configurations.
+- **UI & Manager Propagation**:
+  - Refactored `VoiceSettingsConsumer.SetAutoVad` to update and save the settings state via `SettingsManager.Instance.UpdateSettings` when the SettingsManager is available, ensuring immediate disk flushing and synchronized consumer propagation.
+
+### Code Modified/Added
+- [MODIFY] [SettingsData.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/SettingsData.cs) (Added serialized field and property for IsAutoVad settings).
+- [MODIFY] [VoiceSettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Voice/VoiceSettingsConsumer.cs) (Synchronized IsAutoVad loading and saving through SettingsManager).

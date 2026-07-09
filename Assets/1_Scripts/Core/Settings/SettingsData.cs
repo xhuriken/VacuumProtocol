@@ -20,6 +20,10 @@ public class SettingsData : ISerializationCallbackReceiver
     private float _micSensitivityLimit = 0.1f;
 
     [SerializeField] 
+    [Tooltip("Role: Toggles auto VAD mode.\nUse Case: Settings configuration.\nJustification: When enabled, ignores manual sensitivity slider.")]
+    private bool _isAutoVad = false;
+
+    [SerializeField] 
     [Tooltip("Role: Overall game volume.\nUse Case: Audio mixer parameter.\nJustification: User control over the entire game sound output.")]
     private float _masterVolume = 1.0f;
 
@@ -75,6 +79,17 @@ public class SettingsData : ISerializationCallbackReceiver
     {
         get => _micSensitivityLimit;
         set => _micSensitivityLimit = Mathf.Clamp01(value);
+    }
+
+    /// <summary>
+    /// Description: Gets or sets whether Auto VAD mode is enabled.
+    /// Context: Voice chat settings.
+    /// Justification: Saves whether the VAD uses automatic thresholds or the manual slider.
+    /// </summary>
+    public bool IsAutoVad
+    {
+        get => _isAutoVad;
+        set => _isAutoVad = value;
     }
 
     /// <summary>

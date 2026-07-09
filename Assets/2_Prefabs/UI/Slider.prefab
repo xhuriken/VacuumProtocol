@@ -534,6 +534,9 @@ MonoBehaviour:
   _handleDragBloomMultiplier: 1.5
   _handleHoverRadiusMultiplier: 1.2
   _trackHoverHeightOffset: 5
+  _disabledTrackColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.3}
+  _disabledFillColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.4}
+  _disabledHandleColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
   _onValueChanged:
     m_PersistentCalls:
       m_Calls: []
