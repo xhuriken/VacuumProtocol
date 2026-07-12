@@ -64,6 +64,7 @@ public class UICustomToggle : MonoBehaviour, IPointerClickHandler, IPointerEnter
     private float _originalTrackBackgroundHeight;
     private float _originalHandleRadius;
     private float _initialHandleX;
+    private bool _hasCachedOriginals = false;
 
     /// <summary>
     /// Description: Public event mapping to the serializable state change callbacks.
@@ -108,12 +109,15 @@ public class UICustomToggle : MonoBehaviour, IPointerClickHandler, IPointerEnter
     }
 
     /// <summary>
-    /// Description: Unity Start lifecycle event. Caches original size, handle center, and initializes the visual state instantly.
-    /// Context: Initialization.
-    /// Justification: Caches default geometry values and syncs the visual layout with the serialized state value on startup.
+    /// Description: Caches the original geometric dimensions and positions of the track, background, and handle.
+    /// Context: Component initialization.
+    /// Justification: Ensures that baseline values are read exactly once from the initial prefab state, even if external calls modify state properties before Start.
     /// </summary>
-    private void Start()
+    private void CacheOriginals()
     {
+        if (_hasCachedOriginals) return;
+        _hasCachedOriginals = true;
+
         if (_track != null)
         {
             _originalTrackHeight = _track.Height;
@@ -127,6 +131,16 @@ public class UICustomToggle : MonoBehaviour, IPointerClickHandler, IPointerEnter
             _initialHandleX = _handle.transform.localPosition.x;
             _originalHandleRadius = _handle.Radius;
         }
+    }
+
+    /// <summary>
+    /// Description: Unity Start lifecycle event. Caches original size, handle center, and initializes the visual state instantly.
+    /// Context: Initialization.
+    /// Justification: Caches default geometry values and syncs the visual layout with the serialized state value on startup.
+    /// </summary>
+    private void Start()
+    {
+        CacheOriginals();
         UpdateVisuals(instant: true);
     }
 
@@ -214,6 +228,8 @@ public class UICustomToggle : MonoBehaviour, IPointerClickHandler, IPointerEnter
     /// <param name="instant">If true, applies values immediately; otherwise, plays smooth DOTween animations.</param>
     private void UpdateVisuals(bool instant)
     {
+        CacheOriginals();
+
         float targetX = _isOn ? (_initialHandleX + _handleLocalXOffset) : (_initialHandleX - _handleLocalXOffset);
         Color targetColor = _isOn ? _handleOnColor : _handleOffColor;
 

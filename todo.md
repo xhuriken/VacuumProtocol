@@ -554,4 +554,41 @@
 - [x] Optimize `RebindRowUI.RefreshDisplay()` using a local text string cache to only set text when it changes, preventing typewriter animations from re-triggering on all rows.
 - [x] Fix hover-to-white color reset bug on active button text by removing the text color overwrite from `KillActiveTweens()` in `UICustomSimpleButton.cs`.
 - [x] Verify project compilation and successful build.
-- [x] Update DEVELOPMENT_LOG.md and todo.md to log tasks as completed.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Dropdown
+- [x] Create implementation plan and wait for user approval.
+- [x] Create `UICustomDropdownItem.cs` with hover background color animation and typewriter support.
+- [x] Create `UICustomDropdown.cs` with simple button matching hover animations, open/close animations, option population, and item binding.
+- [x] Modify `SettingsUIPresenter.cs` to declare `_microphoneDropdown` as a `UICustomDropdown` instead of standard `TMP_Dropdown`.
+- [x] Update `Assembly-CSharp.csproj` to include the new script compilation targets.
+- [x] Verify project compilation and successful build.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Shapes-Based Toggle Handle Loading Fix
+- [x] Create implementation plan and wait for user approval.
+- [x] Implement lazy initialization in `UICustomToggle.cs` to cache original handle offset safely.
+- [x] Run compilation checks.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Dropdown Editor Support
+- [x] Create implementation plan and wait for user approval.
+- [x] Serialize `_options` and `_value` in `UICustomDropdown.cs`.
+- [x] Implement `OnValidate()` visual synchronization in `UICustomDropdown.cs`.
+- [x] Protect runtime-only dependencies under editor execution context.
+- [x] Create custom inspector script `UICustomDropdownEditor.cs` with validation check messages.
+- [x] Add editor menu creation item `GameObject/UI/Shapes-Based Dropdown`.
+- [x] Verify project compilation and successful build.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## Current Feature: Custom Dropdown Premium Visuals & Dotted Hover Outlines Fix
+- [x] Refactor header outline border and list outline border to be visible by default as solid borders.
+- [x] Implement invisible-to-visible dotted outlines on dropdown items upon mouse hover.
+- [x] Isolate item background color changes to trigger only when clicked, using a smooth DOTween transition.
+- [x] Implement setup-time background highlight of the active selected item.
+- [x] Remove fullscreen blocker and implement lightweight Update click-outside detection to prevent UGUI layering bugs.
+- [x] Revert runtime dynamic safety-net from item code to follow KISS principles, and document layout config requirements for the user.
+- [x] Update menu builder to instantiate, format, and assign the new item outline vector.
+- [x] Verify project compilation and successful build.
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+

@@ -886,3 +886,89 @@
 ### Code Modified/Added
 - [MODIFY] [RebindRowUI.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/RebindRowUI.cs) (Added local string caching to block redundant typewriter triggers and cleared it on rebind start).
 - [MODIFY] [UICustomSimpleButton.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs) (Removed text color overrides from the KillActiveTweens cleanup routine).
+
+## [2026-07-10] - Custom Shapes-Based Dropdown
+
+### Technical Justification & Details
+- **Vector Shapes Dropdown Integration**:
+  - Created `UICustomDropdown.cs` and `UICustomDropdownItem.cs` utilizing the Freya Holmér Shapes library to render premium vector outlines, backgrounds, and drop-down containers.
+- **Header Button Visual Mirroring**:
+  - Implemented border outline hover animations on the header `Rectangle` to match `UICustomSimpleButton.cs` exactly (outward thickness growth, dash spacing scaling, and infinite dash rotation).
+  - Maintained a static, non-animated background shape for the header area.
+  - Fetches the Febucci typewriter player from children to animate header selection updates.
+- **Dropdown List Unfolding & Border Animations**:
+  - Configured the list template container `_templateContainer` to unfold smoothly using a DOTween scale Y transition (0 to 1) with an `OutCubic` ease.
+  - Attached a dedicated border outline `Rectangle` `_listBorder` that mimics the simple button's hover border animation while the dropdown is open (dashes rotate, thickness expands, and dash spacing increases).
+- **Interactive Option Elements**:
+  - Created option items that inherit from `UICustomButtonBase`, animating the background rectangle color on hover and triggering their child Febucci typewriter player.
+  - Spawns option instances dynamically from the item template, populates labels, binds click events, and automatically closes the dropdown upon selection.
+- **Click-Outside Blocker**:
+  - Implemented an automatic blocker generator: when opened, it creates an invisible, fullscreen raycast blocker in the root Canvas to dismiss the dropdown when the player clicks outside the list container.
+- **Settings Presenter Support**:
+  - Swapped standard `TMP_Dropdown` with `UICustomDropdown` in `SettingsUIPresenter.cs`. The custom dropdown implements the exact same API signature (`ClearOptions()`, `AddOptions(List<string>)`, `value`, and `onValueChanged` event), enabling a seamless transition.
+
+### Code Modified/Added
+- [NEW] [UICustomDropdown.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdown.cs) (Custom vector shapes dropdown header, panel blocker, item populator, and opening transitions).
+- [NEW] [UICustomDropdownItem.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdownItem.cs) (Dropdown option element controller handling background hover color transitions and typewriter relaunching).
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs) (Replaced standard TMP_Dropdown with UICustomDropdown for active microphone settings).
+- [MODIFY] [Assembly-CSharp.csproj](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assembly-CSharp.csproj) (Added compile references for UICustomDropdown.cs and UICustomDropdownItem.cs).
+- [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
+
+## [2026-07-10] - Custom Shapes-Based Toggle Handle Loading Fix
+### Technical Justification & Details
+- **Toggle State Loading Race Condition**:
+  - Solved a startup visual initialization bug where setting `isOn` programmatically (e.g. from disk saves loading during early lifecycle cycles) before the toggle's `Start()` runs would result in the toggle handle shifting incorrectly.
+  - The setter `isOn` triggered `UpdateVisuals()`, translating the handle using the uninitialized `_initialHandleX` (which is `0f`). Subsequently, when Unity's `Start()` hook fired, it cached the already offset coordinate (`35f` or `-35f`) as `_initialHandleX`, skewing all future target X calculations.
+- **Lazy Caching System**:
+  - Implemented `CacheOriginals()` and a private `_hasCachedOriginals` boolean state flag in `UICustomToggle.cs`.
+  - The new method reads the initial coordinate `localPosition.x` of the handle exactly once, either from `Start()` or from `UpdateVisuals()` (whichever is executed first).
+  - This guarantees that the correct reference center is captured regardless of early load orders.
+- **Accessibility & Signature Validation**:
+  - All modified fields and new helper methods are strictly private, preventing external visibility pollution.
+  - Checked properties and types, assuring perfect backward compatibility and zero API surface changes.
+
+### Code Modified/Added
+- [MODIFY] [UICustomToggle.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomToggle.cs) (Added lazy caching mechanism to safely retrieve initial geometry configurations).
+
+## [2026-07-12] - Custom Dropdown Editor Support
+### Technical Justification & Details
+- **Dropdown Configuration Serialization**:
+  - Exposed options `_options` and active value `_value` fields in `UICustomDropdown.cs` via `[SerializeField]` and customized properties. This allows game designers to customize standard options lists and defaults inside Unity's Inspector.
+- **Edit-Mode Visual Synchronization**:
+  - Implemented `OnValidate()` in `UICustomDropdown.cs` to handle property modifications in the editor. It clamps index selection variables and updates TextMeshPro text references so the active value string updates instantly in the Scene view.
+- **Unified Custom Inspector**:
+  - Created `UICustomDropdownEditor.cs` under `Assets/1_Scripts/UI/Editor/` to organize complex dropdown visual properties into tidy collapsible Foldout groups (Header visual components, Template settings, Animation variables, Options configuration).
+- **Hierarchy Validation Warning Checks**:
+  - Added real-time error/warning check boxes inside the Custom Editor GUI. Displays explicit suggestions when essential components (outline rectangle shapes, text label components, template list bodies) are left empty.
+- **Fast-Spawn Menu Integration**:
+  - Implemented a hierarchy menu item `GameObject -> UI -> Shapes-Based Dropdown`. Generates, scales, nests, and pre-wires all necessary shapes, content layout groups, text elements, and template components under the current Canvas in one click.
+- **Nested Foldout Warning Resolution**:
+  - Replaced `EditorGUILayout.BeginFoldoutHeaderGroup` with standard `EditorGUILayout.Foldout` in `UICustomDropdownEditor.cs`. This prevents GUI layout warnings when displaying list/array properties (which have internal foldouts) inside visual groups.
+- **Dynamic Template Auto-Sizing Layout**:
+  - Configured `UpdateDimensions()` in `UICustomDropdown.cs` to dynamically adjust `_templateContainer`'s height based on `_itemParent.rect.height` at runtime and edit time.
+  - Corrected `Content` layout parent anchoring (anchorMin: top-left, anchorMax: top-right, pivot: top-center) in `UICustomDropdownEditor.cs` menu helper to isolate vertical layout calculations and prevent circular size loops.
+
+## [2026-07-12] - Premium Visuals & Dotted Hover Outline Animations
+### Technical Justification & Details
+- **Invisible-to-Visible Dotted Hover Outlines**:
+  - Refactored both the dropdown header and the item template to keep their dotted outlines completely invisible (alpha 0) when not hovered.
+  - On hover enter, they transition smoothly using DOTween to full opacity and animate their `DashSpacing` from 0f to target space value in 0.2s, mimicking `UICustomSimpleButton.cs`.
+- **Item-Specific Outline & Caching**:
+  - Extended `UICustomDropdownItem.cs` to support an outline `_rect` component. Updates dimensions inside `Update()` and animates dash spacing, thickness, and size offset on pointer hover.
+- **Click-Only Background Transitions**:
+  - Disabled item background color changes on pointer hover. The background now transitions to the selection color `_hoverColor` only when clicked, providing instant click feedback.
+- **Hierarchy Creator Wiring**:
+  - Modified `UICustomDropdownEditor.cs`'s GameObject menu builder to automatically instantiate, position, and bind the new item outline rectangle for the template.
+
+## [2026-07-12] - Blockerless Custom Dropdown & New Input System Fixes
+### Technical Justification & Details
+- **New Input System Compatibility**:
+  - Replaced legacy `Input.GetMouseButtonDown(0)` and `Input.mousePosition` references with `Mouse.current.leftButton.wasPressedThisFrame` and `Mouse.current.position.ReadValue()` to fix the `InvalidOperationException` crash when clicking or moving the mouse.
+- **Independent Header Hover Behavior**:
+  - Removed the `_isListOpen` lock inside `AnimateHoverExit()` so the header outline transition (solid vs dotted) matches exactly when the mouse pointer leaves or enters its physical boundaries, even while the dropdown list is open.
+- **Blockerless outside-click detection**:
+  - Removed the `Dropdown Blocker` GameObject entirely. Used coordinate checks on click (via `Mouse.current`) to close the list if clicked outside the header and template container bounds.
+
+### Code Modified/Added
+- [MODIFY] [UICustomDropdown.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdown.cs) (Added UnityEngine.InputSystem imports, replaced legacy Input calls with Mouse.current checks, and removed list open checks on hover exit).
+

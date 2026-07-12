@@ -18,7 +18,7 @@ public class SettingsUIPresenter : MonoBehaviour
     [SerializeField] private UICustomSlider _masterVolumeSlider;
     [SerializeField] private UICustomSlider _voiceVolumeSlider;
     [SerializeField] private UICustomSlider _micSensitivitySlider;
-    [SerializeField] private TMP_Dropdown _microphoneDropdown;
+    [SerializeField] private UICustomDropdown _microphoneDropdown;
 
     [Header("Microphone Level Indicator")]
     [SerializeField] private UICustomSlider _micLevelIndicator;
