@@ -972,3 +972,94 @@
 ### Code Modified/Added
 - [MODIFY] [UICustomDropdown.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdown.cs) (Added UnityEngine.InputSystem imports, replaced legacy Input calls with Mouse.current checks, and removed list open checks on hover exit).
 
+## [2026-07-13] - Dropdown Arrow Morph Animation
+### Technical Justification & Details
+- **Chevron vector morphing**:
+  - Implemented a vector morphing animation for the dropdown chevron arrow, which is composed of two `Shapes.Line` components.
+  - Closed chevron points down: Line 1 goes from (-17, 17) to (0, 0); Line 2 goes from (17, 17) to (0, 0).
+  - Open chevron points up: Line 1 goes from (0, 0) to (17, -17); Line 2 goes from (0, 0) to (-17, -17).
+  - Transition speed and ease curves are fully configurable in the Unity Inspector using exposed variables `_arrowAnimDuration` and `_arrowAnimEase`.
+  - Morph is processed using DOTween for smooth runtime playback and snaps instantly during editor-time `OnValidate()` updates or initializations.
+
+### Code Modified/Added
+- [MODIFY] [UICustomDropdown.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdown.cs) (Added serialized fields for arrow lines, duration, and ease; added AnimateArrow helper method; hooked morph triggers into Open, Close, OnValidate, and InitializeDefaultVisuals).
+
+## [2026-07-13] - Dropdown Custom Inspector & KISS Cleanup
+### Technical Justification & Details
+- **Inspector Field Drawing (Editor Serialization)**:
+  - Custom editor classes override the standard Inspector drawing. I added the arrow properties (`_arrowLine1`, `_arrowLine2`, `_arrowAnimDuration`, and `_arrowAnimEase`) to `UICustomDropdownEditor.cs`, exposing and drawing them under the "Animation Settings" Foldout group.
+- **KISS Menu Creator Removal**:
+  - Removed the complex hierarchy menu item creator shortcut method `CreateShapesBasedDropdown` (and associated child setups) from `UICustomDropdownEditor.cs` entirely to eliminate boilerplate code and simplify future asset maintenance.
+
+### Code Modified/Added
+- [MODIFY] [UICustomDropdownEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Editor/UICustomDropdownEditor.cs) (Added serialized properties and drawn layouts for arrow animations inside OnInspectorGUI; removed the GameObject creation shortcut method).
+
+## [2026-07-13] - Dropdown Arrow Line Size X & Y Parameterization
+### Technical Justification & Details
+- **Chevron Line Size X & Y Parameterization**:
+  - Replaced the hardcoded coordinate values (17f / -17f) inside `AnimateArrow()` with two independent variables: `_arrowLineSizeX` and `_arrowLineSizeY` (both defaulting to 17f).
+  - Exposed and drew `_arrowLineSizeX` and `_arrowLineSizeY` inside the custom editor `UICustomDropdownEditor.cs` under the "Arrow Animations" foldout group.
+
+### Code Modified/Added
+- [MODIFY] [UICustomDropdownEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Editor/UICustomDropdownEditor.cs) (Added _arrowLineSizeXProp and _arrowLineSizeYProp serialization and drew them under the Arrow Animations group).
+
+## [2026-07-13] - Dropdown Arrow Parent Offset Translation
+### Technical Justification & Details
+- **Chevron Parent Translation**:
+  - Implemented vertical Y offset translation on open/close for the chevron parent RectTransform `_arrowParent`.
+  - Closed dropdown: moves parent down by `_arrowParentOffsetY` relative to its baseline.
+  - Open dropdown: moves parent up by `_arrowParentOffsetY` relative to its baseline.
+  - Base Y coordinate `_originalArrowParentY` is cached on startup inside `CacheOriginalStates()`.
+  - Exposed and serialized `_arrowParent` and `_arrowParentOffsetY` variables in the inspector using `UICustomDropdownEditor.cs`.
+
+### Code Modified/Added
+- [MODIFY] [UICustomDropdown.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Components/UICustomDropdown.cs) (Added _arrowParent and _arrowParentOffsetY fields, cached original position on start, and animated translation inside AnimateArrow).
+- [MODIFY] [UICustomDropdownEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Editor/UICustomDropdownEditor.cs) (Added properties serialization and drew fields inside Arrow Animations section of OnInspectorGUI).
+
+## [2026-07-13] - Player Bone Bridge Architecture
+### Technical Justification & Details
+- **Decoupling Skeletal Mesh**:
+  - Implemented the `PlayerBoneBridge` architecture to serve as a single source of truth (SSOT) for the player's skeletal bones. Control scripts (like `PlayerArmsController`, `PhysicalHeadController`) and physics joint systems now bind to static Bone Bridge transforms rather than model-specific bones.
+  - At Awake, `PlayerBoneBridge` scans the child visual mesh for any `SkinnedMeshRenderer` and rebinds their `.bones` array and `rootBone` to the Bone Bridge transforms by name match, deforming the visual mesh using physics/bones animation output.
+  - Added a follower script mechanism `RuntimeFollower` for non-skinned objects (e.g., wheels) to copy positions/rotations of Bone Bridge bones at runtime.
+- **Dynamic Controls Wiring**:
+  - Modified `PlayerCustomization.cs` to expose `ModelRenderer` as a public property.
+  - `PlayerBoneBridge` detects the main renderer on the imported mesh at startup and assigns it to `PlayerCustomization.ModelRenderer`, which automatically reinstalls and instances the customized materials.
+- **Editor Validation & Automation**:
+  - Developed a custom editor `PlayerBoneBridgeEditor.cs` with validation checkers that report matching bone counts by name, and an auto-detector utility that populates custom followers (e.g. wheels) matching specific keywords.
+
+### Code Modified/Added
+- [NEW] [PlayerBoneBridge.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/PlayerBoneBridge.cs) (Manages runtime re-binding of skinned/non-skinned bones by name, and wires ModelRenderer to PlayerCustomization).
+- [NEW] [PlayerBoneBridgeEditor.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Editor/PlayerBoneBridgeEditor.cs) (Custom inspector featuring bone name matching validators and keyword-based follower configuration tools).
+- [MODIFY] [PlayerCustomization.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/PlayerCustomization.cs) (Exposed ModelRenderer property and added material instancing hooks on re-assignment).
+
+## [2026-07-13] - Mouth Animator 3-Bone Thickness Preserving Scaling
+### Technical Justification & Details
+- **3-Bone Scaling Mechanics**:
+  - Implemented 3-bone scaling support inside `MouthAnimator.cs` to match the modeler's armature layout designed to preserve thickness during mouth size changes.
+  - When the target scale factor $S$ changes, the scale change vector is calculated as `change = targetScale - Vector3.one`. Each bone scales using a baseline scale of `Vector3.one` plus the scale change vector scaled by the bone's independent scale multiplier:
+    - Bone 1 Scale = `1 + change * _bone1Multiplier` (scales with 100% of the mouth scale change, e.g. goes from 1 to 2)
+    - Bone 2 Scale = `1 + change * _bone2Multiplier` (scales with 75% of the mouth scale change, e.g. goes from 1 to 1.75)
+    - Bone 3 Scale = `1 + change * _bone3Multiplier` (scales with 50% of the mouth scale change, e.g. goes from 1 to 1.50)
+  - Exposes 3 separate `Transform` fields (`_mouthBone1`, `_mouthBone2`, `_mouthBone3`) and their respective multipliers in the inspector to allow the user to easily configure the scaling ratios.
+  - Implemented a backward-compatible check: if `_mouthBone1` is not set, it cleanly falls back to scaling the single `_mouthTransform` object, preventing inspector setup errors from breaking existing assets.
+
+### Code Modified/Added
+- [MODIFY] [MouthAnimator.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Audio/Controllers/MouthAnimator.cs) (Added bone fields and scale multipliers, updated scale application math in Update, and added backward compatibility fallback).
+
+## [2026-07-13] - Remote Player Multiplayer Look & Wheels Sync
+### Technical Justification & Details
+- **Kinematic Wheel Speed Estimation**:
+  - Since remote player clones have `Rigidbody.isKinematic = true` (to allow smooth Mirror `NetworkTransform` positioning without physics collisions dragging them), they have a default velocity of zero. This caused remote players' wheels to never rotate or steer.
+  - Modified `WheelSteering` in `Wheels.cs` to dynamically compute estimated velocity using position changes over time (`(transform.position - _lastPosition) / Time.deltaTime`) when the Rigidbody is kinematic. This ensures wheels rotate and pivot realistically for all remote players.
+- **Camera Look Pitch Synchronization**:
+  - Yaw (turning left/right) is naturally synchronized because the root GameObject rotates, which is synced by the root's `NetworkTransform`.
+  - Pitch (looking up/down) only updated the local camera localRotation on `isLocalPlayer`. Since remote players had their camera gameobjects deactivated, their pitch remained static at 0 degrees, meaning their heads never nodded/tilted and their procedural arms aimed straight ahead on other clients.
+  - Added a `_syncedCameraPitch` `[SyncVar]` and a `CmdSyncCameraPitch` `[Command]` in `PlayerLookComponent.cs`. Local players stream their look pitch to the server when it changes by > 0.5 degrees, and other clients apply this synced pitch to the remote player's camera transform, allowing `PhysicalHeadController` to nod/aim physically.
+
+### Code Modified/Added
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Synced camera pitch look direction on the network via Command/SyncVar).
+- [MODIFY] [Wheels.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Wheels.cs) (Added kinematic estimated velocity fallback to steer wheels of remote players).
+
+
+

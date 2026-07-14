@@ -25,6 +25,7 @@ public class WheelSteering : NetworkBehaviour
     private float baseOffset = 180f;
 
     private Rigidbody _rb;
+    private Vector3 _lastPosition;
 
     /// <summary>
     /// Description: Start callback. Caches the Rigidbody.
@@ -35,6 +36,7 @@ public class WheelSteering : NetworkBehaviour
     {
         // Cache Rigidbody for all clients to allow synced visuals if velocity is networked
         _rb = GetComponentInParent<Rigidbody>();
+        _lastPosition = transform.position;
     }
 
     /// <summary>
@@ -58,7 +60,18 @@ public class WheelSteering : NetworkBehaviour
     /// </summary>
     private void UpdateWheelOrientation()
     {
-        Vector3 velocity = _rb.linearVelocity;
+        Vector3 velocity;
+        if (_rb.isKinematic)
+        {
+            // Estimate velocity from synced parent position changes (remote players)
+            velocity = Time.deltaTime > 0f ? (transform.position - _lastPosition) / Time.deltaTime : Vector3.zero;
+            _lastPosition = transform.position;
+        }
+        else
+        {
+            velocity = _rb.linearVelocity;
+        }
+
         velocity.y = 0; // Project movement on the horizontal plane
 
         // Skip update if moving too slowly to determine a reliable direction

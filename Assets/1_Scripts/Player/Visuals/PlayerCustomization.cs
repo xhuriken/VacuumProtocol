@@ -34,7 +34,29 @@ namespace VacuumProtocol.Player.Visuals
         [SyncVar(hook = nameof(OnNoteChanged))]
         public MusicalNote PlayerRootNote = MusicalNote.C;
 
-        private Material _instancedMaterial;
+    private Material _instancedMaterial;
+
+        /// <summary>
+        /// Description: Dynamic setter/getter for model renderer, used by PlayerBoneBridge at startup.
+        /// </summary>
+        public Renderer ModelRenderer
+        {
+            get => _modelRenderer;
+            set
+            {
+                _modelRenderer = value;
+                if (_modelRenderer != null)
+                {
+                    if (_instancedMaterial != null)
+                    {
+                        Destroy(_instancedMaterial);
+                    }
+                    _instancedMaterial = _modelRenderer.material;
+                    // Apply currently synced color immediately if we are initializing late
+                    ApplyColor(PlayerColor);
+                }
+            }
+        }
 
         /// <summary>
         /// Description: Awake callback. Clones the material.
@@ -44,7 +66,7 @@ namespace VacuumProtocol.Player.Visuals
         private void Awake()
         {
             // Create an instanced material so changing color doesn't affect all players
-            if (_modelRenderer != null)
+            if (_modelRenderer != null && _instancedMaterial == null)
             {
                 _instancedMaterial = _modelRenderer.material;
             }

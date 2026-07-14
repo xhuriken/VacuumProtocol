@@ -108,6 +108,39 @@ public class UICustomDropdown : UICustomButtonBase
     [SerializeField]
     private float _listDashRotationSpeed = 1.5f;
 
+    [Header("Arrow Animation Settings")]
+    [Tooltip("Role: The first Line component forming the arrow chevron.\nUse Case: Vector chevron morph.\nJustification: Target of start/end point tweens.")]
+    [SerializeField]
+    private Line _arrowLine1;
+
+    [Tooltip("Role: The second Line component forming the arrow chevron.\nUse Case: Vector chevron morph.\nJustification: Target of start/end point tweens.")]
+    [SerializeField]
+    private Line _arrowLine2;
+
+    [Tooltip("Role: The X size parameter for the arrow lines.\nUse Case: Chevron arrow width.\nJustification: Configures arrow width.")]
+    [SerializeField]
+    private float _arrowLineSizeX = 17f;
+
+    [Tooltip("Role: The Y size parameter for the arrow lines.\nUse Case: Chevron arrow height.\nJustification: Configures arrow height.")]
+    [SerializeField]
+    private float _arrowLineSizeY = 17f;
+
+    [Tooltip("Role: The parent RectTransform of the arrow lines.\nUse Case: Chevron arrow group containment.\nJustification: Target of vertical layout translation animations.")]
+    [SerializeField]
+    private RectTransform _arrowParent;
+
+    [Tooltip("Role: Vertical position offset for the arrow parent.\nUse Case: Offset translation between open/closed states.\nJustification: Moves the chevron parent up or down relative to baseline.")]
+    [SerializeField]
+    private float _arrowParentOffsetY = 5f;
+
+    [Tooltip("Role: Duration of the arrow transition animation.\nUse Case: Open/Close morph animation speed.\nJustification: Configurable speed.")]
+    [SerializeField]
+    private float _arrowAnimDuration = 0.25f;
+
+    [Tooltip("Role: Animation curve (ease) for the arrow transition.\nUse Case: Open/Close morph animation curve.\nJustification: Configurable curve.")]
+    [SerializeField]
+    private Ease _arrowAnimEase = Ease.OutCubic;
+
     [Header("Events")]
     [Tooltip("Role: Event dispatched when the selection changes.")]
     [SerializeField]
@@ -136,6 +169,7 @@ public class UICustomDropdown : UICustomButtonBase
 
     private float _originalListBorderThickness;
     private Color _originalListBorderColor;
+    private float _originalArrowParentY;
 
     private float _currentSizeOffset = 0f;
     private float _currentDashOffset = 0f;
@@ -315,6 +349,9 @@ public class UICustomDropdown : UICustomButtonBase
         }
 
         UpdateDimensions();
+
+        // Snap arrow configuration in editor
+        AnimateArrow(false);
     }
     #endif
 
@@ -529,6 +566,9 @@ public class UICustomDropdown : UICustomButtonBase
         _templateContainer.localScale = new Vector3(1f, 0f, 1f);
         _templateContainer.DOScaleY(1f, _animationDuration).SetEase(Ease.OutCubic);
 
+        // Animate arrow transition to open
+        AnimateArrow(true);
+
         // Initialize list border outline visuals to solid (no dashes) by default
         if (_listBorder != null)
         {
@@ -556,6 +596,9 @@ public class UICustomDropdown : UICustomButtonBase
     {
         if (!_isListOpen) return;
         _isListOpen = false;
+
+        // Animate arrow transition to closed
+        AnimateArrow(false);
 
         if (_templateContainer == null) return;
 
@@ -614,6 +657,11 @@ public class UICustomDropdown : UICustomButtonBase
             _originalListBorderColor = _listBorder.Color;
         }
 
+        if (_arrowParent != null)
+        {
+            _originalArrowParentY = _arrowParent.anchoredPosition.y;
+        }
+
         _isCached = true;
     }
 
@@ -664,6 +712,9 @@ public class UICustomDropdown : UICustomButtonBase
             _listBorder.Thickness = _originalListBorderThickness;
             _listBorder.Color = _originalListBorderColor;
         }
+
+        // Initialize arrow state to closed
+        AnimateArrow(false);
     }
 
     /// <summary>
@@ -949,6 +1000,50 @@ public class UICustomDropdown : UICustomButtonBase
                 .SetEase(Ease.OutCubic);
             DOTween.To(() => _listBorder.Thickness, x => _listBorder.Thickness = x, _originalListBorderThickness, 0.2f)
                 .SetEase(Ease.OutCubic);
+        }
+    }
+
+    /// <summary>
+    /// Description: Morph-animates the arrow lines between open and closed chevron state coordinates.
+    /// </summary>
+    private void AnimateArrow(bool open)
+    {
+        if (_arrowLine1 == null || _arrowLine2 == null) return;
+
+        DOTween.Kill(_arrowLine1);
+        DOTween.Kill(_arrowLine2);
+
+        Vector3 targetLine1Start = open ? new Vector3(0f, 0f, 0f) : new Vector3(-_arrowLineSizeX, _arrowLineSizeY, 0f);
+        Vector3 targetLine1End = open ? new Vector3(_arrowLineSizeX, -_arrowLineSizeY, 0f) : new Vector3(0f, 0f, 0f);
+        Vector3 targetLine2Start = open ? new Vector3(0f, 0f, 0f) : new Vector3(_arrowLineSizeX, _arrowLineSizeY, 0f);
+        Vector3 targetLine2End = open ? new Vector3(-_arrowLineSizeX, -_arrowLineSizeY, 0f) : new Vector3(0f, 0f, 0f);
+
+        if (Application.isPlaying)
+        {
+            DOTween.To(() => _arrowLine1.Start, x => _arrowLine1.Start = x, targetLine1Start, _arrowAnimDuration)
+                .SetEase(_arrowAnimEase);
+            DOTween.To(() => _arrowLine1.End, x => _arrowLine1.End = x, targetLine1End, _arrowAnimDuration)
+                .SetEase(_arrowAnimEase);
+
+            DOTween.To(() => _arrowLine2.Start, x => _arrowLine2.Start = x, targetLine2Start, _arrowAnimDuration)
+                .SetEase(_arrowAnimEase);
+            DOTween.To(() => _arrowLine2.End, x => _arrowLine2.End = x, targetLine2End, _arrowAnimDuration)
+                .SetEase(_arrowAnimEase);
+
+            if (_arrowParent != null)
+            {
+                _arrowParent.DOKill();
+                float targetY = open ? (_originalArrowParentY + _arrowParentOffsetY) : (_originalArrowParentY - _arrowParentOffsetY);
+                _arrowParent.DOAnchorPosY(targetY, _arrowAnimDuration)
+                    .SetEase(_arrowAnimEase);
+            }
+        }
+        else
+        {
+            _arrowLine1.Start = targetLine1Start;
+            _arrowLine1.End = targetLine1End;
+            _arrowLine2.Start = targetLine2Start;
+            _arrowLine2.End = targetLine2End;
         }
     }
 

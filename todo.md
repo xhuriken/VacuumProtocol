@@ -589,6 +589,16 @@
 - [x] Remove fullscreen blocker and implement lightweight Update click-outside detection to prevent UGUI layering bugs.
 - [x] Revert runtime dynamic safety-net from item code to follow KISS principles, and document layout config requirements for the user.
 - [x] Update menu builder to instantiate, format, and assign the new item outline vector.
+- [x] Implement configurable dropdown chevron arrow morph animation between closed and open vector coordinates with independent X and Y size parameters.
+- [x] Add arrow parent position Y translation based on a configurable offset.
+- [x] Add arrow parent, offset, and independent X/Y size fields to custom editor class and draw them inside "Animation Settings" Foldout.
+- [x] Remove obsolete GameObject menu creator utility from UICustomDropdownEditor to keep editor code clean (KISS).
 - [x] Verify project compilation and successful build.
+- [x] Expose ModelRenderer property in PlayerCustomization.cs.
+- [x] Create PlayerBoneBridge.cs runtime dynamic bone mapping component.
+- [x] Create PlayerBoneBridgeEditor.cs custom inspector with validators and auto-detect follower configs.
+- [x] Implement 3-bone thickness preserving scaling mechanism in MouthAnimator.cs with configurable multipliers.
+- [x] Implement remote player look pitch SyncVar/Command replication in PlayerLookComponent.cs.
+- [x] Implement kinematic wheel estimated velocity calculations in Wheels.cs.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
 

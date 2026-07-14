@@ -14,6 +14,31 @@ public class MouthAnimator : NetworkBehaviour
     [Tooltip("Role: The transform of the mouth to scale.\nUse Case: Scaling the mesh.\nJustification: Decoupled from the root to allow animating only a specific child part.")]
     private Transform _mouthTransform;
 
+    [Header("3-Bone Scaling Setup (Constant Thickness)")]
+    [SerializeField]
+    [Tooltip("Role: Bone 1 (outer/major mouth bone).\nUse Case: Scales with 100% of the calculated scale change.")]
+    private Transform _mouthBone1;
+
+    [SerializeField]
+    [Tooltip("Role: Bone 2 (middle mouth bone).\nUse Case: Scales with 75% of the calculated scale change.")]
+    private Transform _mouthBone2;
+
+    [SerializeField]
+    [Tooltip("Role: Bone 3 (inner/minor mouth bone).\nUse Case: Scales with 50% of the calculated scale change.")]
+    private Transform _mouthBone3;
+
+    [SerializeField]
+    [Tooltip("Role: Scale multiplier for Bone 1 change from baseline.")]
+    private float _bone1Multiplier = 1.0f;
+
+    [SerializeField]
+    [Tooltip("Role: Scale multiplier for Bone 2 change from baseline.")]
+    private float _bone2Multiplier = 0.75f;
+
+    [SerializeField]
+    [Tooltip("Role: Scale multiplier for Bone 3 change from baseline.")]
+    private float _bone3Multiplier = 0.5f;
+
     [SerializeField] 
     [Tooltip("Role: The base scale when silent.\nUse Case: Rest state.\nJustification: Prevents the mouth from completely disappearing (scale 0) when not talking.")]
     private Vector3 _minScale = Vector3.one;
@@ -228,7 +253,22 @@ public class MouthAnimator : NetworkBehaviour
         _currentVolume = Mathf.Lerp(_currentVolume, targetVolume, Time.deltaTime * _smoothSpeed);
 
         // 4. Apply scale
-        if (_mouthTransform != null)
+        if (_mouthBone1 != null)
+        {
+            Vector3 targetScale = Vector3.Lerp(_minScale, _maxScale, _currentVolume);
+            Vector3 change = targetScale - Vector3.one;
+
+            _mouthBone1.localScale = Vector3.one + change * _bone1Multiplier;
+            if (_mouthBone2 != null)
+            {
+                _mouthBone2.localScale = Vector3.one + change * _bone2Multiplier;
+            }
+            if (_mouthBone3 != null)
+            {
+                _mouthBone3.localScale = Vector3.one + change * _bone3Multiplier;
+            }
+        }
+        else if (_mouthTransform != null)
         {
             _mouthTransform.localScale = Vector3.Lerp(_minScale, _maxScale, _currentVolume);
         }

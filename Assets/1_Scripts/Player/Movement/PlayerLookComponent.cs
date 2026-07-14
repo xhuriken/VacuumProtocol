@@ -22,6 +22,9 @@ using UnityEngine;
         [Tooltip("Role: Maximum pitch angle.\nUse Case: Look constraint.\nJustification: Prevents the player from breaking their neck looking too far down.")]
         [SerializeField] private float _maxPitch = 85f;
 
+        [SyncVar]
+        private float _syncedCameraPitch;
+
         private PlayerInputHandler _input;
         private float _cameraPitch;
 
@@ -52,15 +55,41 @@ using UnityEngine;
         }
 
         /// <summary>
+        /// Description: Command sent to server to replicate the local look pitch.
+        /// Context: Network input sync.
+        /// Justification: Replicates the float to other clients using Mirror's SyncVar.
+        /// </summary>
+        [Command]
+        private void CmdSyncCameraPitch(float pitch)
+        {
+            _syncedCameraPitch = pitch;
+        }
+
+        /// <summary>
         /// Description: Update callback.
         /// Context: Update lifecycle event.
         /// Justification: Runs smoothly every frame to ensure responsive mouse look.
         /// </summary>
         private void Update()
         {
-            if (!isLocalPlayer) return;
+            if (isLocalPlayer)
+            {
+                HandleRotation();
 
-            HandleRotation();
+                // Only send updates if the pitch has moved by a meaningful threshold
+                if (Mathf.Abs(_syncedCameraPitch - _cameraPitch) > 0.5f)
+                {
+                    CmdSyncCameraPitch(_cameraPitch);
+                }
+            }
+            else
+            {
+                // For remote players, update the local camera transform rotation so the head looks up/down
+                if (_cameraTransform != null)
+                {
+                    _cameraTransform.localRotation = Quaternion.Euler(_syncedCameraPitch, 0, 0);
+                }
+            }
         }
 
         /// <summary>

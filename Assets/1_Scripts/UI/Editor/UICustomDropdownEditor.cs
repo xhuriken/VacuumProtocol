@@ -38,6 +38,15 @@ public class UICustomDropdownEditor : Editor
     private SerializedProperty _listDashSpacingProp;
     private SerializedProperty _listDashRotationSpeedProp;
 
+    private SerializedProperty _arrowLine1Prop;
+    private SerializedProperty _arrowLine2Prop;
+    private SerializedProperty _arrowLineSizeXProp;
+    private SerializedProperty _arrowLineSizeYProp;
+    private SerializedProperty _arrowParentProp;
+    private SerializedProperty _arrowParentOffsetYProp;
+    private SerializedProperty _arrowAnimDurationProp;
+    private SerializedProperty _arrowAnimEaseProp;
+
     private SerializedProperty _optionsProp;
     private SerializedProperty _valueProp;
     private SerializedProperty _onValueChangedProp;
@@ -75,6 +84,15 @@ public class UICustomDropdownEditor : Editor
         _listDashSizeProp = serializedObject.FindProperty("_listDashSize");
         _listDashSpacingProp = serializedObject.FindProperty("_listDashSpacing");
         _listDashRotationSpeedProp = serializedObject.FindProperty("_listDashRotationSpeed");
+
+        _arrowLine1Prop = serializedObject.FindProperty("_arrowLine1");
+        _arrowLine2Prop = serializedObject.FindProperty("_arrowLine2");
+        _arrowLineSizeXProp = serializedObject.FindProperty("_arrowLineSizeX");
+        _arrowLineSizeYProp = serializedObject.FindProperty("_arrowLineSizeY");
+        _arrowParentProp = serializedObject.FindProperty("_arrowParent");
+        _arrowParentOffsetYProp = serializedObject.FindProperty("_arrowParentOffsetY");
+        _arrowAnimDurationProp = serializedObject.FindProperty("_arrowAnimDuration");
+        _arrowAnimEaseProp = serializedObject.FindProperty("_arrowAnimEase");
 
         _optionsProp = serializedObject.FindProperty("_options");
         _valueProp = serializedObject.FindProperty("_value");
@@ -161,6 +179,18 @@ public class UICustomDropdownEditor : Editor
             EditorGUILayout.PropertyField(_listDashSizeProp);
             EditorGUILayout.PropertyField(_listDashSpacingProp);
             EditorGUILayout.PropertyField(_listDashRotationSpeedProp);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Arrow Animations", EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_arrowLine1Prop);
+            EditorGUILayout.PropertyField(_arrowLine2Prop);
+            EditorGUILayout.PropertyField(_arrowLineSizeXProp);
+            EditorGUILayout.PropertyField(_arrowLineSizeYProp);
+            EditorGUILayout.PropertyField(_arrowParentProp);
+            EditorGUILayout.PropertyField(_arrowParentOffsetYProp);
+            EditorGUILayout.PropertyField(_arrowAnimDurationProp);
+            EditorGUILayout.PropertyField(_arrowAnimEaseProp);
+            
             EditorGUI.indentLevel--;
         }
 
@@ -202,231 +232,5 @@ public class UICustomDropdownEditor : Editor
         {
             EditorGUILayout.HelpBox("Items parent RectTransform is missing. Spawned options will not layout correctly.", MessageType.Warning);
         }
-    }
-
-    /// <summary>
-    /// Description: GameObject Menu item shortcut to create a pre-configured Shapes-based dropdown menu.
-    /// </summary>
-    /// <param name="menuCommand">Context metadata from the hierarchy menu.</param>
-    [MenuItem("GameObject/UI/Shapes-Based Dropdown", false, 10)]
-    public static void CreateShapesBasedDropdown(MenuCommand menuCommand)
-    {
-        // 1. Create root GameObject
-        GameObject rootGo = new GameObject("Custom Dropdown", typeof(RectTransform), typeof(UICustomDropdown));
-
-        // 2. Parent to context (such as active Canvas) and setup undo tracing
-        GameObject parent = menuCommand.context as GameObject;
-        if (parent == null)
-        {
-            // Try to find any active canvas in scene
-            Canvas canvas = FindAnyObjectByType<Canvas>();
-            if (canvas != null)
-            {
-                parent = canvas.gameObject;
-            }
-            else
-            {
-                // Create a temporary canvas if none is present
-                GameObject canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-                canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-                Undo.RegisterCreatedObjectUndo(canvasGo, "Create Canvas");
-                parent = canvasGo;
-
-                // Ensure an EventSystem exists
-                if (FindAnyObjectByType<EventSystem>() == null)
-                {
-                    GameObject eventSystemGo = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-                    Undo.RegisterCreatedObjectUndo(eventSystemGo, "Create EventSystem");
-                }
-            }
-        }
-
-        GameObjectUtility.SetParentAndAlign(rootGo, parent);
-        Undo.RegisterCreatedObjectUndo(rootGo, "Create Custom Dropdown");
-        Selection.activeObject = rootGo;
-
-        RectTransform rootRt = rootGo.GetComponent<RectTransform>();
-        rootRt.sizeDelta = new Vector2(250f, 50f);
-
-        // 3. Create Header Outline Rectangle
-        GameObject rectGo = new GameObject("Header Outline", typeof(RectTransform), typeof(Rectangle));
-        rectGo.transform.SetParent(rootGo.transform, false);
-        RectTransform rectRt = rectGo.GetComponent<RectTransform>();
-        rectRt.anchorMin = Vector2.zero;
-        rectRt.anchorMax = Vector2.one;
-        rectRt.sizeDelta = Vector2.zero;
-        Rectangle rect = rectGo.GetComponent<Rectangle>();
-        rect.Type = Rectangle.RectangleType.RoundedBorder;
-        rect.Thickness = 2f;
-        rect.Color = Color.white;
-        rect.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        rect.CornerRadius = 4f;
-
-        // 4. Create Header Background Rectangle
-        GameObject bgGo = new GameObject("Header Background", typeof(RectTransform), typeof(Rectangle));
-        bgGo.transform.SetParent(rootGo.transform, false);
-        bgGo.transform.SetSiblingIndex(0); // Position under outline visual block
-        RectTransform bgRt = bgGo.GetComponent<RectTransform>();
-        bgRt.anchorMin = Vector2.zero;
-        bgRt.anchorMax = Vector2.one;
-        bgRt.sizeDelta = Vector2.zero;
-        Rectangle bgRect = bgGo.GetComponent<Rectangle>();
-        bgRect.Type = Rectangle.RectangleType.RoundedSolid;
-        bgRect.Color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-        bgRect.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        bgRect.CornerRadius = 4f;
-
-        // 5. Create Header Text Label
-        GameObject textGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        textGo.transform.SetParent(rootGo.transform, false);
-        RectTransform textRt = textGo.GetComponent<RectTransform>();
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.sizeDelta = new Vector2(-24f, -10f); // Horizontal and vertical indent bounds
-        TextMeshProUGUI text = textGo.GetComponent<TextMeshProUGUI>();
-        text.text = "Select Option...";
-        text.fontSize = 16f;
-        text.alignment = TextAlignmentOptions.Left;
-        text.color = Color.white;
-
-        // 6. Create Template Container
-        GameObject templateGo = new GameObject("Template", typeof(RectTransform));
-        templateGo.transform.SetParent(rootGo.transform, false);
-        RectTransform templateRt = templateGo.GetComponent<RectTransform>();
-        templateRt.anchorMin = new Vector2(0f, 0f);
-        templateRt.anchorMax = new Vector2(1f, 0f);
-        templateRt.pivot = new Vector2(0.5f, 1f); // Pivot top center
-        templateRt.anchoredPosition = new Vector2(0f, -2f); // Spacing margin
-        templateRt.sizeDelta = new Vector2(0f, 120f);
-        templateGo.SetActive(false); // Template is deactivated by default
-
-        // 7. Create Template Outline Border
-        GameObject listBorderGo = new GameObject("List Outline", typeof(RectTransform), typeof(Rectangle));
-        listBorderGo.transform.SetParent(templateGo.transform, false);
-        RectTransform listBorderRt = listBorderGo.GetComponent<RectTransform>();
-        listBorderRt.anchorMin = Vector2.zero;
-        listBorderRt.anchorMax = Vector2.one;
-        listBorderRt.sizeDelta = Vector2.zero;
-        Rectangle listBorder = listBorderGo.GetComponent<Rectangle>();
-        listBorder.Type = Rectangle.RectangleType.RoundedBorder;
-        listBorder.Thickness = 2f;
-        listBorder.Color = Color.white;
-        listBorder.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        listBorder.CornerRadius = 4f;
-
-        // 8. Create Template Background
-        GameObject listBgGo = new GameObject("List Background", typeof(RectTransform), typeof(Rectangle));
-        listBgGo.transform.SetParent(templateGo.transform, false);
-        listBgGo.transform.SetSiblingIndex(0);
-        RectTransform listBgRt = listBgGo.GetComponent<RectTransform>();
-        listBgRt.anchorMin = Vector2.zero;
-        listBgRt.anchorMax = Vector2.one;
-        listBgRt.sizeDelta = Vector2.zero;
-        Rectangle listBg = listBgGo.GetComponent<Rectangle>();
-        listBg.Type = Rectangle.RectangleType.RoundedSolid;
-        listBg.Color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
-        listBg.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        listBg.CornerRadius = 4f;
-
-        // 9. Create Option Layout Parent Content
-        GameObject itemParentGo = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-        itemParentGo.transform.SetParent(templateGo.transform, false);
-        RectTransform itemParentRt = itemParentGo.GetComponent<RectTransform>();
-        itemParentRt.anchorMin = new Vector2(0f, 1f); // Anchor top-left
-        itemParentRt.anchorMax = new Vector2(1f, 1f); // Anchor top-right
-        itemParentRt.pivot = new Vector2(0.5f, 1f);  // Pivot top-center
-        itemParentRt.anchoredPosition = new Vector2(0f, -4f); // Spacing from top border
-        itemParentRt.sizeDelta = new Vector2(-8f, 0f); // 4px margin on left/right
-
-
-        VerticalLayoutGroup layoutGroup = itemParentGo.GetComponent<VerticalLayoutGroup>();
-        layoutGroup.spacing = 2f;
-        layoutGroup.childAlignment = TextAnchor.UpperCenter;
-        layoutGroup.childControlHeight = true;
-        layoutGroup.childControlWidth = true;
-        layoutGroup.childForceExpandHeight = false;
-        layoutGroup.childForceExpandWidth = true;
-        layoutGroup.padding = new RectOffset(4, 4, 4, 4);
-
-        ContentSizeFitter sizeFitter = itemParentGo.GetComponent<ContentSizeFitter>();
-        sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        // 10. Create Option Item Template
-        GameObject itemTemplateGo = new GameObject("Item", typeof(RectTransform), typeof(UICustomDropdownItem));
-        itemTemplateGo.transform.SetParent(itemParentRt, false);
-        RectTransform itemRt = itemTemplateGo.GetComponent<RectTransform>();
-        itemRt.sizeDelta = new Vector2(0f, 35f);
-
-        // 11. Create Item Background, Item Outline, and label text fields
-        GameObject itemBgGo = new GameObject("Item Background", typeof(RectTransform), typeof(Rectangle));
-        itemBgGo.transform.SetParent(itemTemplateGo.transform, false);
-        RectTransform itemBgRt = itemBgGo.GetComponent<RectTransform>();
-        itemBgRt.anchorMin = Vector2.zero;
-        itemBgRt.anchorMax = Vector2.one;
-        itemBgRt.sizeDelta = Vector2.zero;
-        Rectangle itemBg = itemBgGo.GetComponent<Rectangle>();
-        itemBg.Type = Rectangle.RectangleType.RoundedSolid;
-        itemBg.Color = new Color(0f, 0f, 0f, 0f);
-        itemBg.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        itemBg.CornerRadius = 2f;
-
-        GameObject itemOutlineGo = new GameObject("Item Outline", typeof(RectTransform), typeof(Rectangle));
-        itemOutlineGo.transform.SetParent(itemTemplateGo.transform, false);
-        RectTransform itemOutlineRt = itemOutlineGo.GetComponent<RectTransform>();
-        itemOutlineRt.anchorMin = Vector2.zero;
-        itemOutlineRt.anchorMax = Vector2.one;
-        itemOutlineRt.sizeDelta = Vector2.zero;
-        Rectangle itemOutline = itemOutlineGo.GetComponent<Rectangle>();
-        itemOutline.Type = Rectangle.RectangleType.RoundedBorder;
-        itemOutline.Thickness = 2f;
-        itemOutline.Color = Color.white;
-        itemOutline.CornerRadiusMode = Rectangle.RectangleCornerRadiusMode.Uniform;
-        itemOutline.CornerRadius = 2f;
-
-        GameObject itemTextGo = new GameObject("Item Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        itemTextGo.transform.SetParent(itemTemplateGo.transform, false);
-        RectTransform itemTextRt = itemTextGo.GetComponent<RectTransform>();
-        itemTextRt.anchorMin = Vector2.zero;
-        itemTextRt.anchorMax = Vector2.one;
-        itemTextRt.sizeDelta = new Vector2(-12f, 0f);
-        TextMeshProUGUI itemText = itemTextGo.GetComponent<TextMeshProUGUI>();
-        itemText.text = "Option Item";
-        itemText.fontSize = 14f;
-        itemText.alignment = TextAlignmentOptions.Left;
-        itemText.color = Color.white;
-
-        // Binds Custom Item fields using SerializedObject utility for safety
-        UICustomDropdownItem dropdownItem = itemTemplateGo.GetComponent<UICustomDropdownItem>();
-        SerializedObject itemSerializedObj = new SerializedObject(dropdownItem);
-        itemSerializedObj.FindProperty("_backgroundRect").objectReferenceValue = itemBg;
-        itemSerializedObj.FindProperty("_rect").objectReferenceValue = itemOutline;
-        itemSerializedObj.FindProperty("_itemText").objectReferenceValue = itemText;
-        itemSerializedObj.ApplyModifiedProperties();
-
-        // 12. Binds Custom Dropdown fields using SerializedObject
-        UICustomDropdown dropdownComponent = rootGo.GetComponent<UICustomDropdown>();
-        SerializedObject dropdownSerializedObj = new SerializedObject(dropdownComponent);
-        dropdownSerializedObj.FindProperty("_rect").objectReferenceValue = rect;
-        dropdownSerializedObj.FindProperty("_backgroundRect").objectReferenceValue = bgRect;
-        dropdownSerializedObj.FindProperty("_buttonText").objectReferenceValue = text;
-        dropdownSerializedObj.FindProperty("_templateContainer").objectReferenceValue = templateRt;
-        dropdownSerializedObj.FindProperty("_itemTemplate").objectReferenceValue = dropdownItem;
-        dropdownSerializedObj.FindProperty("_itemParent").objectReferenceValue = itemParentRt;
-        dropdownSerializedObj.FindProperty("_listBorder").objectReferenceValue = listBorder;
-
-        // Adds 3 default option strings to avoid empty initial states
-        SerializedProperty optionsListProperty = dropdownSerializedObj.FindProperty("_options");
-        optionsListProperty.ClearArray();
-        optionsListProperty.InsertArrayElementAtIndex(0);
-        optionsListProperty.GetArrayElementAtIndex(0).stringValue = "Option 1";
-        optionsListProperty.InsertArrayElementAtIndex(1);
-        optionsListProperty.GetArrayElementAtIndex(1).stringValue = "Option 2";
-        optionsListProperty.InsertArrayElementAtIndex(2);
-        optionsListProperty.GetArrayElementAtIndex(2).stringValue = "Option 3";
-
-        dropdownSerializedObj.ApplyModifiedProperties();
-
-        // Enforce the visual draw updates immediately
-        dropdownComponent.SendMessage("OnValidate", SendMessageOptions.DontRequireReceiver);
     }
 }
