@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using DG.Tweening;
 
 /// <summary>
 /// Description: Controls the physics-based movement of the player's arms.
@@ -57,6 +59,69 @@ public class PlayerArmsController : NetworkBehaviour
     [SerializeField]
     private Vector3 _handRotationOffset = Vector3.zero;
 
+    [Header("Shoulder Rotation Settings")]
+    [SerializeField]
+    [Tooltip("Role: Left shoulder transform.\nUse Case: Rotates Y by 90 when left arm is extended.")]
+    private Transform _leftShoulder;
+
+    [SerializeField]
+    [Tooltip("Role: Right shoulder transform.\nUse Case: Rotates Y by -90 when right arm is extended.")]
+    private Transform _rightShoulder;
+
+    [SerializeField]
+    [Tooltip("Role: Duration of the shoulder rotation animation.")]
+    private float _shoulderRotateDuration = 0.25f;
+
+    [SerializeField]
+    [Tooltip("Role: Ease curve for shoulder rotation (e.g. OutBack for overshoot snappy feel).")]
+    private Ease _shoulderEase = Ease.OutBack;
+
+    [Header("Joint Tuning Parameters (Auto-Configured at Runtime)")]
+    [SerializeField]
+    [Tooltip("Role: Lock twist/roll rotation on X-axis for all joint segments.\nUse Case: Stiffening.\nJustification: Prevents arm segments from spinning on themselves.")]
+    private bool _lockAngularX = true;
+
+    [SerializeField]
+    [Tooltip("Role: Enable position and rotation projection.\nUse Case: Stiffening.\nJustification: Prevents arms from stretching or separating when moving fast.")]
+    private bool _enableJointProjection = true;
+
+    [SerializeField]
+    [Tooltip("Role: Spring force applied to slerp/angular drives of all arm joints.\nUse Case: Stiffness.")]
+    private float _jointSpringForce = 1500f;
+
+    [SerializeField]
+    [Tooltip("Role: Damping applied to slerp/angular drives of all arm joints.\nUse Case: Stabilizing wobbles.")]
+    private float _jointDamping = 100f;
+
+    [SerializeField]
+    [Tooltip("Role: Angular drag applied to all arm Rigidbody components.\nUse Case: Control swing lag.\nJustification: Higher values prevent infinite swinging/floppiness.")]
+    private float _armAngularDrag = 15f;
+
+    [Header("Retraction / Rest Physics Settings")]
+    [SerializeField]
+    [Tooltip("Role: Return animation duration in seconds.")]
+    private float _retractTransitionDuration = 0.5f;
+
+    [SerializeField]
+    [Tooltip("Role: Strong force applied right after release to pull the arm back to T-pose.")]
+    private float _releaseTransientForce = 350f;
+
+    [SerializeField]
+    [Tooltip("Role: Loose resting force applied continuously to keep the arm floating above the floor.")]
+    private float _releaseRestForce = 40f;
+
+    [SerializeField]
+    [Tooltip("Role: Loose resting torque applied to keep the nozzle aligned without being rigid.")]
+    private float _releaseRestTorque = 4f;
+
+    [SerializeField]
+    [Tooltip("Role: Distance within which the retraction forces/torques smoothly fade to 0.\nUse Case: Eliminates jitter/vibrations and wrist bending.")]
+    private float _restFadeDistance = 0.35f;
+
+    [SerializeField]
+    [Tooltip("Role: Strict deadzone radius in meters around the rest position where all external forces/torques are cut to 0.\nUse Case: Eliminates hand jitter at rest.")]
+    private float _restDeadzone = 0.05f;
+
 
     [Header("Debug & Diagnostics")]
     [Tooltip("Role: Enables diagnostic logging for arm movement lifecycle states.\nUse Case: Network tracing.\nJustification: Helps diagnose client-to-server sync issues with arm inputs.")]
@@ -80,6 +145,16 @@ public class PlayerArmsController : NetworkBehaviour
     // Pre-calculated lengths of the arm hierarchies
     private float _leftArmLength = 1.5f;
     private float _rightArmLength = 1.5f;
+
+    // Cached T-pose design-time offsets relative to player root
+    private Vector3 _leftHandLocalRestPos;
+    private Quaternion _leftHandLocalRestRot;
+    private Vector3 _rightHandLocalRestPos;
+    private Quaternion _rightHandLocalRestRot;
+
+    // Release timestamps for return animation interpolation
+    private float _leftReleaseTime = -100f;
+    private float _rightReleaseTime = -100f;
 
     /// <summary>
     /// Gets the left hand/tip Transform, used for launching items.
@@ -162,6 +237,8 @@ public class PlayerArmsController : NetworkBehaviour
             {
                 _leftHandRb = _leftHand.GetComponent<Rigidbody>();
                 _leftArmLength = CalculateHierarchyLength(_leftArmRoot);
+                _leftHandLocalRestPos = transform.InverseTransformPoint(_leftHand.position);
+                _leftHandLocalRestRot = Quaternion.Inverse(transform.rotation) * _leftHand.rotation;
 
                 if (_leftHandRb == null && _enableDebugLogs)
                 {
@@ -182,6 +259,8 @@ public class PlayerArmsController : NetworkBehaviour
             {
                 _rightHandRb = _rightHand.GetComponent<Rigidbody>();
                 _rightArmLength = CalculateHierarchyLength(_rightArmRoot);
+                _rightHandLocalRestPos = transform.InverseTransformPoint(_rightHand.position);
+                _rightHandLocalRestRot = Quaternion.Inverse(transform.rotation) * _rightHand.rotation;
 
                 if (_rightHandRb == null && _enableDebugLogs)
                 {
@@ -198,6 +277,22 @@ public class PlayerArmsController : NetworkBehaviour
         {
             Debug.Log($"[PlayerArmsController] Initialization complete on '{gameObject.name}'. Left Reach: {_leftArmLength:F2}m, Right Reach: {_rightArmLength:F2}m");
         }
+
+        // Snap shoulders instantly on startup to match initial state
+        if (_leftShoulder != null)
+        {
+            _leftShoulder.localRotation = Quaternion.Euler(0f, _isLeftArmExtended ? 90f : 0f, 0f);
+        }
+        if (_rightShoulder != null)
+        {
+            _rightShoulder.localRotation = Quaternion.Euler(0f, _isRightArmExtended ? -90f : 0f, 0f);
+        }
+
+        // Ignore collisions between arm colliders and the player's body/wheels/head/other arm
+        IgnorePlayerCollisions();
+
+        // Stiffen and lock joints and configure rig drag values dynamically
+        ConfigureArmJointsPhysics();
     }
 
     /// <summary>
@@ -239,40 +334,80 @@ public class PlayerArmsController : NetworkBehaviour
     /// </summary>
     private void FixedUpdate()
     {
-        // 1. Process Left Arm Physics Reach
-        if (_isLeftArmExtended && _leftHandRb != null && _headTransform != null)
+        // 1. Process Left Arm Physics
+        if (_leftHandRb != null)
         {
-            ApplyArmReachingForces(_leftHandRb, _leftArmLength, true);
+            ApplyArmPhysicsForces(_leftHandRb, _leftArmLength, true, _isLeftArmExtended);
         }
 
-        // 2. Process Right Arm Physics Reach
-        if (_isRightArmExtended && _rightHandRb != null && _headTransform != null)
+        // 2. Process Right Arm Physics
+        if (_rightHandRb != null)
         {
-            ApplyArmReachingForces(_rightHandRb, _rightArmLength, false);
+            ApplyArmPhysicsForces(_rightHandRb, _rightArmLength, false, _isRightArmExtended);
         }
     }
 
     /// <summary>
     /// Description: Computes and applies spring/damping attraction forces and look-alignment torques.
     /// Context: Called by FixedUpdate.
-    /// Justification: Pulls the physical joint chain towards the looking target (center line) while dampening the forces to avoid violent snapping.
+    /// Justification: Pulls the physical joint chain towards the looking target (center line) when extended, or towards the cached T-pose rest targets when retracted.
     /// </summary>
     /// <param name="handRb">The Rigidbody of the last child segment in the arm.</param>
     /// <param name="armLength">The maximum physical length of the arm hierarchy.</param>
     /// <param name="isLeft">True if computing the Left Arm reaching direction, false for the Right Arm.</param>
-    private void ApplyArmReachingForces(Rigidbody handRb, float armLength, bool isLeft)
+    /// <param name="isExtended">True if currently aiming/extended, false if retracted in T-pose.</param>
+    private void ApplyArmPhysicsForces(Rigidbody handRb, float armLength, bool isLeft, bool isExtended)
     {
-        Vector3 forward = _headTransform.forward;
-        Vector3 up = _headTransform.up;
+        Vector3 targetPosition;
+        float currentForce;
+        float distanceFactor = 1f;
 
-        // Calculate target location in front of the head at tweaked extension range and vertical/forward offsets
-        Vector3 targetPosition = _headTransform.position 
-            + forward * (armLength * _reachLengthFactor + _forwardOffset)
-            + up * _verticalOffset;
+        if (isExtended)
+        {
+            Vector3 forward = _headTransform != null ? _headTransform.forward : transform.forward;
+            Vector3 up = _headTransform != null ? _headTransform.up : transform.up;
+
+            // Calculate target location in front of the head at tweaked extension range and vertical/forward offsets
+            targetPosition = (_headTransform != null ? _headTransform.position : transform.position)
+                + forward * (armLength * _reachLengthFactor + _forwardOffset)
+                + up * _verticalOffset;
+
+            currentForce = _extendForce;
+        }
+        else
+        {
+            // Retracted: target is cached T-pose position in world space
+            Vector3 localRestPos = isLeft ? _leftHandLocalRestPos : _rightHandLocalRestPos;
+            targetPosition = transform.TransformPoint(localRestPos);
+
+            // Interpolate force: strong right after release, then decays to loose rest force
+            float timeSinceRelease = Time.time - (isLeft ? _leftReleaseTime : _rightReleaseTime);
+            float t = Mathf.Clamp01(1f - (timeSinceRelease / _retractTransitionDuration));
+
+            currentForce = Mathf.Lerp(_releaseRestForce, _releaseTransientForce, t);
+
+            // Calculate distance factor to fade out the force/torque as we approach rest position
+            float dist = Vector3.Distance(handRb.position, targetPosition);
+            if (_restFadeDistance > _restDeadzone)
+            {
+                if (dist <= _restDeadzone)
+                {
+                    distanceFactor = 0f;
+                }
+                else
+                {
+                    distanceFactor = Mathf.Clamp01((dist - _restDeadzone) / (_restFadeDistance - _restDeadzone));
+                }
+            }
+            else if (_restFadeDistance > 0f)
+            {
+                distanceFactor = Mathf.Clamp01(dist / _restFadeDistance);
+            }
+        }
 
         // Calculate proportional attraction force vector
         Vector3 toTarget = targetPosition - handRb.position;
-        Vector3 extensionForce = toTarget * _extendForce;
+        Vector3 extensionForce = toTarget * currentForce * distanceFactor;
 
         // Calculate damping force to control oscillation and maintain joint stability
         Vector3 dampingForce = -handRb.linearVelocity * _extendDamping;
@@ -281,14 +416,31 @@ public class PlayerArmsController : NetworkBehaviour
         Vector3 netForce = (extensionForce + dampingForce) * handRb.mass;
         handRb.AddForce(netForce, ForceMode.Force);
 
-        // Compute rotational target rotation matching the camera/look direction
-        Quaternion targetRotation = Quaternion.LookRotation(forward, up);
-        
-        // Apply additional manual rotation offset (Pitch, Yaw, Roll)
-        targetRotation = targetRotation * Quaternion.Euler(_handRotationOffset);
+        // --- Rotational Alignment ---
+        Quaternion targetRotation;
+        float currentTorque;
+
+        if (isExtended)
+        {
+            Vector3 forward = _headTransform != null ? _headTransform.forward : transform.forward;
+            Vector3 up = _headTransform != null ? _headTransform.up : transform.up;
+            targetRotation = Quaternion.LookRotation(forward, up) * Quaternion.Euler(_handRotationOffset);
+            currentTorque = _alignmentTorque;
+        }
+        else
+        {
+            // Retracted: target is design-time T-pose rotation in world space
+            Quaternion localRestRot = isLeft ? _leftHandLocalRestRot : _rightHandLocalRestRot;
+            targetRotation = transform.rotation * localRestRot;
+
+            float timeSinceRelease = Time.time - (isLeft ? _leftReleaseTime : _rightReleaseTime);
+            float t = Mathf.Clamp01(1f - (timeSinceRelease / _retractTransitionDuration));
+
+            // Fade out the torque to 0 at the rest position so wrist joint springs do the alignment and don't bend it upward
+            currentTorque = Mathf.Lerp(_releaseRestTorque, _alignmentTorque, t) * distanceFactor;
+        }
 
         Quaternion deltaRotation = targetRotation * Quaternion.Inverse(handRb.rotation);
-        
         deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
 
         if (!float.IsNaN(axis.x) && !float.IsNaN(axis.y) && !float.IsNaN(axis.z) && axis.sqrMagnitude > 0.001f)
@@ -300,7 +452,7 @@ public class PlayerArmsController : NetworkBehaviour
             }
 
             // Calculate alignment torque vector
-            Vector3 alignmentTorque = axis * (angle * _alignmentTorque * Mathf.Deg2Rad);
+            Vector3 alignmentTorque = axis * (angle * currentTorque * Mathf.Deg2Rad);
             Vector3 rotationalDamping = -handRb.angularVelocity * _alignmentDamping;
 
             // Apply net torque to orient the hand/nozzle forward
@@ -385,6 +537,12 @@ public class PlayerArmsController : NetworkBehaviour
     /// </summary>
     private void OnLeftArmStateChanged(bool oldState, bool newState)
     {
+        AnimateShoulder(true, newState);
+        if (oldState && !newState)
+        {
+            _leftReleaseTime = Time.time;
+        }
+
         if (_enableDebugLogs)
         {
             Debug.Log($"[PlayerArmsController] Left Arm Extension sync: {newState} (Owner: {netId})");
@@ -396,10 +554,184 @@ public class PlayerArmsController : NetworkBehaviour
     /// </summary>
     private void OnRightArmStateChanged(bool oldState, bool newState)
     {
+        AnimateShoulder(false, newState);
+        if (oldState && !newState)
+        {
+            _rightReleaseTime = Time.time;
+        }
+
         if (_enableDebugLogs)
         {
             Debug.Log($"[PlayerArmsController] Right Arm Extension sync: {newState} (Owner: {netId})");
         }
+    }
+
+    /// <summary>
+    /// Description: Smoothly animates the shoulder joint rotation on extension state changes.
+    /// Context: Triggered by Mirror SyncVar hooks on all clients.
+    /// Justification: Uses DOTween to smoothly transition Y rotation to 90/-90 degrees using a Back ease for a snappy overshoot animation feel.
+    /// </summary>
+    private void AnimateShoulder(bool isLeft, bool extended)
+    {
+        Transform shoulder = isLeft ? _leftShoulder : _rightShoulder;
+        if (shoulder == null) return;
+
+        float targetY = 0f;
+        if (extended)
+        {
+            targetY = isLeft ? 90f : -90f;
+        }
+
+        shoulder.DOKill();
+        shoulder.DOLocalRotate(new Vector3(0f, targetY, 0f), _shoulderRotateDuration)
+            .SetEase(_shoulderEase)
+            .SetUpdate(UpdateType.Normal, true);
+    }
+
+    /// <summary>
+    /// Description: Disables collisions between the arm segments and the player body, head, wheels, and other arm segments.
+    /// Context: Run at Start.
+    /// Justification: Eliminates contact solver bottlenecks (lag/FPS drops) and unwanted reaction forces pushing the player during arm movement.
+    /// </summary>
+    private void IgnorePlayerCollisions()
+    {
+        // Get all colliders on this entire player GameObject hierarchy
+        Collider[] allColliders = GetComponentsInChildren<Collider>(true);
+        
+        // Identify which colliders belong to the left and right arms
+        Collider[] leftArmColliders = _leftArmRoot != null ? _leftArmRoot.GetComponentsInChildren<Collider>(true) : new Collider[0];
+        Collider[] rightArmColliders = _rightArmRoot != null ? _rightArmRoot.GetComponentsInChildren<Collider>(true) : new Collider[0];
+
+        // 1. Ignore left arm vs non-left-arm colliders
+        foreach (Collider armColl in leftArmColliders)
+        {
+            if (armColl == null) continue;
+            foreach (Collider otherColl in allColliders)
+            {
+                if (otherColl == null || otherColl == armColl) continue;
+                if (!IsDescendantOf(otherColl.transform, _leftArmRoot))
+                {
+                    Physics.IgnoreCollision(armColl, otherColl, true);
+                }
+            }
+        }
+
+        // 2. Ignore right arm vs non-right-arm colliders
+        foreach (Collider armColl in rightArmColliders)
+        {
+            if (armColl == null) continue;
+            foreach (Collider otherColl in allColliders)
+            {
+                if (otherColl == null || otherColl == armColl) continue;
+                if (!IsDescendantOf(otherColl.transform, _rightArmRoot))
+                {
+                    Physics.IgnoreCollision(armColl, otherColl, true);
+                }
+            }
+        }
+
+        // 3. Ignore self-collisions within the same arm to prevent the joint chain from locking up
+        for (int i = 0; i < leftArmColliders.Length; i++)
+        {
+            if (leftArmColliders[i] == null) continue;
+            for (int j = i + 1; j < leftArmColliders.Length; j++)
+            {
+                if (leftArmColliders[j] == null) continue;
+                Physics.IgnoreCollision(leftArmColliders[i], leftArmColliders[j], true);
+            }
+        }
+
+        for (int i = 0; i < rightArmColliders.Length; i++)
+        {
+            if (rightArmColliders[i] == null) continue;
+            for (int j = i + 1; j < rightArmColliders.Length; j++)
+            {
+                if (rightArmColliders[j] == null) continue;
+                Physics.IgnoreCollision(rightArmColliders[i], rightArmColliders[j], true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Description: Dynamically stiffens ConfigurableJoints, locks twist rotation on X-axis, and configures Rigidbody drag.
+    /// Context: Run at Start.
+    /// Justification: Automatically enforces rigidity, eliminates floppiness, locks self-rotation, and configures drag without manual per-joint inspector work.
+    /// </summary>
+    private void ConfigureArmJointsPhysics()
+    {
+        // 1. Resolve and configure all arm joints
+        ConfigurableJoint[] leftJoints = _leftArmRoot != null ? _leftArmRoot.GetComponentsInChildren<ConfigurableJoint>(true) : new ConfigurableJoint[0];
+        ConfigurableJoint[] rightJoints = _rightArmRoot != null ? _rightArmRoot.GetComponentsInChildren<ConfigurableJoint>(true) : new ConfigurableJoint[0];
+
+        var allJoints = new List<ConfigurableJoint>();
+        allJoints.AddRange(leftJoints);
+        allJoints.AddRange(rightJoints);
+
+        foreach (ConfigurableJoint joint in allJoints)
+        {
+            if (joint == null) continue;
+
+            // Lock angular X motion to prevent twisting/spinning on itself
+            if (_lockAngularX)
+            {
+                joint.angularXMotion = ConfigurableJointMotion.Locked;
+            }
+
+            // Enable joint projection to prevent stretching/separation under fast movement
+            if (_enableJointProjection)
+            {
+                joint.projectionMode = JointProjectionMode.PositionAndRotation;
+                joint.projectionDistance = 0.01f;
+                joint.projectionAngle = 0.1f;
+            }
+
+            // Create JointDrive for angular and slerp movements
+            JointDrive drive = new JointDrive
+            {
+                positionSpring = _jointSpringForce,
+                positionDamper = _jointDamping,
+                maximumForce = float.MaxValue
+            };
+
+            joint.slerpDrive = drive;
+            joint.angularXDrive = drive;
+            joint.angularYZDrive = drive;
+        }
+
+        // 2. Adjust Rigidbody drag settings to control floppiness
+        Rigidbody[] leftRbs = _leftArmRoot != null ? _leftArmRoot.GetComponentsInChildren<Rigidbody>(true) : new Rigidbody[0];
+        Rigidbody[] rightRbs = _rightArmRoot != null ? _rightArmRoot.GetComponentsInChildren<Rigidbody>(true) : new Rigidbody[0];
+
+        var allRbs = new List<Rigidbody>();
+        allRbs.AddRange(leftRbs);
+        allRbs.AddRange(rightRbs);
+
+        foreach (Rigidbody rb in allRbs)
+        {
+            if (rb == null) continue;
+
+            // Apply high angular drag to prevent wiggling and floppy oscillation
+            rb.angularDamping = _armAngularDrag;
+
+            // Increase solver iterations to eliminate micro-vibrations and jitter
+            rb.solverIterations = 25;
+            rb.solverVelocityIterations = 15;
+        }
+    }
+
+    /// <summary>
+    /// Helper to check if a transform is nested inside a parent transform.
+    /// </summary>
+    private bool IsDescendantOf(Transform child, Transform parent)
+    {
+        if (child == null || parent == null) return false;
+        Transform current = child;
+        while (current != null)
+        {
+            if (current == parent) return true;
+            current = current.parent;
+        }
+        return false;
     }
 
     #endregion

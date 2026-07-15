@@ -600,5 +600,11 @@
 - [x] Implement 3-bone thickness preserving scaling mechanism in MouthAnimator.cs with configurable multipliers.
 - [x] Implement remote player look pitch SyncVar/Command replication in PlayerLookComponent.cs.
 - [x] Implement kinematic wheel estimated velocity calculations in Wheels.cs.
+- [x] Implement snappy Y-axis shoulder rotation animations on arm extension in PlayerArmsController.cs using DOTween Ease.OutBack.
+- [x] Cache design-time T-pose local rest offsets of player hands relative to the root on startup.
+- [x] Record arm release timestamps on Mirror SyncVar extension state changes.
+- [x] Implement transient-to-rest force and torque interpolation during arm retraction in FixedUpdate.
+- [x] Expose transition duration, transient force, and resting float force/torque parameters in the inspector.
+- [x] Implement distance-based force/torque fade-out in retracted state to eliminate hand vibration and wrist curving.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
 

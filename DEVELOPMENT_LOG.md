@@ -1061,5 +1061,48 @@
 - [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Synced camera pitch look direction on the network via Command/SyncVar).
 - [MODIFY] [Wheels.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Wheels.cs) (Added kinematic estimated velocity fallback to steer wheels of remote players).
 
+## [2026-07-14] - Snappy Shoulder Rotation Animation
+### Technical Justification & Details
+- **Snappy Shoulder Rotation**:
+  - Implemented smooth, snappy shoulder rotation animations triggered automatically when individual arms are extended.
+  - When the Left Arm is extended, the Left Shoulder rotates by +90 degrees on the Y-axis.
+  - When the Right Arm is extended, the Right Shoulder rotates by -90 degrees on the Y-axis.
+  - The rotation returns to 0 degrees when the respective arm is retracted.
+  - Uses DOTween to animate local rotation. The transition utilizes `Ease.OutBack` by default (configurable in the inspector) to exceed/overshoot the target rotation slightly before settling, providing a snappy, responsive feel.
+  - Pre-kills existing tweens (`shoulder.DOKill()`) to support rapid input spamming safely.
+  - On startup (`Start()`), initial positions snap instantly without playing animations to match the starting extension states.
+  - Triggered in the Mirror SyncVar hooks `OnLeftArmStateChanged` and `OnRightArmStateChanged`, ensuring the visual shoulder animations play synchronously across all clients in multiplayer.
+
+### Code Modified/Added
+- [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs) (Added shoulder fields, snap initialization, and DOTween rotation animation triggers inside SyncVar hooks).
+
+## [2026-07-14] - Player Arm Retraction Rest Float Physics & Joint Optimization
+### Technical Justification & Details
+- **Arm Colliders Separation (Self/Body Collision Bypass)**:
+  - Dynamically disabled physics collisions on startup (`Start()`) between left/right arm structures and the player's main chassis, head, wheels, and other arm.
+  - Ignored self-collisions between segments of the same arm to prevent mechanical lockup.
+  - Decoupled arm physics from the player's core movement, completely fixing linear velocity bottlenecks (blocks/lags) and massive FPS drops under quick movement.
+- **Dynamic Joint Stiffening & Locking**:
+  - Automatically configured all `ConfigurableJoint` and `Rigidbody` components on start to enforce a high-stiffness, zero-stretch preset (`_jointSpringForce = 1500f`, `_jointDamping = 100f`, projection distance/angle bounds, and `angularXMotion` locked to prevent twisting on itself).
+  - Configured Rigidbody `angularDamping` (Unity 6 drag replacement) dynamically to dampen rapid oscillations.
+- **T-Pose Rest Targeting & Decaying Retraction Forces**:
+  - Cached design-time local rest positions/rotations of the hands on startup relative to the player root.
+  - Modified physics simulation to continuously attract hands back to their local T-pose coordinates when retracted, preventing them from sagging to the floor.
+  - Implemented dynamic force/torque scaling based on elapsed time since release (`_retractTransitionDuration = 0.5s`):
+    - **Transient Phase (Strong)**: Immediately after release, applies a strong force (`_releaseTransientForce`) to quickly pull the arm back to the T-pose.
+    - **Resting Phase (Weak)**: Gradually decays to a weaker resting force (`_releaseRestForce`) and torque (`_releaseRestTorque`), keeping the arm suspended above the ground loosely without making it look rigidly frozen.
+- **Distance-Based Fade-Out (Anti-Vibration & Anti-Wrist-Curve)**:
+  - Added a `_restFadeDistance` parameter (default `0.35m`).
+  - Inside `ApplyArmPhysicsForces`, if the arm is retracted, we calculate a `distanceFactor` which scales down to `0` linearly as the hand reaches the target rest position.
+  - This eliminates jitter/vibrations at the equilibrium rest state since attraction forces drop to zero, and prevents the hand/wrist from being artificially torque-forced to align horizontally, letting the arm hang naturally aligned with the preceding joints without curving up.
+- **Physics Solver & Deadzone Stabilizers (Continuous Hand Jitter Fix)**:
+  - Added a strict `_restDeadzone` radius (default `0.05m`) to cut all external manual forces/torques to exactly `0` when the hand reaches rest.
+  - Automatically configured `solverIterations = 25` and `solverVelocityIterations = 15` on all arm Rigidbody components dynamically on startup. This increases joint simulation precision, preventing the native joint spring calculations from oscillating/vibrating at high spring coefficients.
+
+### Code Modified/Added
+- [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs) (Implemented collision ignoring, runtime joint tuning, rest pose caching, transient-to-rest force interpolation, distance-based fade-out with a strict deadzone, and high solver iterations on all arm rigidbodies).
+
+
+
 
 
