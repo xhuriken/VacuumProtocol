@@ -1102,7 +1102,173 @@
 ### Code Modified/Added
 - [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs) (Implemented collision ignoring, runtime joint tuning, rest pose caching, transient-to-rest force interpolation, distance-based fade-out with a strict deadzone, and high solver iterations on all arm rigidbodies).
 
+## [2026-07-15] - Progressive Neck Curvature & Look Centralization
+### Technical Justification & Details
+- **Centralized Look State & Component-like Decoupling**:
+  - Decoupled view pitch and yaw logic from physical movements by establishing `PlayerLookComponent.cs` as the Single Source of Truth (SSOT).
+  - Exposed `CurrentPitch` and `CurrentYaw` public properties on `PlayerLookComponent.cs` to serve both local input and synced remote client states.
+  - Refactored `PhysicalHeadController.cs` to read pitch and yaw directly from `PlayerLookComponent` rather than recalculating them independently, simplifying the component logic.
+- **4-Bone Neck Chain Procedural Curvature**:
+  - Implemented progressive relative local rotation for a 4-bone neck chain (`_neckBones`) in `PhysicalHeadController.cs`.
+  - Distributes the centralized look rotation using configurable local rotation multipliers (`_neckRotationWeights`).
+- **Progressive Backward Translation (Local -Z Receding)**:
+  - Bending or turning the neck now drives a progressive backward translation of the neck bones along their own rotated local Z axis (`_neckBones[i].localRotation * Vector3.back`).
+  - The recede distance scales dynamically based on local pitch and yaw magnitude and configurable factors (`_neckBackwardFactors`), which prevents mesh stretching and clipping against the torso.
+- **Physical Head Target Tracking & Rotation Unlock**:
+  - Detaches the physical head bone on startup and tracks the end of the procedurally bent neck chain.
+  - Caches the starting relative offset of the head relative to the body root (`_headStartLocalPosInOriginalParent`) on `Start()`.
+  - Calculates the ConfigurableJoint targetPosition offset dynamically relative to this initial position (`targetPosition = -offset`), preventing the head from collapsing downwards on startup.
+  - Re-injects the crouch height offset (`_crouchYOffset`) directly on top of the target joint translation.
+  - Dynamically configures the joint's rotation limits and drives on `Start()` to allow target rotation to rotate the head freely: sets `rotationDriveMode = RotationDriveMode.Slerp` and unlocks angular motions by setting `angularXMotion`, `angularYMotion`, and `angularZMotion` to `Free`.
+- **Robust Automatic Inspector Fallback**:
+  - Implemented automatic upward hierarchy traversal in `Start` starting from the head's parent to auto-populate the 4 neck bones in order (`Neck_01` to `Neck_04`) if they are left unassigned in the inspector.
+- **Enabled Head Collision Physics & Weight Stabilization**:
+  - Removed the `Physics.IgnoreCollision` setup between the head collider and body/arm colliders to let the head physically contact and collide with the body instead of passing through it.
+  - Added serialized properties `_headMass` (default `0f`), `_positionSpring`, `_positionDamping`, `_rotationSpring`, and `_rotationDamping` to `PhysicalHeadController.cs` to dynamically configure physical weight resistance and spring stiffness. Setting mass to 0f allows Unity to use the minimum positive mass value, bypassing movement drag and body self-collision issues.
+- **Torso Bone Rotation Control (Yaw decoupling)**:
+  - Added a serialized `_torsoBone` field to `PlayerLookComponent.cs` along with network synchronization variables (`_syncedTorsoYaw` SyncVar and `CmdSyncTorsoYaw` command).
+  - When a torso bone is assigned, yaw input rotates the torso bone (`_torsoBone.localRotation`) instead of rotating the whole player root transform.
+  - Added support for camera nesting: if the camera is a child of the torso bone, it automatically inherits the torso's yaw; otherwise, yaw is applied to the camera transform directly. Remote players smoothly interpolate this torso yaw.
+- **Vision Range Auto-Discovery Fallback**:
+  - Refactored `PlayerViewRange.cs` to automatically auto-discover the player's main camera on startup and assign it to `_viewReference` if it was left unassigned in the inspector, restoring the vision cone orientation dynamically.
 
+### Code Modified/Added
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Added neck configuration fields, cached initial transforms, added automatic fallback discovery, refactored ApplyJointTargetState to drive neck bones and joint targets using Atan2 projections and relative offsets, removed collision ignore logic, added serialized physics settings to override head mass/joint drives, and unlocked angular motion limits dynamically on Start).
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Added _torsoBone serialized field and network sync variables, exposed CurrentPitch and CurrentYaw properties, refactored HandleRotation and Update to apply yaw to the torso bone and camera nesting, and cached original torso rotation offset).
+- [MODIFY] [PlayerViewRange.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/PlayerViewRange.cs) (Implemented auto-discovery camera fallback for _viewReference on start local player).
 
+## [2026-07-15] - Torso Pivoting, Decoupled Movement & Clean Physics Setup
+### Technical Justification & Details
+- **Auto-Discovery of Torso Bone**:
+  - Implemented automatic child hierarchy search in `PlayerLookComponent.cs` on startup. If `_torsoBone` is left unassigned, it automatically scans for transforms matching names "torso", "chest", "spine", or the parent of "Neck_01", making the inspector setup plug-and-play.
+- **Torso-Relative Movement Direction**:
+  - Refactored `PlayerMovementComponent.cs` to calculate horizontal movement vectors relative to `PlayerLookComponent.CurrentYaw` rather than the player root's forward/right vectors.
+  - This allows the wheelchair-like wheels base to remain horizontally static while the player still moves forward/sideways in the direction their torso is looking.
+- **Coordinate Space Correction for Head Joint**:
+  - Fixed a critical coordinate space mismatch in `PhysicalHeadController.cs`. The ConfigurableJoint's target position and target rotation are relative to the connected body Rigidbody.
+  - Caches `_bodyRoot` (the joint's `connectedBody` Transform, or falls back to the player parent Rigidbody/root).
+  - Converts all desired world coordinates of the neck tip into `_bodyRoot` space rather than the neck parent space (`_originalParent`).
+  - This allows the head to pivot cleanly and follows the torso's yaw rotations without collapsing or collapsing downwards.
+- **Simplification of Procedural Neck Bending**:
+  - Simplified the procedural neck bone bending to distribute pitch (nodding) only.
+  - Removed local yaw bending since the torso already rotates on yaw, allowing the neck and head to stay perfectly aligned as a single solid horizontal unit when looking around.
+
+### Code Modified/Added
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Implemented automatic fallback detection of the torso bone in child hierarchy on startup).
+- [MODIFY] [PlayerMovementComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerMovementComponent.cs) (Modified movement vector calculations to align with look yaw instead of the root transform).
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Cached the connectedBody/player root as `_bodyRoot`, converted all joint target calculations to `_bodyRoot` space, and simplified progressive neck bending to only distribute look pitch).
+
+## [2026-07-15] - KISS Clean Setup & Reference Simplification
+### Technical Justification & Details
+- **Removed Auto-Discovery Fallback Guess-Work**:
+  - Removed torso bone auto-discovery from `PlayerLookComponent.cs`.
+  - Removed camera auto-discovery from `PlayerViewRange.cs`.
+  - Removed neck bone auto-discovery from `PhysicalHeadController.cs`.
+  - T- **Direct ConnectedBody Coordinate Space & Torso Joint Rigging**:
+  - Simplified `_bodyRoot` resolution in `PhysicalHeadController.cs`. It now uses `_joint.connectedBody.transform` directly if assigned in the editor, and falls back to `_originalParent` otherwise.
+  - This completely solves joint yaw snapping when looking past 180 degrees. Because the joint rotates w- **Unified Agnostic Physical Coordinates**:
+  - Removed all dynamic Rigidbody attachments, visual counter-rotation band-aids, and custom look conversions.
+  - Simplified `PlayerLookComponent.cs` to handle mouse inputs and rotate the `_torsoBone` transform. If a Rigidbody is attached to the torso bone in the Unity Editor (kinematic or physical), the script automatically uses `MoveRotation` in `FixedUpdate` to drive it smoothly, avoiding out-of-sync physics solver jitters.
+  - Refactored `PhysicalHeadController.cs` to be completely reference-space agnostic. It resolves the joint's target coordinates in the space of `_joint.connectedBody` directly, meaning it adapts automatically to whichever Rigidbody/bone the user assigns in the Editor.
+  - Removed joint motion limits overriding from the script, allowing the user to configure limits (`angularXMotion`, `angularYMotion`, etc.) directly in the Unity Inspector.
+
+### Code Modified/Added
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Cleaned torso yaw rotation to support standard transform or Rigidbody MoveRotation in FixedUpdate).
+- [MODIFY] [PlayerMovementComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerMovementComponent.cs) (Used Look Component yaw relative vectors for movement calculations).
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Simplified body root resolving to use connectedBody directly, relative target calculations, and removed hardcoded joint angular limit overrides).
+
+## 2026-07-15: Reconstruction V5 (Camera Alignment & Signed Bending offsets)
+
+### Fix / Feature
+- Rebuilt from scratch the look, head, movement direction, and eye tracking scripts to support exact world camera looking, lagged physics head tilting, locked horizontal yaw, signed neck recoil translations, and instant pupil tracking.
+
+### Rationale
+- Decoupled physical wiggling from camera look targeting by overriding the camera's world rotation in `LateUpdate` (100% precision), while allowing its position to follow the head Rigidbody.
+- Locked the head's horizontal yaw joint (`Angular Y Motion` = Locked) to prevent horizontal twisting/lag, while leaving Pitch and Roll wobbly.
+- Replaced the absolute recoil factor with signed recoil (`bonePitch * _neckBackwardFactors[i]`), ensuring correct recoil (backward in `-Z` when looking down, forward in `+Z` when looking up).
+- Replaced soft fallback validation checks with loud assertions (throwing explicit exceptions) to make setup issues obvious in the Unity Editor console.
+
+### Code Modified/Added
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (World camera rotation override, kinematic assertions).
+- [MODIFY] [PlayerMovementComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerMovementComponent.cs) (Torso-look relative movement forces).
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Signed neck translations, joint look targeting, kinematic torso check asserts).
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Added instant world pupil rotation and 70% slerped eye rotation).
+
+## [2026-07-15] - Reconstruction V5 (Step 0: Scrap Logic)
+
+### Feature / Refactoring
+- Emptied all logical method bodies in `PhysicalHeadController.cs` and `PlayerLookComponent.cs` as part of Step 0 of the implementation plan, while preserving all existing comments. Eye tracking scripts (`Eye.cs`) were left untouched.
+
+### Rationale
+- Allows rebuilding look, camera world alignment, physical neck bending, and physical head joint features step-by-step from clean files to ensure maximum stability and zero legacy interference.
+
+### Code Modified/Added
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Scrapped execution logic in method bodies).
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Scrapped execution logic in method bodies).
+
+## [2026-07-15] - Reconstruction V5 (Step 1: Torso Look & Relative Movement)
+
+### Feature Added
+- Reimplemented mouse look logic in `PlayerLookComponent.cs`.
+- Kinematic torso bone Rigidbody rotation via `MoveRotation` in `FixedUpdate` (Y-axis Yaw).
+- Camera world rotation forced to 100% look accuracy in `LateUpdate` (X-axis Pitch and Y-axis Yaw).
+- Strict runtime validations/asserts for torso bone assignment and Rigidbody kinematic setting on startup.
+
+### Rationale
+- Decouples torso rotation from movement root and prevents double camera sensitivity by enforcing absolute world rotation on camera.
+- Relies on kinematic Rigidbody `MoveRotation` for smooth physics-accurate updates rather than direct transform manipulation, preventing visual jitters.
+
+### Code Modified/Added
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Reimplemented Look methods, cursor locking, and kinematic Rigidbody updates).
+
+## [2026-07-15] - Reconstruction V5 (Step 2: Neck Bending & Signed Offset)
+
+### Feature Added
+- Reimplemented neck bending logic in `PhysicalHeadController.cs`.
+- Iterates over all cached neck bone transforms, rotating them on the vertical Pitch axis relative to their initial local orientation based on the camera's Pitch.
+- Applies a signed translation offset in the local Z axis for bones with a translation factor > 0 (recedes in -Z when looking down, advances in +Z when looking up).
+
+### Rationale
+- Creates a smooth visual curvature for the robot's neck that mirrors the vertical look direction.
+- Dynamic signed offsets prevent the head mesh from clipping/colliding with the main robot body when looking at extreme angles.
+
+### Code Modified/Added
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Reimplemented Start, FixedUpdate, and ApplyJointTargetState for neck bending and translation offsets).
+
+## [2026-07-16] - Reconstruction V5 (Step 1 Update: Decoupled Visuals & Root Player Rotation)
+
+### Feature Added
+- Reverted head joint and neck bending logic to Step 0 (empty method bodies in `PhysicalHeadController.cs`).
+- Refactored `PlayerLookComponent.cs` to rotate the entire player root Rigidbody horizontally (Yaw) in `FixedUpdate` instead of only rotating the Torso bone.
+- Added serialized `_wheelsChassisVisual` field in `PlayerLookComponent.cs` to handle counter-rotation of the wheels chassis.
+- In `LateUpdate`, if `_wheelsChassisVisual` is assigned, applies a local rotation of `-targetYaw` to keep the wheels visual stationary in world space.
+- Cleaned up and removed all unused `_torsoBone`, `_torsoRb`, and `_originalTorsoLocalRot` fields and checks from `PlayerLookComponent.cs`.
+
+### Rationale
+- Rotating the entire player root keeps all child joints and transforms aligned inside a single rotating reference frame, avoiding joint reference frame torsion issues.
+- Visual counter-rotation of the wheels visual chassis maintains the aesthetic decoupling of the wheels visual relative to the player's look direction, preserving the original design.
+- Cleaning up the torso fields keeps the inspector and code clean according to the KISS principle since the torso bone is no longer rotated independently.
+
+### Code Modified/Added
+- [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs) (Reverted method bodies to empty).
+- [MODIFY] [PlayerLookComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerLookComponent.cs) (Switched to player root Rigidbody rotation, added wheels chassis visual counter-rotation, and removed torso bone references/validations).
+
+## [2026-07-16] - Active Ragdoll Head Pitch & Neck Bending Control
+
+### Feature Added
+- **Active Ragdoll Pitch Control**: Replaced old procedural neck bone bending logic in `PhysicalHeadController.cs` with physical pitch-based active ragdoll joint targeting using Slerp drives.
+- **Organic Softbody Reactions**: Intermediate neck bones that are not actively driven (e.g. Neck base, Neck 1, Neck 3) now flex and bend organically in response to the physical motion of the driven bones (Neck 2 and Head).
+- **Automatic Physics Configuration**: Dynamically configures all ConfigurableJoint and Rigidbody parameters under an optional neck root transform at Start (stiffening drives, enabling projection, setting solver iterations and high angular drag to prevent jitter/stretch).
+- **Collision Separation**: Programmatically configures all neck and head colliders to ignore collisions with the rest of the player's body to avoid physics glitches.
+
+### Code Modified/Added
+
+#### [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs)
+- **Class `PhysicalHeadController`**: Completely rewritten. Features a configurable `_controlledJoints` list mapping bones to pitch multipliers, dynamic active ragdoll setup, collision ignoring, and mathematically precise joint-space target rotation updates in `FixedUpdate`.
+
+### Technical Justification & Details
+- **Joint Space Target Rotation Offset**: Standard Unity ConfigurableJoint `targetRotation` operates in joint-space. Transformed the desired pitch rotation offset relative to the starting local rotation into the joint's local axes to guarantee exact alignment.
+- **KISS Philosophy**: Completely removed procedural translation curves and camera-lag ratios, relying instead on pure PhysX joint dynamics.
+- **Explicit Visibility & Standard compliance**: Followed Allman styling, explicit visibilities, and private `_camelCase` member naming.
 
 

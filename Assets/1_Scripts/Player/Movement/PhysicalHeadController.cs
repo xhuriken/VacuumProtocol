@@ -1,140 +1,226 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VacuumProtocol.Player
 {
     /// <summary>
-    /// Description: Controls the physical head using a ConfigurableJoint to simulate a vertical spring-crouch and a "boing boing" wiggle.
-    /// Context: Attached to the player's head mesh, separate from the camera.
-    /// Justification: Gives the player character's head physical weight and momentum when moving or crouching, rather than snapping rigidly to the camera rotation.
+    /// Description: Controls the active ragdoll physical head and neck joints based on look pitch.
+    /// Context: Attached to the player prefab.
+    /// Justification: Implements physics-based head tilting (pitch) using ConfigurableJoint target rotations, allowing intermediate bones to bend organically via spring dynamics.
     /// </summary>
-    [RequireComponent(typeof(ConfigurableJoint))]
     public class PhysicalHeadController : MonoBehaviour
     {
-        [Header("Follow Settings")]
-        [Tooltip("Role: The camera transform to track.\nUse Case: Look target.\nJustification: The head needs to physically spring towards the direction the player is aiming the camera.")]
-        [SerializeField] private Transform _cameraTransform;
+        [Header("References")]
+        [Tooltip("The look component to read the current pitch from.")]
+        [SerializeField] private PlayerLookComponent _lookComponent;
 
-        [Tooltip("Role: Ratio of camera look rotation that the head should follow.\nUse Case: Turning stiffness.\nJustification: A ratio < 1 means the head doesn't snap instantly, creating a slight lag/drag effect.")]
-        [SerializeField] private float _followRatio = 0.7f;
+        [Header("Bones and Joints Settings")]
+        [Tooltip("The root transform of the neck/head bone hierarchy. Used to auto-configure physics for all neck joints.")]
+        [SerializeField] private Transform _neckRootTransform;
 
-        [Header("Arc Settings")]
-        [Tooltip("Role: Radius of the virtual circle arc representing the neck bend.\nUse Case: Looking up/down.\nJustification: Simulates the cervical vertebrae arc so the head doesn't just rotate in place, but physically shifts forward/backward.")]
-        [SerializeField] private float _arcRadius = 0.2f;
+        [Tooltip("The list of joints that should actively rotate with the pitch input.")]
+        [SerializeField] private List<JointRotationSetting> _controlledJoints = new List<JointRotationSetting>();
 
-        [Tooltip("Role: Downward sag multiplier when the head bends in pitch.\nUse Case: Looking down.\nJustification: Adds extra weight simulation so the head drops slightly when looking down.")]
-        [SerializeField] private float _sagFactor = 0.05f;
+        [Header("Physics Configuration")]
+        [Tooltip("Force applied by the joint's slerp drive to return to target rotation.")]
+        [SerializeField] private float _jointSpringForce = 1500f;
 
-        private ConfigurableJoint _joint;
-        private Transform _originalParent;
-        private float _crouchYOffset = 0f;
+        [Tooltip("Damping applied to the joint's slerp drive to prevent oscillation.")]
+        [SerializeField] private float _jointDamping = 100f;
+
+        [Tooltip("Angular drag applied to the Rigidbody of neck and head bones to control wobbliness.")]
+        [SerializeField] private float _neckAngularDrag = 15f;
+
+        [Tooltip("If true, automatically configures all child ConfigurableJoints and Rigidbodies at Start.")]
+        [SerializeField] private bool _autoConfigurePhysics = true;
+
+        [Tooltip("Enable diagnostic logs.")]
+        [SerializeField] private bool _enableDebugLogs = false;
 
         /// <summary>
-        /// Description: Gets the current crouch vertical offset of the head.
-        /// Context: Read by UI or debug systems to track current crouch state.
-        /// Justification: Exposed for external scripts to know the physical offset state without calculating it.
+        /// Description: Structure to define how much pitch rotation is applied to a specific joint.
         /// </summary>
-        public float CrouchYOffset
+        [System.Serializable]
+        public class JointRotationSetting
         {
-            get
+            [Tooltip("The configurable joint of the bone.")]
+            public ConfigurableJoint Joint;
+
+            [Tooltip("Multiplier for the pitch angle applied to this bone. Positive values rotate forward on local X.")]
+            [Range(-2f, 2f)]
+            public float PitchMultiplier = 0.5f;
+
+            /// <summary>
+            /// Cached starting local rotation of the bone relative to its parent.
+            /// </summary>
+            [HideInInspector] public Quaternion StartLocalRotation;
+        }
+
+        /// <summary>
+        /// Description: Start callback. Resolves components, caches initial orientations, and configures active ragdoll physics.
+        /// </summary>
+        private void Start()
+        {
+            if (_lookComponent == null)
             {
-                return _crouchYOffset;
+                _lookComponent = GetComponentInParent<PlayerLookComponent>();
+            }
+
+            if (_lookComponent == null)
+            {
+                Debug.LogError("[PhysicalHeadController] PlayerLookComponent is not assigned and could not be found in parent!");
+                return;
+            }
+
+            // Cache start local rotations of controlled joints
+            foreach (var setting in _controlledJoints)
+            {
+                if (setting.Joint != null)
+                {
+                    setting.StartLocalRotation = setting.Joint.transform.localRotation;
+                }
+            }
+
+            if (_autoConfigurePhysics)
+            {
+                ConfigurePhysicsSettings();
+            }
+
+            IgnorePlayerCollisions();
+        }
+
+        /// <summary>
+        /// Description: FixedUpdate callback. Drives the controlled joints using the player's look pitch.
+        /// </summary>
+        private void FixedUpdate()
+        {
+            if (_lookComponent == null) return;
+
+            float pitch = _lookComponent.CurrentPitch;
+
+            foreach (var setting in _controlledJoints)
+            {
+                if (setting.Joint == null) continue;
+
+                // Calculate the target rotation offset based on look pitch
+                float targetAngle = pitch * setting.PitchMultiplier;
+                Quaternion targetOffset = Quaternion.Euler(targetAngle, 0f, 0f);
+                
+                // Desired local rotation of the bone relative to its parent
+                Quaternion targetLocalRotation = setting.StartLocalRotation * targetOffset;
+
+                // Apply target rotation to the ConfigurableJoint
+                SetJointTargetRotation(setting.Joint, setting.StartLocalRotation, targetLocalRotation);
             }
         }
 
         /// <summary>
-        /// Description: Unparents the head from the body and sets up collision rules.
-        /// Context: Start lifecycle event.
-        /// Justification: The head must be detached from the body hierarchy at runtime so that its ConfigurableJoint can act freely in world space without inheriting parent transforms recursively.
+        /// Description: Sets the target rotation of a ConfigurableJoint relative to its starting local rotation.
         /// </summary>
-        private void Start()
+        /// <param name="joint">The joint component to modify.</param>
+        /// <param name="startLocalRotation">The starting local rotation of the joint's transform.</param>
+        /// <param name="targetLocalRotation">The target local rotation we want the transform to reach.</param>
+        private void SetJointTargetRotation(ConfigurableJoint joint, Quaternion startLocalRotation, Quaternion targetLocalRotation)
         {
-            // Cache the configurable joint component.
-            _joint = GetComponent<ConfigurableJoint>();
+            // The relative rotation from the initial rotation to the target rotation
+            Quaternion relativeRotation = Quaternion.Inverse(startLocalRotation) * targetLocalRotation;
+            
+            // Joint space axes relative to the local transform
+            Vector3 jointRight = joint.axis;
+            Vector3 jointUp = joint.secondaryAxis;
+            Vector3 jointForward = Vector3.Cross(jointRight, jointUp).normalized;
+            jointUp = Vector3.Cross(jointForward, jointRight).normalized;
+            
+            Quaternion localToJointSpace = Quaternion.LookRotation(jointForward, jointUp);
+            
+            // Transform relative rotation into joint space and invert it
+            Quaternion targetRotationInJointSpace = Quaternion.Inverse(localToJointSpace) * relativeRotation * localToJointSpace;
+            joint.targetRotation = Quaternion.Inverse(targetRotationInJointSpace);
+        }
 
-            // Detach from parent at runtime to avoid transform propagation conflicts.
-            _originalParent = transform.parent;
+        /// <summary>
+        /// Description: Auto-configures joint drives, projection settings, and Rigidbody parameters for stability.
+        /// </summary>
+        private void ConfigurePhysicsSettings()
+        {
+            Transform searchRoot = _neckRootTransform != null ? _neckRootTransform : transform;
 
-            // Dynamically ignore collisions between the head and player body/arms colliders.
-            Collider headCollider = GetComponent<Collider>();
-            if (headCollider != null && _originalParent != null)
+            ConfigurableJoint[] joints = searchRoot.GetComponentsInChildren<ConfigurableJoint>(true);
+            Rigidbody[] rigidbodies = searchRoot.GetComponentsInChildren<Rigidbody>(true);
+
+            JointDrive drive = new JointDrive
             {
-                Collider[] bodyColliders = _originalParent.GetComponentsInChildren<Collider>();
-                foreach (Collider bodyCollider in bodyColliders)
+                positionSpring = _jointSpringForce,
+                positionDamper = _jointDamping,
+                maximumForce = float.MaxValue
+            };
+
+            foreach (ConfigurableJoint joint in joints)
+            {
+                if (joint == null) continue;
+
+                // Use Slerp drive for smooth 3D active ragdoll rotation
+                joint.rotationDriveMode = RotationDriveMode.Slerp;
+                joint.slerpDrive = drive;
+                joint.angularXDrive = drive;
+                joint.angularYZDrive = drive;
+
+                // Enable projection to prevent bone separation under force
+                joint.projectionMode = JointProjectionMode.PositionAndRotation;
+                joint.projectionDistance = 0.01f;
+                joint.projectionAngle = 0.1f;
+            }
+
+            foreach (Rigidbody rb in rigidbodies)
+            {
+                if (rb == null) continue;
+
+                // Apply high angular drag to stabilize spring movements and damp oscillations
+                rb.angularDamping = _neckAngularDrag;
+
+                // Increase solver iterations for physics stability
+                rb.solverIterations = 25;
+                rb.solverVelocityIterations = 15;
+            }
+
+            if (_enableDebugLogs)
+            {
+                Debug.Log($"[PhysicalHeadController] Configured physics for {joints.Length} joints and {rigidbodies.Length} rigidbodies under {searchRoot.name}.");
+            }
+        }
+
+        /// <summary>
+        /// Description: Dynamically ignores collisions between all neck/head colliders and other player colliders.
+        /// </summary>
+        private void IgnorePlayerCollisions()
+        {
+            Transform root = transform.root;
+            Collider[] playerColliders = root.GetComponentsInChildren<Collider>(true);
+            
+            Transform neckRoot = _neckRootTransform != null ? _neckRootTransform : transform;
+            Collider[] neckColliders = neckRoot.GetComponentsInChildren<Collider>(true);
+
+            int ignoredCount = 0;
+            foreach (Collider neckColl in neckColliders)
+            {
+                if (neckColl == null) continue;
+                foreach (Collider otherColl in playerColliders)
                 {
-                    if (bodyCollider != headCollider)
+                    if (otherColl == null || otherColl == neckColl) continue;
+                    
+                    // If the other collider is NOT part of the neck hierarchy, ignore collisions
+                    if (!otherColl.transform.IsChildOf(neckRoot))
                     {
-                        Physics.IgnoreCollision(headCollider, bodyCollider, true);
+                        Physics.IgnoreCollision(neckColl, otherColl, true);
+                        ignoredCount++;
                     }
                 }
             }
 
-            transform.SetParent(null);
-        }
-
-        /// <summary>
-        /// Description: Updates the target crouch vertical offset.
-        /// Context: Called by PlayerMovementComponent when the crouch button is held.
-        /// Justification: Applies a downward target offset to the joint, which will cause the physics spring to bounce the head downwards.
-        /// </summary>
-        /// <param name="crouchOffset">The offset along the Y axis.</param>
-        public void SetCrouchOffset(float crouchOffset)
-        {
-            _crouchYOffset = crouchOffset;
-        }
-
-        /// <summary>
-        /// Description: Continuously updates the joint's target position and rotation to follow the camera.
-        /// Context: FixedUpdate physics event.
-        /// Justification: Must be done in FixedUpdate because we are modifying a physics joint's target state.
-        /// </summary>
-        private void FixedUpdate()
-        {
-            // If the original parent (player body) was destroyed, destroy this detached head.
-            if (_originalParent == null)
+            if (_enableDebugLogs)
             {
-                Destroy(gameObject);
-                return;
+                Debug.Log($"[PhysicalHeadController] Ignored {ignoredCount} collision pairs between neck bones and player body.");
             }
-
-            if (_cameraTransform == null)
-            {
-                return;
-            }
-
-            ApplyJointTargetState();
-        }
-
-        /// <summary>
-        /// Description: Calculates and applies the target rotation and target position to the joint.
-        /// Context: Called every FixedUpdate.
-        /// Justification: Uses trigonometry to calculate the correct translation offset along the Z and Y axes based on the pitch angle, simulating a realistic neck.
-        /// </summary>
-        private void ApplyJointTargetState()
-        {
-            // Obtain relative rotation from camera compared to joint parent.
-            Quaternion relativeCamRot = Quaternion.Inverse(_originalParent.rotation) * _cameraTransform.rotation;
-            Vector3 camAngles = relativeCamRot.eulerAngles;
-
-            // Clamp angles between -180 and 180 degrees.
-            float pitch = Mathf.DeltaAngle(0f, camAngles.x) * _followRatio;
-            float yaw = Mathf.DeltaAngle(0f, camAngles.y) * _followRatio;
-            float roll = 0f; // Let the physical Slerp drive handle roll oscillations.
-
-            // ConfigurableJoint targetRotation is defined as the INVERSE of the desired local rotation.
-            Quaternion targetRot = Quaternion.Euler(pitch, yaw, roll);
-            _joint.targetRotation = Quaternion.Inverse(targetRot);
-
-            // Compute arc of circle translation offset.
-            float pitchRad = pitch * Mathf.Deg2Rad;
-            float arcZ = _arcRadius * Mathf.Sin(pitchRad);
-            
-            // Y sag should always pull downward (positive magnitude), whether looking up or down.
-            float arcY = _arcRadius * (1f - Mathf.Cos(pitchRad)) + _sagFactor * Mathf.Abs(Mathf.Sin(pitchRad));
-
-            // ConfigurableJoint targetPosition is defined as the INVERSE of the desired local offset:
-            // - To move the head down (negative Y), we set a positive target Y.
-            // - To move the head forward (positive Z), we set a negative target Z.
-            _joint.targetPosition = new Vector3(0f, _crouchYOffset + arcY, -arcZ);
         }
     }
 }

@@ -1,98 +1,114 @@
 using Mirror;
 using UnityEngine;
 
-/// <summary>
-/// Description: Controls eye orientation using Quaternions to avoid Euler-related axis issues.
-/// Context: Attached to the physical eye bone in the player's head.
-/// Justification: Gives the player a sense of life and focus by physically pointing their eye at the highest priority entity in view.
-/// </summary>
-public class Eye : NetworkBehaviour
+namespace VacuumProtocol.Player.Visuals
 {
-    [Header("References")]
-    [SerializeField, Tooltip("Role: Reference to the script detecting targets.\nUse Case: Target acquisition.\nJustification: Decouples the physical rotation logic from the detection logic.")]
-    private PlayerViewRange _playerViewRange;
-
-    [Header("Settings")]
-    [SerializeField, Tooltip("Role: How fast the eye follows the target.\nUse Case: Slerp speed.\nJustification: Simulates biological saccadic movement constraints.")]
-    private float _rotationSpeed = 8f;
-
-    [Tooltip("Role: Enable eye debug logs.\nUse Case: Target tracking debug.\nJustification: Verifies if the eye logic is properly receiving the target from ViewRange.")]
-    [SerializeField] private bool _showDebugLogs = true;
-
-    private Quaternion _initialLocalRotation;
-    private Quaternion _targetLocalRotation;
-
     /// <summary>
-    /// Description: Start callback. Caches initial orientation.
-    /// Context: Lifecycle event.
-    /// Justification: Storing the initial rotation as our "looking forward" reference makes the script bone-orientation agnostic.
+    /// Description: Controls eye orientation and pupil tracking using Quaternions to avoid Euler-related axis issues.
+    /// Context: Attached to the physical eye bone in the player's head.
+    /// Justification: Gives the player a sense of life by pointing their eye (70% speed) and pupil (100% speed) at the targets.
     /// </summary>
-    private void Start()
+    public class Eye : NetworkBehaviour
     {
-        // Store the initial rotation as our "looking forward" reference.
-        // This makes the script bone-orientation agnostic.
-        _initialLocalRotation = transform.localRotation;
-        _targetLocalRotation = _initialLocalRotation;
-    }
+        [Header("References")]
+        [SerializeField, Tooltip("Role: Reference to the script detecting targets.\nUse Case: Target acquisition.")]
+        private PlayerViewRange _playerViewRange;
 
-    /// <summary>
-    /// Description: Update callback. Triggers rotation math.
-    /// Context: Update lifecycle event.
-    /// Justification: Only the local player calculates their own eye movement for responsiveness and to save network bandwidth.
-    /// </summary>
-    private void Update()
-    {
-        // Only the local player calculates their own eye movement for responsiveness.
-        if (!isLocalPlayer) return;
+        [SerializeField, Tooltip("Role: Pupil bone transform inside the eye.\nUse Case: Instant 100% tracking.")]
+        private Transform _pupilBone;
 
-        CalculateTargetRotation();
-        ApplyRotation();
-    }
+        [Header("Settings")]
+        [SerializeField, Tooltip("Role: How fast the eye bone follows the target.\nUse Case: Slerp speed.\nJustification: Simulates biological saccadic movement constraints.")]
+        private float _rotationSpeed = 8f;
 
-    /// <summary>
-    /// Description: Determines the rotation needed to look at the highest priority target.
-    /// Context: Called during Update.
-    /// Justification: Calculates a target quaternion in local space based on the original offset, preventing gimbal lock and weird twisting.
-    /// </summary>
-    private void CalculateTargetRotation()
-    {
-        if (_playerViewRange != null && _playerViewRange.HighestPriorityEntity != null)
+        [Tooltip("Role: Enable eye debug logs.\nUse Case: Target tracking debug.")]
+        [SerializeField] private bool _enableDebugLogs = true;
+
+        private Quaternion _initialLocalRotation;
+        private Quaternion _targetLocalRotation;
+
+        private Quaternion _pupilInitialLocalRot;
+        private Quaternion _pupilInitialWorldRotOffset;
+
+        /// <summary>
+        /// Description: Start callback. Caches initial orientations and asserts references.
+        /// </summary>
+        private void Start()
         {
-            Transform targetPoint = _playerViewRange.HighestPriorityEntity.LookAtPoint;
-            Vector3 directionToTarget = targetPoint.position - transform.position;
-
-            if (directionToTarget.sqrMagnitude > 0.001f)
+            if (_playerViewRange == null)
             {
-                // 1. Calculate the world rotation that faces the target.
-                Quaternion worldLookRot = Quaternion.LookRotation(directionToTarget.normalized, Vector3.up);
+                throw new System.NullReferenceException($"[Eye] Missing required PlayerViewRange component on {name}!");
+            }
 
-                // 2. Convert to local rotation and apply the initial offset.
-                // This ensures that whatever direction the bone was facing at Start is 
-                // what now faces the target.
-                _targetLocalRotation = Quaternion.Inverse(transform.parent.rotation) * worldLookRot * _initialLocalRotation;
-                
-                if (_showDebugLogs) Debug.Log($"<color=magenta>[Eye] Looking at:</color> {targetPoint.name}, TargetLocalRot: {_targetLocalRotation.eulerAngles}");
+            if (_pupilBone == null)
+            {
+                throw new System.NullReferenceException($"[Eye] Pupil bone transform (_pupilBone) is NOT assigned in the Inspector on {name}!");
+            }
+
+            _initialLocalRotation = transform.localRotation;
+            _targetLocalRotation = _initialLocalRotation;
+
+            _pupilInitialLocalRot = _pupilBone.localRotation;
+            
+            // Cache the initial pupil offset relative to the eye transform
+            _pupilInitialWorldRotOffset = Quaternion.Inverse(transform.rotation) * _pupilBone.rotation;
+        }
+
+        /// <summary>
+        /// Description: Update callback. Updates eye and pupil tracking.
+        /// </summary>
+        private void Update()
+        {
+            if (!isLocalPlayer) return;
+
+            CalculateTargetRotation();
+            ApplyRotation();
+        }
+
+        /// <summary>
+        /// Description: Determines the target rotation for the eye (70% follow) and applies 100% rotation to the pupil.
+        /// </summary>
+        private void CalculateTargetRotation()
+        {
+            if (_playerViewRange.HighestPriorityEntity != null)
+            {
+                Transform targetPoint = _playerViewRange.HighestPriorityEntity.LookAtPoint;
+                Vector3 directionToTarget = targetPoint.position - transform.position;
+
+                if (directionToTarget.sqrMagnitude > 0.001f)
+                {
+                    Quaternion worldLookRot = Quaternion.LookRotation(directionToTarget.normalized, Vector3.up);
+
+                    // Eye bone target local rotation (slerped later)
+                    _targetLocalRotation = Quaternion.Inverse(transform.parent.rotation) * worldLookRot * _initialLocalRotation;
+
+                    // Pupil bone gets 100% instant world rotation matching the target
+                    _pupilBone.rotation = worldLookRot * _pupilInitialWorldRotOffset;
+
+                    if (_enableDebugLogs)
+                    {
+                        Debug.Log($"[Eye] {name} tracking target: {targetPoint.name}");
+                    }
+                }
+            }
+            else
+            {
+                // Reset both to forward-facing orientations if target is lost
+                _targetLocalRotation = _initialLocalRotation;
+                _pupilBone.localRotation = _pupilInitialLocalRot;
             }
         }
-        else
-        {
-            if (_showDebugLogs && _targetLocalRotation != _initialLocalRotation) Debug.Log("<color=magenta>[Eye] Resetting to forward.</color>");
-            // Reset to the original forward-facing position.
-            _targetLocalRotation = _initialLocalRotation;
-        }
-    }
 
-    /// <summary>
-    /// Description: Smoothly rotates the eye towards the target rotation.
-    /// Context: Called during Update.
-    /// Justification: Uses Slerp to create an organic, non-linear tracking motion.
-    /// </summary>
-    private void ApplyRotation()
-    {
-        transform.localRotation = Quaternion.Slerp(
-            transform.localRotation,
-            _targetLocalRotation,
-            Time.deltaTime * _rotationSpeed
-        );
+        /// <summary>
+        /// Description: Smoothly slerps the eye bone local rotation.
+        /// </summary>
+        private void ApplyRotation()
+        {
+            transform.localRotation = Quaternion.Slerp(
+                transform.localRotation,
+                _targetLocalRotation,
+                Time.deltaTime * _rotationSpeed
+            );
+        }
     }
 }

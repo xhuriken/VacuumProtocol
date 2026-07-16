@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using VacuumProtocol.Player;
 
     /// <summary>
     /// Description: Handles horizontal Rigidbody-based movement and sprinting.
@@ -76,7 +77,17 @@ using UnityEngine;
             bool isGrounded = Mathf.Abs(_rb.linearVelocity.y) < 0.05f;
             
             Vector2 moveInput = _input.MoveInput;
-            Vector3 moveDirection = transform.right * moveInput.x + transform.forward * moveInput.y;
+            
+            PlayerLookComponent look = GetComponent<PlayerLookComponent>();
+            if (look == null)
+            {
+                throw new System.NullReferenceException("[PlayerMovementComponent] Missing required PlayerLookComponent on the player root!");
+            }
+
+            float yaw = look.CurrentYaw;
+            Vector3 lookForward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            Vector3 lookRight = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            Vector3 moveDirection = lookRight * moveInput.x + lookForward * moveInput.y;
 
             float currentMaxSpeed = _input.IsSprinting ? _maxSpeed * _sprintMultiplier : _maxSpeed;
 

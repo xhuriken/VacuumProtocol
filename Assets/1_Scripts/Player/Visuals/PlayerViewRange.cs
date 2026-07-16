@@ -59,11 +59,6 @@ public class PlayerViewRange : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// Description: Re-enables logic for the local player.
-    /// Context: Mirror NetworkBehaviour callback.
-    /// Justification: Start might run before network authority is established, so we double-check here.
-    /// </summary>
     public override void OnStartLocalPlayer()
     {
         enabled = true;

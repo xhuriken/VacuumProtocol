@@ -608,3 +608,60 @@
 - [x] Implement distance-based force/torque fade-out in retracted state to eliminate hand vibration and wrist curving.
 - [x] Update DEVELOPMENT_LOG.md and todo.md to mark tasks as completed.
 
+## Current Feature: Progressive Neck Curvature & Collision Physics
+- [x] Refactor `PhysicalHeadController.cs` to add neck bone references, rotation weights, and backward translation factors.
+- [x] Remove head-to-body collision ignoring block.
+- [x] Implement start-time caching of neck bone positions/rotations and head parent details.
+- [x] Implement automatic neck bone traversal fallback for robust inspector setups.
+- [x] Update `ApplyJointTargetState()` to progressively rotate and translate neck bones, and anchor the head joint to the neck tip.
+- [x] Refactor `PlayerLookComponent.cs` to apply yaw to the torso bone instead of player root body, with SyncVars.
+- [x] Replace Euler angle relative calculations in `PhysicalHeadController.cs` with robust Atan2 direction vector projections.
+- [x] Fix ConfigurableJoint targetPosition calculation to use offset relative to startup pose instead of absolute height.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: Centralized Look Architecture & Joint Rotation Fix
+- [x] Expose `CurrentPitch` and `CurrentYaw` properties on `PlayerLookComponent.cs` as the single source of truth.
+- [x] Stiffen and unlock head rotation limits/drives in `PhysicalHeadController.cs` (Slerp mode and Free angular motion).
+- [x] Refactor `PhysicalHeadController.cs` to consume look state directly from `PlayerLookComponent`.
+- [x] Implement auto-discovery fallback for `_viewReference` in `PlayerViewRange.cs` on startup.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: Torso Pivoting, Decoupled Movement & Clean Physics Setup
+- [x] Implement auto-discovery fallback for `_torsoBone` in `PlayerLookComponent.cs`.
+- [x] Refactor `PlayerMovementComponent.cs` to move relative to torso look direction rather than root transform.
+- [x] Refactor `PhysicalHeadController.cs` to use parent Rigidbody `_bodyRoot` coordinate space and simplify progressive neck bending to pitch only.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: KISS Clean Setup & Reference Simplification
+- [x] Simplify `PlayerLookComponent.cs` by removing torso bone auto-discovery fallback.
+- [x] Simplify `PlayerViewRange.cs` by removing camera auto-discovery fallback.
+- [x] Simplify `PhysicalHeadController.cs` by removing neck bone auto-discovery and using direct joint connectedBody mapping.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: Decoupled Visuals & Counter-Rotating Wheels Chassis
+- [x] Revert PlayerLookComponent and PlayerMovementComponent to standard root rotation/movement.
+- [x] Implement wheels chassis visual counter-rotation (`_wheelsChassisVisual`) in PlayerLookComponent.
+- [x] Clean up PhysicalHeadController joint reference coordinate spaces using player root Rigidbody directly.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: Diagnostic Logs & Nested Rigidbody Checking
+- [x] Restore correct PlayerLookComponent layout.
+- [x] Implement dynamic nested Rigidbody checks and warnings on Start in PlayerLookComponent.cs and PhysicalHeadController.cs.
+- [x] Expose `_enableDebugLogs` in PhysicalHeadController.cs to dump joint calculations.
+- [x] Verify project compilation.
+- [x] Update DEVELOPMENT_LOG.md and todo.md.
+
+## Current Feature: Active Ragdoll Head Pitch & Neck Bending
+- [x] Clear existing code from `PhysicalHeadController.cs` (Etape 0).
+- [x] Implement player root rotation (Yaw), 100% camera world alignment, and counter-rotating wheels chassis (Etape 1) in `PlayerLookComponent.cs`.
+- [x] Implement active ragdoll Slerp drive physics-based pitch control in `PhysicalHeadController.cs`.
+- [x] Implement local X-axis pitch joint offset math mapping look pitch to target joint orientations.
+- [x] Add runtime automatic physics parameters configuration (spring, damping, angular drag, projection) for all neck/head bones under a root transform.
+- [x] Implement dynamic collision ignoring between neck/head bones and other player body colliders.
+- [x] Verify project compilation and write logs.
+
