@@ -540,6 +540,9 @@ MonoBehaviour:
   _onValueChanged:
     m_PersistentCalls:
       m_Calls: []
+  _onPointerUp:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &7307835088203995127
 MonoBehaviour:
   m_ObjectHideFlags: 0

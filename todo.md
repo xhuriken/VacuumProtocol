@@ -665,3 +665,37 @@
 - [x] Implement dynamic collision ignoring between neck/head bones and other player body colliders.
 - [x] Verify project compilation and write logs.
 
+## Current Feature: Centralized Player Collision Manager (SSOT)
+- [x] Create centralized `PlayerCollisionManager.cs` to manage all player physics collision rules.
+- [x] Implement selective torso and arm collision ignoring (Torso Collider A ignores arms, Torso Collider B collides with arms).
+- [x] Implement torso and wheel collision ignoring for custom torso colliders.
+- [x] Remove local hardcoded `IgnorePlayerCollisions()` from `PlayerArmsController.cs`.
+- [x] Remove local hardcoded `IgnorePlayerCollisions()` from `PhysicalHeadController.cs`.
+- [x] Verify project compilation and write logs.
+
+## Current Feature: Lobby Texture Editor (Tomodachi Style)
+- [x] Plan and design Lobby Texture Editor architecture.
+- [x] Implement core `TexturePainter.cs` supporting dynamic texture dimensions (pixels line interpolation, hard/soft brushes, spray, flood fill, eraser).
+- [x] Implement memory-efficient `TextureUndoSystem.cs` (Color32 snapshot history).
+- [x] Integrate cursor SSOT by extending `CustomCursorFollower.cs` / `MouseManager.cs` for canvas brush cursor mode.
+- [x] Create `TexturePainterUI.cs` presenter (canvas input listener & UV coordinate mapping).
+- [x] Create `TextureEditorPanelUI.cs` panel with custom `ColorButtonUI`, `UICustomSlider`, and tool toggles.
+- [x] Support 1x1 micro pencil mode (Radius 0) at minimum slider range.
+- [x] Calculate exact sub-pixel screen radius `uiRadius = (brush.Radius + 0.5f) * uiPixelSize` to match painted pixels 100% perfectly across any RawImage scale.
+- [x] Decouple `UIColorsPalettes.cs` with generic `OnColorSelected` UnityEvents for clean reusability across Lobby and Texture Editor.
+- [x] Implement active tool button toggling (`Interactable = false` on selected tool).
+- [x] Implement dynamic drawing stroke resume on pointer drag re-entry into the canvas.
+- [x] Fix stuck hover animations on custom buttons when disabled/re-enabled by tracking physical hover state via `RectTransformUtility.RectangleContainsScreenPoint`.
+- [x] Resolve grey button text stuck issue by preventing DOTween `DOKill()` on Graphic color transitions during hover exit.
+- [x] Add dynamic Brush Opacity settings property and map it to UI `_brushOpacitySlider`.
+- [x] Implement non-accumulating stroke blending mask using Color32 start snapshots and float alpha coverage buffers to prevent paint build-up at slow drag speeds.
+- [x] Add Airbrush Spray Density Slider `_brushDensitySlider` and show/hide it dynamically based on active tool selection.
+- [x] Implement brush-specific slider value loading and saving on pointer release (`onPointerUp` event added to `UICustomSlider.cs`).
+- [x] Fix collapsed slider track background layout timing bug by forcing canvas update and sizeDelta fallback inside `UpdateVisuals()`.
+- [x] Implement opacity blending support on Flood Fill (bucket tool).
+- [x] Update `SetTool()` to dynamically hide Size/Opacity sliders for Eyedropper (pipette) and hide Size slider for FloodFill.
+- [x] Verify compilation, test UI interactions, and update DEVELOPMENT_LOG.md.
+
+
+
+

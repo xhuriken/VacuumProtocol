@@ -73,6 +73,9 @@ public class UICustomSlider : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     [Tooltip("Role: Event dispatched when the slider value changes.\nUse Case: Observer pattern notification.\nJustification: Exposes the value changes to presenters and controllers.")]
     [SerializeField] private SliderEvent _onValueChanged = new SliderEvent();
 
+    [Tooltip("Role: Event dispatched when the slider is released.\nUse Case: Save triggers.\nJustification: Allows saving values on pointer release.")]
+    [SerializeField] private UnityEvent _onPointerUp = new UnityEvent();
+
     private float _originalTrackThickness;
     private Color _originalTrackColor;
     private Color _originalFillColor;
@@ -89,6 +92,17 @@ public class UICustomSlider : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         get => _onValueChanged;
         set => _onValueChanged = value;
+    }
+
+    /// <summary>
+    /// Description: Public event mapping to pointer release callbacks.
+    /// Context: External event registration.
+    /// Justification: Used to trigger data persistence after slider manipulation.
+    /// </summary>
+    public UnityEvent onPointerUp
+    {
+        get => _onPointerUp;
+        set => _onPointerUp = value;
     }
 
     /// <summary>
@@ -229,6 +243,7 @@ public class UICustomSlider : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         {
             DOTween.To(() => _handle.Color, x => _handle.Color = x, _originalHandleColor, 0.1f);
         }
+        _onPointerUp.Invoke();
     }
 
     /// <summary>
@@ -321,8 +336,24 @@ public class UICustomSlider : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
         RectTransform rectTransform = GetComponent<RectTransform>();
         float width = rectTransform != null ? rectTransform.rect.width : 100f;
+
+        // Sync layout pass: if layout hasn't run on start, force update or read sizeDelta to prevent track collapsing to zero
+        if (width <= 0f && rectTransform != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            width = rectTransform.rect.width;
+            if (width <= 0f)
+            {
+                width = Mathf.Max(100f, rectTransform.sizeDelta.x);
+            }
+        }
+
         float minX = rectTransform != null ? rectTransform.rect.xMin : -width / 2f;
-        float maxX = rectTransform != null ? rectTransform.rect.xMax : width / 2f;
+        if (rectTransform != null && rectTransform.rect.width <= 0f)
+        {
+            minX = -width * rectTransform.pivot.x;
+        }
+        float maxX = minX + width;
 
         // 1. Update track points if present
         if (_track != null)

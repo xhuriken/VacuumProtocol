@@ -80,13 +80,12 @@ namespace VacuumProtocol.Player
                     setting.StartLocalRotation = setting.Joint.transform.localRotation;
                 }
             }
-
             if (_autoConfigurePhysics)
             {
                 ConfigurePhysicsSettings();
             }
 
-            IgnorePlayerCollisions();
+            // Centralized collision ignoring is now handled by PlayerCollisionManager on the player root
         }
 
         /// <summary>
@@ -189,38 +188,6 @@ namespace VacuumProtocol.Player
             }
         }
 
-        /// <summary>
-        /// Description: Dynamically ignores collisions between all neck/head colliders and other player colliders.
-        /// </summary>
-        private void IgnorePlayerCollisions()
-        {
-            Transform root = transform.root;
-            Collider[] playerColliders = root.GetComponentsInChildren<Collider>(true);
-            
-            Transform neckRoot = _neckRootTransform != null ? _neckRootTransform : transform;
-            Collider[] neckColliders = neckRoot.GetComponentsInChildren<Collider>(true);
 
-            int ignoredCount = 0;
-            foreach (Collider neckColl in neckColliders)
-            {
-                if (neckColl == null) continue;
-                foreach (Collider otherColl in playerColliders)
-                {
-                    if (otherColl == null || otherColl == neckColl) continue;
-                    
-                    // If the other collider is NOT part of the neck hierarchy, ignore collisions
-                    if (!otherColl.transform.IsChildOf(neckRoot))
-                    {
-                        Physics.IgnoreCollision(neckColl, otherColl, true);
-                        ignoredCount++;
-                    }
-                }
-            }
-
-            if (_enableDebugLogs)
-            {
-                Debug.Log($"[PhysicalHeadController] Ignored {ignoredCount} collision pairs between neck bones and player body.");
-            }
-        }
     }
 }

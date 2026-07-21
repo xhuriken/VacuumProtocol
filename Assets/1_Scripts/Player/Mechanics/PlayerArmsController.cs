@@ -85,13 +85,31 @@ public class PlayerArmsController : NetworkBehaviour
     [Tooltip("Role: Enable position and rotation projection.\nUse Case: Stiffening.\nJustification: Prevents arms from stretching or separating when moving fast.")]
     private bool _enableJointProjection = true;
 
-    [SerializeField]
-    [Tooltip("Role: Spring force applied to slerp/angular drives of all arm joints.\nUse Case: Stiffness.")]
-    private float _jointSpringForce = 1500f;
+    [Header("Shoulder Joint Tuning")]
+    [Tooltip("Spring force applied to the shoulder joint when extended/reaching.")]
+    [SerializeField] private float _shoulderExtendSpringForce = 1500f;
 
-    [SerializeField]
-    [Tooltip("Role: Damping applied to slerp/angular drives of all arm joints.\nUse Case: Stabilizing wobbles.")]
-    private float _jointDamping = 100f;
+    [Tooltip("Damping applied to the shoulder joint when extended/reaching.")]
+    [SerializeField] private float _shoulderExtendDamping = 20f;
+
+    [Tooltip("Spring force applied to the shoulder joint when at rest.")]
+    [SerializeField] private float _shoulderRestSpringForce = 800f;
+
+    [Tooltip("Damping applied to the shoulder joint when at rest (higher damping stabilizes rotation).")]
+    [SerializeField] private float _shoulderRestDamping = 40f;
+
+    [Header("Elbow / Wrist Joint Tuning")]
+    [Tooltip("Spring force applied to elbow and wrist joints when extended/reaching.")]
+    [SerializeField] private float _elbowWristExtendSpringForce = 1500f;
+
+    [Tooltip("Damping applied to elbow and wrist joints when extended/reaching.")]
+    [SerializeField] private float _elbowWristExtendDamping = 20f;
+
+    [Tooltip("Spring force applied to elbow and wrist joints when at rest (lower values = looser/more relaxed arms).")]
+    [SerializeField] private float _elbowWristRestSpringForce = 150f;
+
+    [Tooltip("Damping applied to elbow and wrist joints when at rest.")]
+    [SerializeField] private float _elbowWristRestDamping = 15f;
 
     [SerializeField]
     [Tooltip("Role: Angular drag applied to all arm Rigidbody components.\nUse Case: Control swing lag.\nJustification: Higher values prevent infinite swinging/floppiness.")]
@@ -155,6 +173,16 @@ public class PlayerArmsController : NetworkBehaviour
     // Release timestamps for return animation interpolation
     private float _leftReleaseTime = -100f;
     private float _rightReleaseTime = -100f;
+
+    // Joint caching for dynamic stiffness
+    private ConfigurableJoint _leftShoulderJoint;
+    private readonly List<ConfigurableJoint> _leftElbowWristJoints = new List<ConfigurableJoint>();
+
+    private ConfigurableJoint _rightShoulderJoint;
+    private readonly List<ConfigurableJoint> _rightElbowWristJoints = new List<ConfigurableJoint>();
+
+    private bool _lastLeftExtended;
+    private bool _lastRightExtended;
 
     /// <summary>
     /// Gets the left hand/tip Transform, used for launching items.
@@ -240,6 +268,16 @@ public class PlayerArmsController : NetworkBehaviour
                 _leftHandLocalRestPos = transform.InverseTransformPoint(_leftHand.position);
                 _leftHandLocalRestRot = Quaternion.Inverse(transform.rotation) * _leftHand.rotation;
 
+                // Cache Left Arm joints
+                _leftShoulderJoint = _leftArmRoot.GetComponent<ConfigurableJoint>();
+                foreach (ConfigurableJoint joint in _leftArmRoot.GetComponentsInChildren<ConfigurableJoint>(true))
+                {
+                    if (joint != _leftShoulderJoint)
+                    {
+                        _leftElbowWristJoints.Add(joint);
+                    }
+                }
+
                 if (_leftHandRb == null && _enableDebugLogs)
                 {
                     Debug.LogWarning($"[PlayerArmsController] Left hand '{_leftHand.name}' does not have a Rigidbody! Physics forces cannot be applied.");
@@ -261,6 +299,16 @@ public class PlayerArmsController : NetworkBehaviour
                 _rightArmLength = CalculateHierarchyLength(_rightArmRoot);
                 _rightHandLocalRestPos = transform.InverseTransformPoint(_rightHand.position);
                 _rightHandLocalRestRot = Quaternion.Inverse(transform.rotation) * _rightHand.rotation;
+
+                // Cache Right Arm joints
+                _rightShoulderJoint = _rightArmRoot.GetComponent<ConfigurableJoint>();
+                foreach (ConfigurableJoint joint in _rightArmRoot.GetComponentsInChildren<ConfigurableJoint>(true))
+                {
+                    if (joint != _rightShoulderJoint)
+                    {
+                        _rightElbowWristJoints.Add(joint);
+                    }
+                }
 
                 if (_rightHandRb == null && _enableDebugLogs)
                 {
@@ -288,11 +336,16 @@ public class PlayerArmsController : NetworkBehaviour
             _rightShoulder.localRotation = Quaternion.Euler(0f, _isRightArmExtended ? -90f : 0f, 0f);
         }
 
-        // Ignore collisions between arm colliders and the player's body/wheels/head/other arm
-        IgnorePlayerCollisions();
+        // Centralized collision ignoring is now handled by PlayerCollisionManager on the player root
 
         // Stiffen and lock joints and configure rig drag values dynamically
         ConfigureArmJointsPhysics();
+
+        // Initialize joint state trackers and apply initial drives
+        _lastLeftExtended = _isLeftArmExtended;
+        _lastRightExtended = _isRightArmExtended;
+        UpdateJointDrives(true, _isLeftArmExtended);
+        UpdateJointDrives(false, _isRightArmExtended);
     }
 
     /// <summary>
@@ -337,12 +390,22 @@ public class PlayerArmsController : NetworkBehaviour
         // 1. Process Left Arm Physics
         if (_leftHandRb != null)
         {
+            if (_isLeftArmExtended != _lastLeftExtended)
+            {
+                UpdateJointDrives(true, _isLeftArmExtended);
+                _lastLeftExtended = _isLeftArmExtended;
+            }
             ApplyArmPhysicsForces(_leftHandRb, _leftArmLength, true, _isLeftArmExtended);
         }
 
         // 2. Process Right Arm Physics
         if (_rightHandRb != null)
         {
+            if (_isRightArmExtended != _lastRightExtended)
+            {
+                UpdateJointDrives(false, _isRightArmExtended);
+                _lastRightExtended = _isRightArmExtended;
+            }
             ApplyArmPhysicsForces(_rightHandRb, _rightArmLength, false, _isRightArmExtended);
         }
     }
@@ -589,70 +652,6 @@ public class PlayerArmsController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Disables collisions between the arm segments and the player body, head, wheels, and other arm segments.
-    /// Context: Run at Start.
-    /// Justification: Eliminates contact solver bottlenecks (lag/FPS drops) and unwanted reaction forces pushing the player during arm movement.
-    /// </summary>
-    private void IgnorePlayerCollisions()
-    {
-        // Get all colliders on this entire player GameObject hierarchy
-        Collider[] allColliders = GetComponentsInChildren<Collider>(true);
-        
-        // Identify which colliders belong to the left and right arms
-        Collider[] leftArmColliders = _leftArmRoot != null ? _leftArmRoot.GetComponentsInChildren<Collider>(true) : new Collider[0];
-        Collider[] rightArmColliders = _rightArmRoot != null ? _rightArmRoot.GetComponentsInChildren<Collider>(true) : new Collider[0];
-
-        // 1. Ignore left arm vs non-left-arm colliders
-        foreach (Collider armColl in leftArmColliders)
-        {
-            if (armColl == null) continue;
-            foreach (Collider otherColl in allColliders)
-            {
-                if (otherColl == null || otherColl == armColl) continue;
-                if (!IsDescendantOf(otherColl.transform, _leftArmRoot))
-                {
-                    Physics.IgnoreCollision(armColl, otherColl, true);
-                }
-            }
-        }
-
-        // 2. Ignore right arm vs non-right-arm colliders
-        foreach (Collider armColl in rightArmColliders)
-        {
-            if (armColl == null) continue;
-            foreach (Collider otherColl in allColliders)
-            {
-                if (otherColl == null || otherColl == armColl) continue;
-                if (!IsDescendantOf(otherColl.transform, _rightArmRoot))
-                {
-                    Physics.IgnoreCollision(armColl, otherColl, true);
-                }
-            }
-        }
-
-        // 3. Ignore self-collisions within the same arm to prevent the joint chain from locking up
-        for (int i = 0; i < leftArmColliders.Length; i++)
-        {
-            if (leftArmColliders[i] == null) continue;
-            for (int j = i + 1; j < leftArmColliders.Length; j++)
-            {
-                if (leftArmColliders[j] == null) continue;
-                Physics.IgnoreCollision(leftArmColliders[i], leftArmColliders[j], true);
-            }
-        }
-
-        for (int i = 0; i < rightArmColliders.Length; i++)
-        {
-            if (rightArmColliders[i] == null) continue;
-            for (int j = i + 1; j < rightArmColliders.Length; j++)
-            {
-                if (rightArmColliders[j] == null) continue;
-                Physics.IgnoreCollision(rightArmColliders[i], rightArmColliders[j], true);
-            }
-        }
-    }
-
-    /// <summary>
     /// Description: Dynamically stiffens ConfigurableJoints, locks twist rotation on X-axis, and configures Rigidbody drag.
     /// Context: Run at Start.
     /// Justification: Automatically enforces rigidity, eliminates floppiness, locks self-rotation, and configures drag without manual per-joint inspector work.
@@ -684,18 +683,6 @@ public class PlayerArmsController : NetworkBehaviour
                 joint.projectionDistance = 0.01f;
                 joint.projectionAngle = 0.1f;
             }
-
-            // Create JointDrive for angular and slerp movements
-            JointDrive drive = new JointDrive
-            {
-                positionSpring = _jointSpringForce,
-                positionDamper = _jointDamping,
-                maximumForce = float.MaxValue
-            };
-
-            joint.slerpDrive = drive;
-            joint.angularXDrive = drive;
-            joint.angularYZDrive = drive;
         }
 
         // 2. Adjust Rigidbody drag settings to control floppiness
@@ -716,6 +703,51 @@ public class PlayerArmsController : NetworkBehaviour
             // Increase solver iterations to eliminate micro-vibrations and jitter
             rb.solverIterations = 25;
             rb.solverVelocityIterations = 15;
+        }
+    }
+
+    /// <summary>
+    /// Description: Updates slerp/angular drive spring and damper configurations dynamically on state changes.
+    /// Context: Executed on Start and during FixedUpdate when state transitions.
+    /// </summary>
+    private void UpdateJointDrives(bool isLeft, bool isExtended)
+    {
+        ConfigurableJoint shoulderJoint = isLeft ? _leftShoulderJoint : _rightShoulderJoint;
+        List<ConfigurableJoint> elbowWristJoints = isLeft ? _leftElbowWristJoints : _rightElbowWristJoints;
+
+        float shoulderSpring = isExtended ? _shoulderExtendSpringForce : _shoulderRestSpringForce;
+        float shoulderDamp = isExtended ? _shoulderExtendDamping : _shoulderRestDamping;
+
+        float elbowSpring = isExtended ? _elbowWristExtendSpringForce : _elbowWristRestSpringForce;
+        float elbowDamp = isExtended ? _elbowWristExtendDamping : _elbowWristRestDamping;
+
+        if (shoulderJoint != null)
+        {
+            JointDrive drive = new JointDrive
+            {
+                positionSpring = shoulderSpring,
+                positionDamper = shoulderDamp,
+                maximumForce = float.MaxValue
+            };
+            shoulderJoint.slerpDrive = drive;
+            shoulderJoint.angularXDrive = drive;
+            shoulderJoint.angularYZDrive = drive;
+        }
+
+        foreach (ConfigurableJoint joint in elbowWristJoints)
+        {
+            if (joint != null)
+            {
+                JointDrive drive = new JointDrive
+                {
+                    positionSpring = elbowSpring,
+                    positionDamper = elbowDamp,
+                    maximumForce = float.MaxValue
+                };
+                joint.slerpDrive = drive;
+                joint.angularXDrive = drive;
+                joint.angularYZDrive = drive;
+            }
         }
     }
 

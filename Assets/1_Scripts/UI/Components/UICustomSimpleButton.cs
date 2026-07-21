@@ -435,6 +435,16 @@ public class UICustomSimpleButton : UICustomButtonBase
             {
                 DOTween.To(() => _rect.Color, x => _rect.Color = x, _originalRectColor, duration).SetEase(Ease.OutQuad);
             }
+
+            // Sync visual states with actual hover state immediately on re-enable
+            if (IsHovered)
+            {
+                AnimateHoverEnter();
+            }
+            else
+            {
+                AnimateHoverExit();
+            }
         }
         else
         {
@@ -497,7 +507,6 @@ public class UICustomSimpleButton : UICustomButtonBase
         if (_buttonText != null)
         {
             _buttonText.transform.DOKill();
-            _buttonText.DOKill();
         }
 
         if (_clickFlashSequence != null && _clickFlashSequence.IsActive())

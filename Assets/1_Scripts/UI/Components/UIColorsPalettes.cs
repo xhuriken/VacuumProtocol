@@ -24,9 +24,32 @@ public class UIColorsPalettes : MonoBehaviour
     private bool _enableDebugLogs = false;
 
     [Header("Lobby Integration")]
-    [Tooltip("Role: The Lobby Customization UI script.\nUse Case: Sending the chosen color.\nJustification: Acts as the intermediary to the local network player.")]
+    [Tooltip("Role: Optional Lobby Customization UI script.\nUse Case: Sending chosen player color.\nJustification: Fallback intermediary for local player customization.")]
     [SerializeField]
     private LobbyCustomizationUI _lobbyCustomizationUI;
+
+    [Header("Events (Generic Reusable Pattern)")]
+    [Tooltip("Role: Dispatched when a color is picked.\nUse Case: Observer pattern.\nJustification: Allows TextureEditor, Lobby, or any system to listen to color selection.")]
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent<Color> _onColorSelected = new UnityEngine.Events.UnityEvent<Color>();
+
+    [Tooltip("Role: Dispatched with Hex string when a color is picked.\nUse Case: Network sync.")]
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent<string> _onHexColorSelected = new UnityEngine.Events.UnityEvent<string>();
+
+    /// <summary>
+    /// Description: UnityEvent invoked when any color button in the palette is clicked (emits Color).
+    /// Context: External subscription API.
+    /// Justification: Allows TextureEditorPanelUI to bind cleanly.
+    /// </summary>
+    public UnityEngine.Events.UnityEvent<Color> OnColorSelected => _onColorSelected;
+
+    /// <summary>
+    /// Description: UnityEvent invoked when any color button in the palette is clicked (emits Hex string).
+    /// Context: External subscription API.
+    /// Justification: Allows network customization to bind cleanly.
+    /// </summary>
+    public UnityEngine.Events.UnityEvent<string> OnHexColorSelected => _onHexColorSelected;
 
     /// <summary>
     /// Description: Unity Start callback. Triggers the initialization of the color palette buttons.
@@ -124,26 +147,27 @@ public class UIColorsPalettes : MonoBehaviour
             // Convert the Unity Color into an HTML Hex string for multiplayer sync compatibility
             string hexColor = "#" + ColorUtility.ToHtmlStringRGB(buttonColor);
 
-            // Clean previous listeners and add a new hex assignment action
+            // Clean previous listeners and add dynamic event dispatching
             string capturedHex = hexColor; // Prevent closure variable capture issue in C# loops
+            Color capturedColor = buttonColor;
             currentButton.onClick.RemoveAllListeners();
             currentButton.onClick.AddListener(() =>
             {
+                // 1. Dispatch generic observer events for decoupled listeners (TextureEditor, etc.)
+                _onColorSelected?.Invoke(capturedColor);
+                _onHexColorSelected?.Invoke(capturedHex);
+
+                // 2. Fallback to Lobby Customization if present
                 if (_lobbyCustomizationUI != null)
                 {
                     _lobbyCustomizationUI.SetPlayerColorHex(capturedHex);
                 }
                 else
                 {
-                    // Fallback to find active lobby UI dynamically if original was destroyed or re-loaded
                     LobbyCustomizationUI dynamicLobbyUI = FindAnyObjectByType<LobbyCustomizationUI>();
                     if (dynamicLobbyUI != null)
                     {
                         dynamicLobbyUI.SetPlayerColorHex(capturedHex);
-                    }
-                    else
-                    {
-                        if (_enableDebugLogs) Debug.LogError("[UIColorsPalettes] Color button clicked, but no LobbyCustomizationUI was found in the scene.");
                     }
                 }
             });

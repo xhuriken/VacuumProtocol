@@ -285,6 +285,13 @@ public class ColorButtonUI : UICustomButtonBase
     }
 
     /// <summary>
+    /// Description: Gets the active color displayed by this color button.
+    /// Context: Property read accessor.
+    /// Justification: Exposes the button color to TextureEditorPanelUI cleanly.
+    /// </summary>
+    public Color ButtonColor => _plainShape != null ? _plainShape.Color : Color.white;
+
+    /// <summary>
     /// Description: Animates the outline shape size and plain scale when pointer enters button bounds.
     /// Context: EventSystem callback.
     /// Justification: Provides tactile expansion feedback on hover.

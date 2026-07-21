@@ -76,9 +76,16 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
             if (_interactable != value)
             {
                 _interactable = value;
-                if (!_interactable)
+                if (_interactable)
                 {
-                    _isHovered = false; // Reset hover state immediately when becoming disabled
+                    // Check if mouse is physically hovering the RectTransform right now (using SSOT MouseManager)
+                    Canvas canvas = GetComponentInParent<Canvas>();
+                    Camera cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) ? canvas.worldCamera : null;
+                    _isHovered = RectTransformUtility.RectangleContainsScreenPoint(GetComponent<RectTransform>(), MouseManager.Instance.MousePosition, cam);
+                }
+                else
+                {
+                    _isHovered = false; // Reset hover state when becoming disabled
                 }
                 OnInteractableChanged(value);
             }
@@ -95,6 +102,10 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     {
         // Custom transitions can be defined by subclasses
     }
+
+    [Header("Awake Setup")]
+    [Tooltip("Role: Safety image raycast setup.")]
+    private bool _unusedPlaceholder;
 
     /// <summary>
     /// Description: Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.
@@ -138,9 +149,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerEnter(PointerEventData eventData)
     {
+        _isHovered = true;
         if (!_interactable) return;
         if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerEnter triggered on '{gameObject.name}'");
-        _isHovered = true;
         onPointerEnter.Invoke();
     }
 
@@ -152,9 +163,9 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// <param name="eventData">Pointer event data.</param>
     public virtual void OnPointerExit(PointerEventData eventData)
     {
+        _isHovered = false;
         if (!_interactable) return;
         if (_enableDebugLogs) Debug.Log($"[UICustomButtonBase] OnPointerExit triggered on '{gameObject.name}'");
-        _isHovered = false;
         onPointerExit.Invoke();
     }
 

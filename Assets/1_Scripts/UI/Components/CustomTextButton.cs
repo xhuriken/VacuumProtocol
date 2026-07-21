@@ -754,6 +754,16 @@ public class CustomTextButton : UICustomButtonBase
                     }
                 }
             }
+
+            // Sync visual states with actual hover state immediately on re-enable
+            if (IsHovered)
+            {
+                AnimateHoverEnter();
+            }
+            else
+            {
+                AnimateHoverExit();
+            }
         }
         else
         {

@@ -1,6 +1,51 @@
 # Development Log
 
-## [2026-05-26] - Lobby Color Selection Palette Implementation
+## [2026-07-21] - Lobby Texture Editor Feature (Tomodachi Style)
+
+### Feature Added
+- **Core Texture Painting Engine (`TexturePainter.cs`)**: Non-UI drawing engine operating directly on raw `Color32[]` pixel buffers with dynamic texture dimensions ($W \times H$). Supports:
+  - **Bresenham Interpolation**: Connects consecutive drag points to ensure smooth, gap-free strokes during fast mouse movements.
+  - **Brush Tools**: Hard Pencil, Soft Brush (radial falloff gradient), Airbrush (stochastic spray), Eraser (background restore/clear), Flood Fill (BFS queue bucket fill), and Eyedropper (color sampler).
+- **Snapshot History Engine (`TextureUndoSystem.cs`)**: Memory-efficient Undo/Redo stack manager storing pixel array snapshots with configurable step bounds.
+- **SSOT Custom Cursor Integration (`CustomCursorFollower.cs`)**: Extended existing single-source-of-truth custom cursor follower with `SetBrushCursorMode()`. Canvas hover dynamically switches standard UI cursor graphics into a *Shapes* vector brush ring matching the active tool diameter, color, or eraser indicator.
+- **UI Presenter (`TexturePainterUI.cs`)**: Receives Unity UGUI pointer events on canvas `RawImage`, transforms local RectTransform screen points to exact UV pixel coordinates, and updates SSOT cursor visual dimensions.
+- **Lobby Studio Control Panel (`TextureEditorPanelUI.cs`)**: Integrates custom tool selection, project `ColorButtonUI` color buttons, `UICustomSlider` for brush size control, and Undo/Redo/Clear/Save action buttons.
+
+### Code Modified/Added
+- **Created `Assets/1_Scripts/UI/TextureEditor/Core/BrushData.cs`**: Defines `PainterTool` enum and `BrushSettings` container class.
+- **Created `Assets/1_Scripts/UI/TextureEditor/Core/TextureUndoSystem.cs`**: Implements snapshot stacks for memory-friendly Undo/Redo operations.
+- **Created `Assets/1_Scripts/UI/TextureEditor/Core/TexturePainter.cs`**: Implements core pixel drawing algorithms, Bresenham line rendering, and flood fill.
+- **Implemented Opacity Blending on Flood Fill (`TexturePainter.cs`)**: Refactored `PerformFloodFill()` to support opacity blending using `Color32.Lerp(targetColor, fillColor, opacity)`. Now, bucket filling regions blends the new color cleanly with the target background color based on active opacity slider settings.
+- **Dynamic Tool-Specific Slider Visibility (`TextureEditorPanelUI.cs`)**: Refactored `SetTool` to show/hide sliders contextually:
+  - Pencil/SoftBrush/Eraser: Shows Size & Opacity.
+  - Airbrush: Shows Size, Opacity & Density.
+  - FloodFill: Shows Opacity (hides Size as it has no radius).
+  - Eyedropper: Hides all sliders (locked to default single-pixel size).
+- **Added Airbrush Spray Density Slider (`TextureEditorPanelUI.cs`)**: Created a dedicated `_brushDensitySlider` for the Airbrush tool. The slider is dynamically shown (`SetActive(true)`) only when the Airbrush tool is selected.
+- **Implemented Tool-Specific Persistent Settings (`TextureEditorPanelUI.cs`, `UICustomSlider.cs`)**: Designed brush-specific memory and storage. Every brush now maintains independent settings for Size, Opacity, and Spray Density. When switching tools, the sliders automatically transition to their saved settings. To prevent UI lag, PlayerPrefs persistence is triggered only on pointer release (`onPointerUp` event added to `UICustomSlider.cs`).
+- **Fixed Collapsed Slider Track Layout Timing Bug (`UICustomSlider.cs`)**: Added fallback handling to `UpdateVisuals()` in `UICustomSlider.cs`. If the UGUI layout pass hasn't completed on initialization, it forces canvas layout update or reads `sizeDelta.x` to prevent the track geometry from collapsing to zero width.
+- **Added Brush Opacity Slider (`BrushData.cs`, `TextureEditorPanelUI.cs`)**: Expanded brush settings with a dynamic `Opacity` property (`0.0` to `1.0`) and mapped it to a new `_brushOpacitySlider` control in the editor panel.
+- **Implemented Non-Accumulating Blending Mask (`TexturePainter.cs`)**: Introduced `_strokeStartBuffer` (Color32 texture snapshot) and `_strokeAlphaBuffer` (opacity coverage tracking layer) initialized at `BeginStroke`. During a single mouse drag stroke, stamp alphas are combined using `Mathf.Max` rather than additive accumulation. Prevents paint buildup on slow mouse speeds and ensures perfectly uniform opacity coverage regardless of drag speed.
+- **Modified `Assets/1_Scripts/UI/Core/UICustomButtonBase.cs`**: Refactored `Interactable` setter to perform an instant physical hover check using `RectTransformUtility.RectangleContainsScreenPoint` and `MouseManager.Instance.MousePosition` when the button is re-enabled. Resolves EventSystem limitation where disabled buttons did not receive exit events.
+- **Modified `Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs`**: Removed `_buttonText.DOKill()` from `KillActiveTweens()`. Prevents hover exit transitions from instantly killing text color fade tweens, correcting the bug where button text remained greyed out.
+- **Modified `Assets/1_Scripts/UI/Components/UICustomSimpleButton.cs` and `CustomTextButton.cs`**: Implemented hover state synchronization inside `AnimateInteractableTransition(true)`. When a button is re-enabled, it immediately evaluates the physical `IsHovered` check and transitions visual states to `AnimateHoverEnter` or `AnimateHoverExit` automatically.
+- **Fixed Stroke Drawing Interruptions (`TexturePainterUI.cs`)**: Refactored `OnDrag` to check `!_painter.IsStrokeActive` and dynamically resume drawing via `BeginStroke` upon mouse drag re-entry into the canvas, resolving the issue where drawing broke if the mouse temporarily exited the canvas.
+- **Modified `Assets/1_Scripts/UI/Components/UIColorsPalettes.cs`**: Added generic `OnColorSelected` and `OnHexColorSelected` UnityEvents to decouple color palette selection, allowing the same `UIColorsPalettes` component to drive TextureEditor, Player Customization, or any menu cleanly via Observer pattern.
+- **Fixed Brush Cursor Precision Math (`TexturePainterUI.cs`)**: Calculated exact sub-pixel screen radius `uiRadius = (brush.Radius + 0.5f) * uiPixelSize`. Ensures 100.0% exact alignment between the custom cursor ring visual and painted pixels regardless of RawImage UI scaling or texture resolution.
+
+### Technical Justification & Details
+- **Responsive Layout Architecture**: Replaced arbitrary static pixel offsets with normalized anchor ranges and UGUI layout groups (`HorizontalLayoutGroup`, `VerticalLayoutGroup`, `GridLayoutGroup`). The drawing canvas enforces a 1:1 ratio using `AspectRatioFitter` so the painting surface stays square regardless of screen size.
+- **TextMeshPro Integration**: All section headers and button labels utilize `TextMeshProUGUI` for ultra-crisp vector typography matching project design standards.
+- **Auto-Aligning Button Containers**: Tools and color buttons are placed inside auto-wrapping grid containers with `GridLayoutGroup` and `ContentSizeFitter`, allowing endless tool and color button additions without breaking panel alignment.
+- **Dynamic Resolution Flexibility**: Canvas resolution is specified dynamically at initialization (`InitializeCanvas(width, height)`) or on texture load (`LoadTexture(Texture2D)`). This allows painting small 64x64 pupil textures, 128x128 player avatar icons, or large player body UV maps with the exact same codebase.
+- **SSOT Cursor Consistency**: Reuses the existing `CustomCursorFollower.cs` component rather than creating a secondary mouse follower script, ensuring single source of truth for mouse tracking and screen-space project alignment.
+- **Non-Recursive BFS Flood Fill**: Avoids stack overflow exceptions on large texture fills by utilizing a `Queue<Vector2Int>` breadth-first algorithm.
+
+### Accessibility/Visibility Signature Checks
+- Microsoft CoreFX naming convention applied: explicit visibilities, Allman brackets, private `_camelCase` members.
+- XML `/// <summary>` documentation added on all public classes, methods, and serialized fields.
+
+
 
 ### Feature Added
 - **Unity Color Array Inspector Support**: Replaced hardcoded string colors with an editable `Color[]` array, making it extremely easy to tweak and preview colors directly within the Unity Inspector.
@@ -1270,5 +1315,46 @@
 - **Joint Space Target Rotation Offset**: Standard Unity ConfigurableJoint `targetRotation` operates in joint-space. Transformed the desired pitch rotation offset relative to the starting local rotation into the joint's local axes to guarantee exact alignment.
 - **KISS Philosophy**: Completely removed procedural translation curves and camera-lag ratios, relying instead on pure PhysX joint dynamics.
 - **Explicit Visibility & Standard compliance**: Followed Allman styling, explicit visibilities, and private `_camelCase` member naming.
+
+## [2026-07-17] - Centralized Player Collision ignoring Manager (SSOT)
+
+### Feature Added
+- **Centralized Player Collision Manager**: Created `PlayerCollisionManager.cs` to serve as the Single Source of Truth (SSOT) for all player-internal physics collision ignoring rules.
+- **Custom Torso and Arm Collision Interactivity**: 
+  - Allows two custom torso colliders (A and B) to ignore collisions with the wheels.
+  - Torso Collider A ignores collisions with the arms.
+  - Torso Collider B **does not ignore** collisions with the arms, allowing arms to physically collide and interact with this specific torso collider.
+  - Centralizes other standard player collision rules (head/neck vs torso/wheels, arms self-collisions, arm vs arm) in one location.
+
+### Code Modified/Added
+
+#### [NEW] [PlayerCollisionManager.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerCollisionManager.cs)
+- **Class `PlayerCollisionManager`**: Centralizes classification and configuration of physics collision exemptions using `Physics.IgnoreCollision` at startup.
+
+#### [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs)
+- Removed local `IgnorePlayerCollisions()` method and call, delegating arm collision management entirely to the centralized `PlayerCollisionManager`.
+
+#### [MODIFY] [PhysicalHeadController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PhysicalHeadController.cs)
+- Removed local `IgnorePlayerCollisions()` method and call, delegating head/neck collision management entirely to the centralized `PlayerCollisionManager`.
+
+### Technical Justification & Details
+- **Selective Physics Blocking**: Employs lists and explicit references to handle different interaction parameters on specific torso colliders.
+
+## [2026-07-17] - Dynamic Joint Stiffness & Rest Vibration Damping
+
+### Feature Added
+- **State-Dependent Joint Stiffness**: Introduced dynamic spring force adjustments for arm joints. Left and right arm joints now transition spring/damping forces based on extension state.
+- **Separate Shoulder and Elbow/Wrist Tuning**: Exposed independent properties for the shoulder joint (stiffer at rest to prevent sagging) and the elbow/wrist joints (softer at rest for loose/relaxed arms).
+- **Vibration Damping**: Enabled fine-tuned damping variables for rest states to eliminate high-frequency jitter and trembling in limp limbs.
+
+### Code Modified
+
+#### [MODIFY] [PlayerArmsController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerArmsController.cs)
+- Added caching structures and collections for left/right shoulder joints and left/right elbow/wrist joints at initialization.
+- Modified `ConfigureArmJointsPhysics` to skip setting hardcoded slerp drives.
+- Added `UpdateJointDrives` method to dynamically update ConfigurableJoint spring/damping drives.
+- Updated `FixedUpdate` to refresh joint drives when state changes.
+
+
 
 
