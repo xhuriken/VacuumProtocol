@@ -686,7 +686,7 @@
 - [x] Implement active tool button toggling (`Interactable = false` on selected tool).
 - [x] Implement dynamic drawing stroke resume on pointer drag re-entry into the canvas.
 - [x] Fix stuck hover animations on custom buttons when disabled/re-enabled by tracking physical hover state via `RectTransformUtility.RectangleContainsScreenPoint`.
-- [x] Resolve grey button text stuck issue by preventing DOTween `DOKill()` on Graphic color transitions during hover exit.
+- [x] Fix grey button text stuck issue by preventing DOTween `DOKill()` on Graphic color transitions during hover exit.
 - [x] Add dynamic Brush Opacity settings property and map it to UI `_brushOpacitySlider`.
 - [x] Implement non-accumulating stroke blending mask using Color32 start snapshots and float alpha coverage buffers to prevent paint build-up at slow drag speeds.
 - [x] Add Airbrush Spray Density Slider `_brushDensitySlider` and show/hide it dynamically based on active tool selection.
@@ -696,6 +696,14 @@
 - [x] Update `SetTool()` to dynamically hide Size/Opacity sliders for Eyedropper (pipette) and hide Size slider for FloodFill.
 - [x] Verify compilation, test UI interactions, and update DEVELOPMENT_LOG.md.
 
+## Current Feature: Robot Arm Physics Shoulder Lag Fix
+- [x] Analyze and diagnose shoulder physics lag during movement.
+- [x] Provide architectural solutions for maintaining exact shoulder alignment.
+- [x] Update DEVELOPMENT_LOG.md.
 
-
-
+## Current Feature: Cone-based Arm Vacuum Suction & Vortex Animation (KISS)
+- [x] Replace the trigger collider with a script-based Physics.OverlapSphere cone detection (dot product filter).
+- [x] Implement multi-raycast surface visibility occlusion check (center, left, right offsets).
+- [x] Implement physical vortex torque rotation and centripetal alignment force to guide objects.
+- [x] Implement smoothed bi-directional Lerp scale transitions for collectibles to prevent yo-yo effect.
+- [x] Update DEVELOPMENT_LOG.md and verify compilation.

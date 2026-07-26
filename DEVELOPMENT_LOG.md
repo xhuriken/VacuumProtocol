@@ -1355,6 +1355,36 @@
 - Added `UpdateJointDrives` method to dynamically update ConfigurableJoint spring/damping drives.
 - Updated `FixedUpdate` to refresh joint drives when state changes.
 
+## [2026-07-24] - Robot Arm Physics Shoulder Lag Diagnostic & Architectural Solutions
 
+### Technical Justification & Details
+- **Shoulder Physics Lag Diagnosis**:
+  - Analyzed the physics update loop and coordinate hierarchies for the robot arms.
+  - The shoulder lag (delayed translation during movement) occurs because the shoulder's root transform has a Rigidbody (often kinematic) that is nested inside the player movement root Rigidbody.
+  - In Unity, nested Rigidbodies (where a child Rigidbody is translated by a parent Rigidbody) face synchronization conflicts. PhysX updates the parent Rigidbody's position at the end of the physics solver loop, while the child's transform is resolved differently. If interpolation is active on the parent and not on the child (or vice versa), it causes a visual "rubber band" lag during movements.
+  - Furthermore, if the shoulder is connected via a `ConfigurableJoint` to the torso, PhysX solvers allow slight constraint stretching (joint stretching) under fast accelerations, causing the shoulders to drift.
+- **Architectural Proposals**:
+  - **Solution A (Recommended)**: Remove the Rigidbody from the shoulder joint (making it a static child Transform of the Torso) and anchor the first physical segment (Upper Arm) directly to the Torso Rigidbody via a `ConfigurableJoint` offset.
+  - **Solution B (Runtime Unparenting)**: Unparent the arm root hierarchy at `Start()` (setting `transform.parent = null;`), keeping it non-kinematic and connecting the shoulder to the Torso Rigidbody via a fully translation-locked `ConfigurableJoint` with interpolation enabled.
 
+### Code Modified/Added
+- None (Diagnostic and architectural analysis).
 
+## [2026-07-25] - Cone-based Arm Vacuum Suction & Vortex Animation (KISS)
+
+### Technical Justification & Details
+- **Trigger Collider Abandonment**:
+  - Replaced the old trigger collider-based detection in `VacuumSuctionZone.cs` with a precise `Physics.OverlapSphere` manual query combined with a forward dot product angle filter.
+  - This eliminates standard Unity trigger detection issues (unreliable collision triggers at high velocities) and avoids declaring a physical trigger collider on the arm segment.
+- **Occlusion Handling & Surface Visibility**:
+  - Added a multi-raycast system targeting the center and lateral boundaries (15cm offset) of the collectible.
+  - Visibly scales the force applied based on occlusion (0/3, 1/3, 2/3, or 3/3 clear paths) so collectibles hiding behind walls or other objects are not sucked up until the path is cleared, ensuring high physical realism.
+- **Vortex Rotation & Centripetal Alignment**:
+  - Added a centripetal force that dynamically pulls the collectible towards the central axis line of the nozzle forward direction, preventing items from getting stuck on the nozzle outer edges.
+  - Added torque physics (`AddTorque`) to spin the object dynamically around the nozzle axis to create a realistic physical vortex.
+- **Visual Scale Smoothing**:
+  - Replaced the distance-locked scale calculation with a time-based Lerp approach.
+  - When suction is lost or deactivated, collectibles regrow back to their original size and resume normal gravity behavior smoothly.
+
+### Code Modified/Added
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Rebuilt the entire class to support manual cone queries, visibility calculations, centripetal alignment, torque spin, and smoothed bi-directional scale transitions; corrected local suction axis to be configurable via a serialized `LocalAxis` enum in the Unity Inspector).

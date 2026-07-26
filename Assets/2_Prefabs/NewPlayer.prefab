@@ -3149,8 +3149,6 @@ MonoBehaviour:
   _shoulderExtendDamping: 20
   _shoulderRestSpringForce: 800
   _shoulderRestDamping: 40
-  _leftShoulderRestRotation: {x: 0, y: 0, z: -80}
-  _rightShoulderRestRotation: {x: 0, y: 0, z: 80}
   _elbowWristExtendSpringForce: 1500
   _elbowWristExtendDamping: 20
   _elbowWristRestSpringForce: 150
@@ -3242,7 +3240,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3245617558550847052}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 2f7bdaec870501e468a5ece9e1f0f4fc, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -3331,7 +3329,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8888007352447097725}
   - component: {fileID: 3522410653085139920}
-  - component: {fileID: 6603760916785122108}
+  - component: {fileID: 4536090254355586253}
   m_Layer: 0
   m_Name: Shoulder.L
   m_TagString: Untagged
@@ -3375,7 +3373,7 @@ MonoBehaviour:
   tipStiffnessMultiplier: 2
   angularLimit: 45
   colliderRadius: 0.05
---- !u!54 &6603760916785122108
+--- !u!54 &4536090254355586253
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3383,7 +3381,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4200534922824053639}
   serializedVersion: 5
-  m_Mass: 1
+  m_Mass: 0.0000001
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -3400,7 +3398,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 1
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 14
   m_CollisionDetection: 0
 --- !u!1 &4390460253101877570
 GameObject:
@@ -3777,7 +3775,7 @@ ConfigurableJoint:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5467971438089658685}
   serializedVersion: 4
-  m_ConnectedBody: {fileID: 6603760916785122108}
+  m_ConnectedBody: {fileID: 4536090254355586253}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
   m_Axis: {x: 1, y: 0, z: 0}
@@ -4336,7 +4334,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6339128270289373840}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 2f7bdaec870501e468a5ece9e1f0f4fc, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -4779,6 +4777,7 @@ GameObject:
   - component: {fileID: 835438247569751891}
   - component: {fileID: 6552446551799068233}
   - component: {fileID: 7093499839221139071}
+  - component: {fileID: 117668522861708448}
   m_Layer: 0
   m_Name: Hand.R
   m_TagString: Untagged
@@ -4953,6 +4952,32 @@ ConfigurableJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!114 &117668522861708448
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7411231490567515836}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f999a14b863c0e459029be5d0811940, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VacuumSuctionZone
+  _suctionRange: 4
+  _coneAngle: 45
+  _suctionAxis: 2
+  _collectibleLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  _suctionForce: 25
+  _absorbDistance: 0.6
+  _nozzleTransform: {fileID: 8002544508402188241}
+  _shrinkStartDistance: 3
+  _shrinkLerpSpeed: 10
+  _vortexTorque: 0
+  _centripetalForce: 0
+  _drawGizmos: 1
 --- !u!1 &7964496229117889943
 GameObject:
   m_ObjectHideFlags: 0
@@ -4963,7 +4988,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7517164178507241720}
   - component: {fileID: 8206743986960698824}
-  - component: {fileID: 3488963759950445107}
+  - component: {fileID: 7859527034188792998}
   m_Layer: 0
   m_Name: Shoulder.R
   m_TagString: Untagged
@@ -5007,7 +5032,7 @@ MonoBehaviour:
   tipStiffnessMultiplier: 2
   angularLimit: 45
   colliderRadius: 0.05
---- !u!54 &3488963759950445107
+--- !u!54 &7859527034188792998
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5015,7 +5040,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7964496229117889943}
   serializedVersion: 5
-  m_Mass: 1
+  m_Mass: 0.0000001
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -5032,7 +5057,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 1
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 14
   m_CollisionDetection: 0
 --- !u!1 &7987443882089406175
 GameObject:
@@ -5314,7 +5339,7 @@ ConfigurableJoint:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8140934495422885239}
   serializedVersion: 4
-  m_ConnectedBody: {fileID: 3488963759950445107}
+  m_ConnectedBody: {fileID: 7859527034188792998}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
   m_Axis: {x: 1, y: 0, z: 0}
