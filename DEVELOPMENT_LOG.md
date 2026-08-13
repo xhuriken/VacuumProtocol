@@ -1,5 +1,28 @@
 # Development Log
 
+## [2026-08-13] PlayerV2 Arms Physical System
+**Goal:** Port the physical, procedural arm-reaching system from V1 to V2 (`PlayerV2_Arms`) and implement a Gizmo tool.
+**Changes:**
+- **`PlayerV2_Arms.cs` [NEW]**: Recreated the physics-based arm extension logic. 
+  - Subscribes to `PlayerInputHandler` to trigger left/right extensions on clicks.
+  - Dynamically computes arm max physical reach and assigns `ConfigurableJoint` spring settings.
+  - Added `FreeHangAtRest` toggle. When retracted, the script no longer attempts to force the hands back into a strict T-pose, simply allowing them to dangle organically using standard gravity and joint stiffness.
+- **`PlayerV2_Controller.cs` [MODIFIED]**: Added references (`LeftArmRoot`, `RightArmRoot`, `LeftShoulder`, `RightShoulder`, `ArmsController`) to act as the Single Source of Truth for hierarchy traversal.
+- **`PlayerV2_Gizmos.cs` [NEW]**: Created an Odin-compatible Gizmos manager. Added toggles (`ShowArmsGizmos`, `ShowHeadGizmos`, `ShowSuspensionGizmos`) to visualize invisible physics data directly in the Scene view (e.g. arm root, target reach position, suspension raycasts).
+**Justification:** Reusing the proven V1 mechanics ensures identical game feel while adopting the cleaner V2 architecture. Removing the forced rest-pose solves the T-pose jitter issue entirely, letting standard Unity physics handle the organic dangling state.
+
+## [2026-08-13] PlayerV2 Physical Head/Neck (Torsion Spring)
+**Goal:** Implement a physics-based, driven neck and head system (ragdoll but responsive to mouse pitch) where the base is fixed relative to the Torso but the rest is a physical spring.
+**Changes:**
+- **`PlayerV2_CollisionManager.cs` [NEW]**: Duplicated and adapted the old `PlayerCollisionManager.cs` to the V2 namespace. Added explicit support to ignore self-collisions within the `_neckColliders` group to completely prevent physics-induced stretching caused by neck bones repelling each other.
+- **`PlayerV2_Head.cs` [NEW/MODIFIED]**: Created a script to handle an array of `ConfigurableJoint`s (`NeckJoints`). It automatically configures `slerpDrive` settings (spring, damper) on `Start()` to avoid manual setup. It exposes `SetTargetPitch(float)` to divide the target pitch evenly across all physical joints.
+  - *Update:* Inverted pitch orientation for correct mouse Y-axis handling.
+  - *Update:* Forced linear motions to `Locked`, enabled angular `Limited` motions with a configurable `JointAngleLimit` (default 30°), and set `enableCollision = false` on joints. Increased default `SpringForce` (5000) and `SpringDamper` (500) for a more "muscular" and less wobbly feel.
+- **`PlayerV2_Look.cs` [MODIFIED]**: Altered the `LateUpdate()` method to transmit the `_cameraPitch` to `HeadController.SetTargetPitch()`.
+  - *Update:* Added `MaxTurnSpeed` to clamp the maximum degrees per second the torso (Yaw) and camera (Pitch) can turn. This prevents violent physics snaps when the mouse is flicked extremely fast, ensuring the physical head can smoothly keep up with the Torso's rotation.
+- **`PlayerV2_Controller.cs` [MODIFIED]**: Added `HeadController` reference to centralize references.
+**Justification:** By using `ConfigurableJoint.slerpDrive` with `RotationDriveMode.Slerp` and passing the divided pitch via `targetRotation`, the neck acts as a cohesive torsion spring. It follows the player's look inputs while remaining physically reactive to external forces and allowing the head to lag/wobble dynamically.
+
 ## [2026-08-12] PlayerV2 Suspension Extension & Jump Physics
 **Goal:** Implement professional dynamic suspension that extends wheels mid-air, and add jump logic with reliable ground checking.
 **Changes:**

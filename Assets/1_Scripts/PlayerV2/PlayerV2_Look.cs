@@ -14,6 +14,8 @@ namespace VacuumProtocol.PlayerV2
     {
         [Header("Settings")]
         public float Sensitivity = 0.15f;
+        [Tooltip("Vitesse de rotation maximale (en degrés par seconde) pour éviter que le torse ne tourne trop vite pour la physique.")]
+        public float MaxTurnSpeed = 720f;
         public float MinPitch = -85f;
         public float MaxPitch = 85f;
 
@@ -46,18 +48,34 @@ namespace VacuumProtocol.PlayerV2
 
             Vector2 lookInput = _input.LookInput;
             
-            _torsoYaw += lookInput.x * Sensitivity;
-            _cameraPitch -= lookInput.y * Sensitivity;
+            // Calcul du mouvement désiré
+            float targetYawDelta = lookInput.x * Sensitivity;
+            float targetPitchDelta = lookInput.y * Sensitivity;
+
+            // Limitation de la vitesse de rotation pour que la physique (tête/cou) puisse suivre
+            // On convertit la vitesse max (degrés/seconde) en delta maximum par frame
+            float maxDeltaPerFrame = MaxTurnSpeed * Time.deltaTime;
+            float clampedYawDelta = Mathf.Clamp(targetYawDelta, -maxDeltaPerFrame, maxDeltaPerFrame);
+            float clampedPitchDelta = Mathf.Clamp(targetPitchDelta, -maxDeltaPerFrame, maxDeltaPerFrame);
+
+            _torsoYaw += clampedYawDelta;
+            _cameraPitch -= clampedPitchDelta;
             _cameraPitch = Mathf.Clamp(_cameraPitch, MinPitch, MaxPitch);
         }
 
         private void LateUpdate()
         {
             if (!isOwned) return;
-            if (_controller.CameraTransform != null)
+
+            if (_controller.HeadController != null)
             {
-                // La caméra gère le pitch (haut/bas) localement.
-                // Le yaw est géré par le TorsoRigidbody, donc la caméra hérite du yaw.
+                // Le pitch est transmis au contrôleur de la tête pour être réparti sur les joints physiques.
+                // Le yaw est géré par le TorsoRigidbody (FixedUpdate).
+                _controller.HeadController.SetTargetPitch(_cameraPitch);
+            }
+            else if (_controller.CameraTransform != null)
+            {
+                // Fallback si pas de tête physique : La caméra gère le pitch localement.
                 _controller.CameraTransform.localRotation = Quaternion.Euler(_cameraPitch, 0f, 0f);
             }
         }

@@ -21,6 +21,25 @@ namespace VacuumProtocol.PlayerV2
         [Tooltip("Role: La caméra du joueur.\nUse Case: Assignée au script de Look.")]
         public Transform CameraTransform;
 
+        [Tooltip("Role: Contrôleur de la tête et du cou.\nUse Case: Transmission du pitch calculé par le Look.")]
+        public PlayerV2_Head HeadController;
+
+        [Header("Arms System")]
+        [Tooltip("Role: Racine physique du bras gauche.\nUse Case: Traversal et distance max.")]
+        public Transform LeftArmRoot;
+
+        [Tooltip("Role: Racine physique du bras droit.\nUse Case: Traversal et distance max.")]
+        public Transform RightArmRoot;
+
+        [Tooltip("Role: Épaule gauche visuelle/physique.\nUse Case: Rotation à 90° en extension.")]
+        public Transform LeftShoulder;
+
+        [Tooltip("Role: Épaule droite visuelle/physique.\nUse Case: Rotation à -90° en extension.")]
+        public Transform RightShoulder;
+
+        [Tooltip("Role: Contrôleur physique des bras.\nUse Case: Référence centralisée pour d'autres systèmes.")]
+        public PlayerV2_Arms ArmsController;
+
         private void Start()
         {
             if (HipsRigidbody == null || TorsoRigidbody == null)
