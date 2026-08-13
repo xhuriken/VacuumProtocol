@@ -14,13 +14,16 @@ namespace VacuumProtocol.Player
         [Header("Settings")]
         [Tooltip("Role: The camera transform to rotate (pitch & yaw).\nUse Case: View rotation.\nJustification: Camera is a child of Head. We override its world rotation to prevent sensitivity multiplier or double rotation.")]
         [SerializeField] private Transform _cameraTransform;
-        
+
+
         [Tooltip("Role: Mouse look sensitivity.\nUse Case: Input scaling.\nJustification: Directly multiplies raw delta mouse inputs.")]
         [SerializeField] private float _sensitivity = 0.15f;
-        
+
+
         [Tooltip("Role: Minimum pitch angle.\nUse Case: Look constraint.\nJustification: Prevents the player from looking too far up.")]
         [SerializeField] private float _minPitch = -85f;
-        
+
+
         [Tooltip("Role: Maximum pitch angle.\nUse Case: Look constraint.\nJustification: Prevents the player from looking too far down.")]
         [SerializeField] private float _maxPitch = 85f;
 
@@ -87,7 +90,8 @@ namespace VacuumProtocol.Player
             {
                 throw new System.NullReferenceException("[PlayerLookComponent] Camera transform (_cameraTransform) is NOT assigned in the Inspector!");
             }
-            
+
+
             Cursor.lockState = CursorLockMode.Locked;
         }
 

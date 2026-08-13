@@ -208,9 +208,10 @@ namespace VacuumProtocol.Player
 
             int ignoredPairs = 0;
 
-            // Apply standard internal rules (like self-collision ignore within arms to prevent joint lockups)
+            // Apply standard internal rules (like self-collision ignore within arms and wheels to prevent joint lockups)
             IgnoreSelfCollisions(_leftArmColliders, ref ignoredPairs);
             IgnoreSelfCollisions(_rightArmColliders, ref ignoredPairs);
+            IgnoreSelfCollisions(_wheelsColliders, ref ignoredPairs);
 
             // Apply custom ignore rules configured in the inspector
             foreach (CollisionIgnoreRule rule in _ignoreRules)

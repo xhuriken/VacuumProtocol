@@ -1,5 +1,89 @@
 # Development Log
 
+## [2026-08-12] PlayerV2 Suspension Extension & Jump Physics
+**Goal:** Implement professional dynamic suspension that extends wheels mid-air, and add jump logic with reliable ground checking.
+**Changes:**
+- **Suspension Target Position (`PlayerV2_Suspension.cs`)**: Added `TargetExtension` and mapped it to `joint.targetPosition`. This configures the ConfigurableJoint's internal spring to actively push the wheels away from the chassis. When airborne, the wheels visually stretch down. Upon landing, the chassis weight compresses the spring to find a natural resting height.
+- **Physics Impulse Jump (`PlayerV2_Movement.cs`)**: Implemented a physical jump by applying `ForceMode.Impulse` upwards on the `HipsRigidbody`. The multi-body physics handles the rest automatically: the Hips launch upward, the springs extend the wheels downward, and the wheels lift off the ground only when the joint `linearLimit` is reached.
+- **Robust Ground Check**: Integrated a `Physics.SphereCast` firing downwards from the Hips. The cast distance ensures ground detection even when the suspension is heavily compressed or fully extended.
+**Justification:** Pushing the joint `targetPosition` away from zero utilizes Unity's native physics springs correctly, completely decoupling the need for manual script-based wheel offset animations. Firing an impulse on the parent body cleanly achieves "jump takeoff lag" natively through the joint's constraints.
+
+## [2026-08-12] PlayerV2 Wheels Steering Angle & Drift Fix
+**Goal:** Fix wheels turning on themselves when stopped and ensure all wheels rotate uniformly regardless of their individual base orientations.
+**Changes:**
+- **Absolute Steering Authority**: Decoupled the Lerp from the wheel's actual `localEulerAngles.y`. The script now maintains a single internal `_currentSteeringAngle` and forcefully applies it. This prevents the ConfigurableJoint's Free AngularY axis from drifting due to physics micro-collisions when stopped.
+- **Base Offset Independence**: Removed the global `_baseOffset`. Instead, cached each wheel's `_initialWheelY` in `Start()`. The `_currentSteeringAngle` is now additively applied to each wheel's initial Y rotation.
+**Justification:** When `angularYMotion` is Free, Physics can impart tiny rotational forces. If the script reads the wheel's rotation to Lerp it, it creates a feedback loop causing drift. By keeping an isolated steering state and applying it as an offset to each wheel's initial rotation, all wheels stay perfectly synchronized and ignore physical jitter, solving the perpendicular orientation bug on the side wheels.
+
+## [2026-08-12] PlayerV2 Wheels Refactoring (KISS)
+**Goal:** Simplify wheel orientation logic after identifying the true source of rotation bugs (locked angularYMotion in PlayerV2_Suspension).
+**Changes:**
+- **KISS Refactoring**: Completely rewrote `Wheels.cs` (`WheelSteering`). Removed all complex gimbal lock workarounds, cached arrays, and velocity smoothing.
+- **Distance-Based Delta**: Restored the simple delta position calculation (`movement = currentPosition - _lastPosition`).
+- **Local Inverse Math**: Used `transform.InverseTransformDirection(movement)` and `Mathf.Atan2` to calculate the exact local angle relative to the parent Hips.
+- **Direct Application**: Simply Lerped `localEulerAngles.y` directly without attempting to enforce cached X and Z axes.
+**Justification:** The previous complex gimbal lock and rotation snapping fixes were unnecessary. The root cause of the wheels not turning properly was the physical suspension joint (`ConfigurableJoint.angularYMotion`) being accidentally locked. By removing the over-engineered workarounds, the code is robust, readable, and relies strictly on pure parent-relative math.
+
+## [2026-08-12] PlayerV2 Movement Physics Bugfixes
+**Goal:** Fix physics accumulation and rotation bugs on the Hips, solve infinite sliding, and correct movement velocity scaling.
+**Changes:**
+- Enforced `RigidbodyConstraints.FreezeRotation` in code on `HipsRigidbody` during `Start()` to prevent any ground friction from inducing torque and spinning the Hips indefinitely.
+- Fixed infinite sliding: Now applies explicit velocity zeroing (`HipsRigidbody.velocity = new Vector3(0, y, 0)`) when braking velocity falls below a 0.1 threshold to counter the lack of physics material friction.
+- Restructured acceleration logic: Separated `MoveSpeed` (target velocity limit), `Acceleration` (force to reach target), and `Deceleration` (braking force). Changed the movement application from instant `VelocityChange` to gradual `Acceleration` to prevent physics snapping that made movement feel uncontrollable.
+- Re-assigned movement direction calculation to use `CameraTransform` (`Look`) instead of `TorsoRigidbody` so players move relative to where they are looking instead of where the torso is visually rotated.
+- **API Updater False Positive Fix**: Replaced all occurrences of `isLocalPlayer` with `isOwned` in `PlayerV2_Movement.cs` and `PlayerV2_Look.cs`. Unity's API Updater incorrectly scans the text `isLocalPlayer` and mistakes Mirror scripts for deprecated UNET scripts, causing an endless loop of "Script Updating Consent" prompts whenever the file is edited externally.
+**Justification:** Physics materials without friction cause rigidbodies to drift forever unless hard-stopped. Floating character bases will accumulate rolling torque from floor drag unless their rotation is explicitly frozen. The previous snappy movement using `VelocityChange` applied max speed instantly, bypassing normal physical acceleration curves. Changing `isLocalPlayer` to `isOwned` strictly bypasses Unity's broken UNET regex scanner while preserving identical Mirror networking authority logic.
+
+## [2026-08-12] PlayerV2 Wheels Decoupling & Strict Checks
+**Goal:** Fix wheel steering orientation issues introduced by the new physics architecture and enforce strict reference checks instead of silent fallbacks.
+**Changes:**
+- **Strict Architecture**: Removed the silent fallback in `PlayerV2_Movement.cs`. The script now strictly requires `CameraTransform` and throws a `Debug.LogError` if it is missing, rather than quietly guessing another transform.
+- **Visual Wheel Decoupling**: Completely removed Rigidbody dependency (`linearVelocity`) from `Wheels.cs` (`WheelSteering`). The wheels now calculate their orientation strictly based on pure spatial position delta (`transform.position - _lastPosition`).
+- **Animator Override (Wheel Jitter/Reset Fix)**: Moved wheel rotation logic to `LateUpdate()` and implemented internal state tracking (`_currentWheelY`). Previously, if an Animator or NetworkTransform reset the wheel's local rotation to default every frame, reading `wheel.localEulerAngles.y` would constantly start the Lerp from 0, causing violent trembling and making the wheel snap back when stopped. Now, the script ignores the overwritten physical angle, Lerps its own internal float, and brute-forces it onto the Transform.
+- **Gimbal Lock Destruction Fix**: Cached initial local X and Z rotations (`_baseX`, `_baseZ`) in `Wheels.cs`. Previously, the script was reading `localEulerAngles.x` and writing it back while modifying `y`. When crossing 180 degrees backwards, Unity's internal Quaternion calculation would flip the Euler X and Z values to 180 (Gimbal lock). Writing these back permanently locked the wheel meshes upside-down and backwards, causing them to orbit sideways outside the robot's body due to their offset pivot.
+**Justification:** Silent fallbacks create unpredictable long-term bugs because developers don't realize their configuration is broken. For the wheels, using physical velocity directly on an active suspension rig causes micro-stutters and orientation issues; position delta guarantees smooth, 100% accurate visual rotation independent of the underlying physics system (V1 or V2) or network sync states.
+
+## [2026-08-12] PlayerV2 Movement Physics Bugfixes
+- Planned the architecture: Hips (Base RB) and Torso (Turret RB) connected via a ConfigurableJoint with Free Y rotation.
+- Created `PlayerV2` directory and basic script structure.
+- Ignored Multiplayer SyncVars for now to focus purely on local physics stability.
+**Justification:** The previous setup used a single root RB and tried to counter-rotate child transforms visually or physically, causing Unity physics to fight the Transform hierarchy, leading to jitter and joint failures. The Multi-Body approach delegates the "turret" logic entirely to the physics engine, ensuring 100% stability.
+## [2026-08-06] - 4-Wheel Procedural Raycast Suspension Refactoring
+
+### Feature Added / Refactoring
+- **Dynamic Relative Wheel Baseline & Independent 4-Wheel Suspension (`WheelSuspensionController.cs`)**:
+  - Captured each wheel's initial Editor local position (`_initialWheelLocalPos[i]`, e.g. `y = -0.07642244f`) on `Awake()` as the single-source-of-truth baseline offset.
+  - Calculated independent downward extension distance (`-Y`) relative to each wheel's cached initial local Y position, ensuring exact model pivot preservation without hardcoded `0f` assumptions.
+  - Refactored `RoutineJumpSuspensionSequence()` to maintain full downward extension in mid-air (`_maxSuspensionDistance`), providing a realistic leg-stretch visual effect during jump takeoff and airtime.
+
+### Code Modified/Added
+- **Modified `Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs`**:
+  - Retained `_initialWheelLocalPos` caching to capture prefab default local offsets (such as `y = -0.07642244f`).
+  - Updated visual Lerp calculations in `AnimateVisualWheels()` to subtract extension from `baseLocalPos.y`.
+  - Refactored jump sequence coroutine to stretch legs in mid-air and hold extension until ground landing.
+
+### Technical Justification & Details
+- **Pivot Integrity**: Hardcoding local Y to `0f` breaks 3D models whose wheel origins start at negative or custom offsets (e.g. `y = -0.07642244f`). Storing `baseLocalPos` ensures the suspension travel (`_maxSuspensionDistance` / `_restExtensionDistance`) is applied relative to the mesh's natural origin.
+- **Airborne Leg Stretch**: Keeping wheels extended downward in mid-air gives immediate visual feedback of jump takeoff dynamics and prepares wheels for ground impact compression on landing.
+
+## [2026-08-05] - Wheel Suspension Edit-Mode Gizmos Fix
+
+### Feature Added / Bug Fix
+- **Edit-Mode Suspension Gizmo Auto-Discovery (`WheelSuspensionController.cs`)**:
+  - Implemented `GetCandidateWheelTransforms()` helper to dynamically discover wheel child transforms from `_wheelsRoot` when running in Edit Mode before `Awake()` populates runtime lists.
+  - Added serialized `_drawGizmosOnlyWhenSelected` setting (default `true`) allowing developers to toggle between showing gizmos only when selected vs continuously in the Scene View during Edit Mode.
+
+### Code Modified/Added
+- **Modified `Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs`**:
+  - Added `_drawGizmosOnlyWhenSelected` serialized boolean field under `Debug & Gizmos`.
+  - Added `GetCandidateWheelTransforms()` for Edit Mode transform querying.
+  - Added `OnDrawGizmos()` callback to support continuous rendering when `_drawGizmosOnlyWhenSelected` is `false`.
+  - Refactored `OnDrawGizmosSelected()` and extracted `DrawSuspensionGizmos()`.
+
+### Technical Justification & Details
+- **Root Cause**: `WheelSuspensionController` relies on `DiscoverAndSetupWheels()` executed during `Awake()` to populate `_wheelTransforms` at runtime. In Edit Mode (outside Play Mode), `Awake()` does not run, leaving `_wheelTransforms` empty (Count = 0) unless manually assigned in Inspector. In addition, Gizmo drawing was locked inside `OnDrawGizmosSelected()`, requiring the object to be actively selected.
+- **Solution**: Extracted wheel candidate resolution logic so that in Edit Mode `_wheelsRoot.GetComponentsInChildren` / `foreach (Transform child in _wheelsRoot)` supplies target transforms without needing Play Mode execution.
+
 ## [2026-07-21] - Lobby Texture Editor Feature (Tomodachi Style)
 
 ### Feature Added
@@ -556,7 +640,8 @@
 - **Modified Files**: MyNetworkManager.cs, SteamLobby.cs, LobbyController.cs, LobbyCustomizationUI.cs, PlayerListItem.cs, PlayerObjectController.cs.
 - **Why**: Solidify the networking core. Multiplayer synchronization is the most fragile part of the project.
 - **Problem solved**: Added XML summaries and Tooltips to map out the Steamworks-to-Mirror handshake, Lobby UI refresh cycles, and [SyncVar] hooks. This ensures future modifications to the lobby don't accidentally break Steam integration or client-host state mismatch.
-## Codebase Audit - Phase 5: UI Systems (July 2026)
+
+## Codebase Audit - Phase 5: UI Systems (July 2026)
 - **Modified Files**: ColorButtonUI.cs, CustomTextButton.cs, UICustomButtonBase.cs, UIColorsPalettes.cs, InGameMenuController.cs, UIPanelController.cs, UINavigationGroup.cs, OpenURLButton.cs, CustomCursorFollower.cs, MouseManager.cs, PlayerVolumeSlider.cs, SettingsUIPresenter.cs.
 - **Why**: Finalize the strict code standards implementation on the last remaining subsystem: the User Interface. The custom vector graphics UI and menu navigation controllers are highly customized and require thorough explanation for future maintainability.
 - **Problem solved**: Added strict XML summaries (Description, Context, Justification) and Tooltips (Role, Use Case, Justification) across all UI scripts. Created `documentation/UI_System.md` to provide a high-level architectural overview of the vector UI integrations (Shapes), menu navigation, and input helpers, thereby successfully concluding the complete codebase audit.
@@ -1388,3 +1473,154 @@
 
 ### Code Modified/Added
 - [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Rebuilt the entire class to support manual cone queries, visibility calculations, centripetal alignment, torque spin, and smoothed bi-directional scale transitions; corrected local suction axis to be configurable via a serialized `LocalAxis` enum in the Unity Inspector).
+
+## [2026-08-05] - 4-Wheel Pyramid Suspension Physics & Jump Refactor (SSOT)
+
+### Technical Justification & Details
+- **4-Wheel Pyramid Suspension Physics**:
+  - Implemented `WheelSuspensionController.cs` to act as the Single Source of Truth (SSOT) for configuring and driving 4-wheel suspension joints.
+  - Programmatically configures `ConfigurableJoint` components on all 4 wheels on Awake:
+    - Translation in X and Z is locked (`xMotion = Locked`, `zMotion = Locked`).
+    - Downward Y translation is limited (`yMotion = Limited`, bounded by `_maxSuspensionDistance`).
+    - Rotational degrees of freedom are fully locked (`angularXMotion = Locked`, `angularYMotion = Locked`, `angularZMotion = Locked`) to form a rigid pyramid spring structure from the hips/torso.
+  - Initial wheel positions in editor are treated as the minimal (highest / fully compressed) baseline position. Wheels extend downwards toward the ground.
+- **Resting Elevation Push Force**:
+  - Added resting elevation spring push force system (`_defaultPushForce`, `_springStiffness`, `_restExtensionDistance`).
+  - Automatically computes per-wheel ground raycasts and applies upward forces on the chassis and downward forces on wheels to keep the body resting floating in the air upon game start.
+- **Dynamic Jump Takeoff & Landing Suspension Sequence**:
+  - Refactored `PlayerJumpComponent.cs` to query grounding from `WheelSuspensionController` and trigger upward impulse.
+  - During jump takeoff, `WheelSuspensionController` forces joint target positions to `_maxSuspensionDistance` for `_jumpRetractDelay` seconds, visually demonstrating suspension extension lag as the body rises while wheels briefly stay extended near ground.
+  - Mid-air, wheels retract toward the body.
+  - Upon landing, wheels touch ground first and slam/compress upward against the ground, absorbing shock seamlessly via spring dampers.
+- **Internal Collision Exemption**:
+  - Updated `PlayerCollisionManager.cs` to apply `IgnoreSelfCollisions(_wheelsColliders)` and prevent wheel-to-wheel physics lockups.
+
+### Code Modified/Added
+- [NEW] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Centralized 4-wheel pyramid suspension physics, ground elevation push forces, multi-wheel raycast grounding, and jump takeoff/landing dynamics).
+- [MODIFY] [PlayerJumpComponent.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerJumpComponent.cs) (Integrated with WheelSuspensionController for ground state checks and jump takeoff suspension triggers).
+- [MODIFY] [PlayerCollisionManager.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/PlayerCollisionManager.cs) (Added wheel self-collision ignoring rules).
+
+## [2026-08-05] - Fix Infinite Bounce & Add Scene View Gizmos (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Infinite Bounce Root Cause & Fix**:
+  - Removed manual `AddForceAtPosition` from `FixedUpdate()`, which was double-applying force on top of PhysX `ConfigurableJoint` `yDrive`. Compounding forces had created infinite energy gain / spring oscillation.
+  - Rely exclusively on PhysX `ConfigurableJoint`'s `yDrive` (with `positionSpring` and `positionDamper` = 60f) for smooth non-bouncing shock absorption and resting height elevation.
+- **Ignore Self-Colliders on Raycast Ground Check**:
+  - `CheckWheelGrounded` now dynamically filters out all colliders belonging to the player hierarchy using `HashSet<Collider>`, preventing raycasts from falsely hitting the player's own wheels or body.
+- **Scene View Visual Debug Gizmos (`OnDrawGizmosSelected`)**:
+  - **Ground Check Raycasts**: Rendered as vertical lines from each wheel down to `_groundCheckDistance` with a sphere indicator (**Green** when grounded, **Red** when airborne).
+  - **Max Suspension Distance**: Rendered as a **Cyan** line and wire cube showing the maximum downward extension range (`_maxSuspensionDistance`).
+  - **Rest Extension Height**: Rendered as a **Magenta** wire cube indicating the target resting float position (`_restExtensionDistance`).
+  - **Pyramid Connection Structure**: Rendered as **Yellow** lines connecting the main body center to each of the 4 wheel mounts.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Refactored to rely on PhysX `yDrive` spring damper, exclude player self-colliders from ground check, add `OnValidate()` range clamping, and render 4-color Scene view Gizmos).
+
+## [2026-08-05] - Baseline Alignment & Scaled Suspension Ranges Fix (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Baseline Position & Editor Mount Point Alignment**:
+  - Re-aligned Gizmos calculation to compute `baselineMountPos` from `joint.connectedBody.transform.TransformPoint(joint.connectedAnchor)` (the bottom plate of the robot body).
+  - This guarantees that Gizmo bounds (Rest Height Magenta, Max Travel Cyan) render starting directly from the robot's lower body plate rather than floating meters below in the air.
+- **Scaled Suspension Travel Range Defaults**:
+  - Reduced default `_maxSuspensionDistance` from `0.6m` to `0.25m` (Range `0.02m` to `1.0m`) to match the small scale of the vacuum caster wheels.
+  - Reduced default `_restExtensionDistance` from `0.4m` to `0.10m` (Range `0.01m` to `0.8m`) so the body floats slightly off the ground when driving/rolling without unnatural gap height.
+  - Reduced default `_groundCheckDistance` to `0.18m` for precise grounding.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Updated `OnDrawGizmosSelected` to measure downward extension from joint connectedAnchors on the body base; scaled default range parameters for small caster wheels).
+
+## [2026-08-05] - Procedural Raycast Suspension Refactor (Fluid Physics & Zero Friction)
+
+### Technical Justification & Details
+- **Procedural Raycast Suspension Architecture (Industry Standard)**:
+  - Replaced physical ConfigurableJoints and child wheel Rigidbodies scraping on the floor with pure Procedural Raycast Spring Suspension.
+  - In Unity character controller physics, attaching physical Rigidbodies and Colliders to 4 wheels scraping against the floor causes massive ground friction drag, rotational torque resistance, and joint constraint fighting that destroys movement fluidness and turning performance.
+  - With Procedural Raycast Suspension, the main player Rigidbody remains the Single Source of Truth (SSOT) for all horizontal physics and turning. Child wheel Rigidbodies are automatically set to `isKinematic = true` and their physical colliders are converted to triggers (`isTrigger = true`).
+- **Spring Force Equation ($F = k \cdot \text{compression} - c \cdot v$)**:
+  - Performs 4 downward raycasts from the wheel baseline mount points under the lower body plate.
+  - Applies upward spring forces directly to the main body Rigidbody (`_bodyRb.AddForceAtPosition`) when grounded.
+  - Procedurally drives the visual local Y positions of the wheel Transforms between 0 (minimal / top position) and `_maxSuspensionDistance` (`0.422m` default) with visual smoothing (`_visualLerpSpeed = 25f`).
+- **Dynamic Jump Takeoff & Landing Visuals Preserved**:
+  - Retained jump takeoff visual delay (`_jumpRetractDelay = 0.12s`) where visual wheels stretch downward to `_maxSuspensionDistance` during takeoff, then pull up to minimal position (0) mid-air, and compress back to rest height (`0.097m` default) upon landing.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Rebuilt with Procedural Raycast Spring Suspension physics, setting child wheel rigidbodies to kinematic and colliders to triggers, eliminating all physical friction and turning resistance while preserving 100% of visual suspension dynamics).
+
+## [2026-08-05] - Zero-Friction Physical Wheel Colliders & Compilation Fix (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Physical Wheel Colliders (`isTrigger = false`)**:
+  - Restored physical collision (`isTrigger = false`) on all 4 wheel colliders so that wheels physically support the robot on the floor and elevate the body when `_restExtensionDistance` is increased.
+- **Dynamic Zero-Friction `PhysicsMaterial`**:
+  - Dynamically creates and assigns a `PhysicsMaterial` ("WheelZeroFriction") with `dynamicFriction = 0`, `staticFriction = 0`, and `frictionCombine = Minimum` to all wheel colliders.
+  - This allows vertical ground support and elevation while removing 100% of horizontal ground drag and rotational friction, allowing the player to turn on themselves effortlessly.
+- **CS1061 Compilation Fix**:
+  - Removed invalid `joint.enabled = false` call (since `UnityEngine.Joint` does not inherit from `Behaviour`).
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Updated `DiscoverAndConfigureWheelJoints` to apply dynamic zero-friction PhysicsMaterial to physical wheel colliders; resolved compilation errors).
+
+## [2026-08-05] - Wheels Angular Y Motion & Counter-Rotation Fix (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Root Cause Analysis**:
+  - `ConfigurableJoint.angularYMotion` was set to `ConfigurableJointMotion.Locked`, forcing PhysX to override the wheel Rigidbodies' Y rotation to match the body's yaw rotation.
+  - This prevented `PlayerLookComponent.cs` from counter-rotating `_wheelsChassisVisual` (`_wheelsChassisVisual.localRotation = _originalWheelsLocalRot * Quaternion.Euler(0f, -parentYaw, 0f)`), causing the wheels and chassis plate to rotate along with the player's look yaw instead of remaining stationary in world orientation.
+- **Fix**:
+  - Changed `joint.angularYMotion = ConfigurableJointMotion.Free` on all 4 wheel `ConfigurableJoint`s while keeping tilt angles (`angularXMotion` and `angularZMotion`) locked.
+  - This allows the wheel chassis plate and wheels to counter-rotate freely on the Y-axis, restoring the stationary chassis base simulation during torso yaw turns.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Changed `angularYMotion` to `ConfigurableJointMotion.Free` in `ApplyJointPhysicsConfiguration()` so `PlayerLookComponent` counter-rotation functions unimpeded).
+
+## [2026-08-05] - Elimination of Nested Rigidbody Loop & Pure Procedural Raycast Suspension
+
+### Technical Justification & Details
+- **Nested Rigidbody & Joint Feedback Loop Diagnosis**:
+  - In Unity PhysX, placing child `Rigidbody` components with `ConfigurableJoint`s under a parent `Transform` (`_wheelsChassisVisual` / `Wheel_FL`) that is being manually rotated via script in `Update()` / `LateUpdate()` (`PlayerLookComponent` counter-rotation and `WheelSteering` caster orientation) creates a circular physics constraint conflict:
+    `Body Rigidbody` -> parent of `_wheelsChassisVisual` -> parent of `Wheel Rigidbody` -> connected via `ConfigurableJoint` back to `Body Rigidbody`.
+  - This circular loop caused violent physics feedback, spinning wheel visual glitches ("roues qui tournent dans tous les sens"), and broken turning.
+- **Single Source of Truth (SSOT) Solution**:
+  - `WheelSuspensionController.cs` automatically detects and destroys any child `ConfigurableJoint` or `Rigidbody` components on wheel GameObjects at `Awake()`, eliminating nested Rigidbody loops completely.
+  - The root player `Rigidbody` is the single SSOT physics body.
+  - Raycast spring forces ($F = k \cdot \text{compression} - c \cdot v$) push upward directly on the root Rigidbody at each wheel mount position, elevating the body physically at rest height (`0.097m` default).
+  - `WheelSuspensionController` animates **only** `wheel.localPosition.y` for visual suspension extension/compression. It **never** modifies `wheel.localRotation`.
+  - This leaves `PlayerLookComponent` 100% in control of chassis counter-rotation (`_wheelsChassisVisual.localRotation`) and `WheelSteering` 100% in control of caster orientation (`WheelSteering.cs`) with ZERO PhysX interference!
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Rebuilt to auto-destroy child Rigidbodies/Joints, apply raycast spring forces to root Rigidbody, animate only local Y position, and preserve rotation SSOT for PlayerLookComponent and WheelSteering).
+
+## [2026-08-05] - Automatic Critical Damping & Elevated Raycast Origin Fix (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Floor Spawn Clipping Fix (`_rayStartUpOffset = 0.5m`)**:
+  - Previously, raycasts originated at `mountOrigin + Vector3.up * 0.02m`. When spawning flat on the ground or clipped 2-3cm into the floor, raycasts originated inside the floor geometry and failed to detect ground, causing wheels to pass through the floor and get stuck.
+  - Elevating raycast origins to `mountOrigin + Vector3.up * 0.5m` ensures ground is detected even if the player spawns clipped into the floor. The raycast calculates `distanceToMount = minHitDistance - 0.5m` (negative when clipped), applying immediate upward spring force to pop the player up onto their wheels smoothly at spawn.
+- **Infinite Spring Oscillation Elimination (Critical Damping $c = 2\sqrt{m \cdot k}$)**:
+  - Added automatic mathematical critical damping calculation based on body mass and spring stiffness per wheel ($c_{\text{crit}} = 2\sqrt{(M_{\text{body}} / 4) \cdot k}$).
+  - Dampens downward and upward vertical velocity efficiently, preventing spring force overshooting and guaranteeing 0 infinite bouncing when the robot is resting or landing.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Added `_useAutoCriticalDamping`, `_dampingMultiplier`, and `_rayStartUpOffset = 0.5m` to eliminate infinite spring bouncing and ground spawn clipping).
+
+## [2026-08-05] - Base Height Offset Parameter Addition (WheelSuspensionController)
+
+### Technical Justification & Details
+- **Base Height Offset (`_baseHeightOffset`)**:
+  - Added serialized float parameter `_baseHeightOffset` under Suspension Travel Parameters.
+  - Applied `_baseHeightOffset` to all baseline mount points (`initialLocalPos + Vector3.up * _baseHeightOffset`), Raycast spring physics evaluations, visual wheel local Y animations (`baseLocalPos.y + _baseHeightOffset - _animatedWheelY[i]`), and Scene view Gizmos bounds.
+  - Allows designers to adjust the overall vertical origin pivot of the suspension system in the Inspector if the model origin pivot is placed too low or too high.
+
+### Code Modified/Added
+- [MODIFY] [WheelSuspensionController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Movement/WheelSuspensionController.cs) (Added `_baseHeightOffset` field and integrated it across physics, visual animation, and Gizmos calculations).
+
+
+
+
+
+
+
+
+

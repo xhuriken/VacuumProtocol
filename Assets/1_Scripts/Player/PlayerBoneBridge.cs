@@ -139,13 +139,23 @@ namespace VacuumProtocol.Player
             }
 
             // 2. Automatic rigid/non-skinned matching fallback
-            // If the model has no SkinnedMeshRenderer, or if there are rigid pieces, map them directly by name
+            // Retrieve wheel transforms managed by WheelSuspensionController to exclude them from RuntimeFollower override
+            HashSet<Transform> wheelTransforms = new HashSet<Transform>();
+            VacuumProtocol.Player.WheelSuspensionController suspension = GetComponentInParent<VacuumProtocol.Player.WheelSuspensionController>();
+            if (suspension != null && suspension.WheelTransforms != null)
+            {
+                foreach (Transform wt in suspension.WheelTransforms)
+                {
+                    if (wt != null) wheelTransforms.Add(wt);
+                }
+            }
+
             Transform[] visualTransforms = _importedMeshRoot.GetComponentsInChildren<Transform>(true);
             int autoRigidCount = 0;
             foreach (Transform visT in visualTransforms)
             {
-                // Skip the root itself
-                if (visT == _importedMeshRoot) continue;
+                // Skip the root itself and any wheel transforms managed procedurally by WheelSuspensionController
+                if (visT == _importedMeshRoot || wheelTransforms.Contains(visT)) continue;
 
                 // Check if this transform matches a bone in the Bone Bridge by name
                 Transform bridgeBone = FindBoneInBridge(visT.name);
