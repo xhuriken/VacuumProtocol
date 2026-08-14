@@ -19,6 +19,11 @@ namespace VacuumProtocol.PlayerV2
         public float MinPitch = -85f;
         public float MaxPitch = 85f;
 
+        [Header("Camera Fluidity")]
+        [Tooltip("0 = Caméra purement stable (mouvement direct souris). 1 = Caméra attachée au rebond physique de la tête.")]
+        [Range(0f, 1f)]
+        public float HeadMovementBlend = 0f;
+
         private PlayerV2_Controller _controller;
         private PlayerInputHandler _input; // On réutilise l'input handler existant
         
@@ -67,16 +72,38 @@ namespace VacuumProtocol.PlayerV2
         {
             if (!isOwned) return;
 
-            if (_controller.HeadController != null)
+            if (_controller.CameraTransform != null)
             {
-                // Le pitch est transmis au contrôleur de la tête pour être réparti sur les joints physiques.
-                // Le yaw est géré par le TorsoRigidbody (FixedUpdate).
-                _controller.HeadController.SetTargetPitch(_cameraPitch);
-            }
-            else if (_controller.CameraTransform != null)
-            {
-                // Fallback si pas de tête physique : La caméra gère le pitch localement.
-                _controller.CameraTransform.localRotation = Quaternion.Euler(_cameraPitch, 0f, 0f);
+                Quaternion finalTargetRot;
+
+                // Cible 0: Totalement stable, pure input mathématique
+                Quaternion targetStable = Quaternion.Euler(_cameraPitch, _torsoYaw, 0f);
+
+                if (_controller.HeadController != null && _controller.HeadController.NeckJoints.Length > 0)
+                {
+                    // La tête prend 70% en physique
+                    _controller.HeadController.SetTargetPitch(_cameraPitch);
+
+                    // Cible 1: Rebond physique de la tête
+                    Rigidbody headRb = _controller.HeadController.NeckJoints[_controller.HeadController.NeckJoints.Length - 1].GetComponent<Rigidbody>();
+                    
+                    float headPitch = _cameraPitch * _controller.HeadController.PitchMultiplier;
+                    float remainingPitch = _cameraPitch - headPitch;
+                    
+                    // On compense les 30% restants sur le transform physique de la tête
+                    Quaternion targetHead = headRb.rotation * Quaternion.Euler(remainingPitch, 0f, 0f);
+
+                    // Mix entre "FPS Pur" et "Corps physique" (Totalement linéaire)
+                    finalTargetRot = Quaternion.Slerp(targetStable, targetHead, HeadMovementBlend);
+                }
+                else
+                {
+                    finalTargetRot = targetStable;
+                }
+
+                // Application directe de la rotation mixée. 
+                // Ne JAMAIS utiliser de Slerp avec Time.deltaTime ici, sinon la caméra "traîne" derrière la physique et crée des saccades.
+                _controller.CameraTransform.rotation = finalTargetRot;
             }
         }
 

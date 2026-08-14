@@ -1,5 +1,40 @@
 # Development Log
 
+## [2026-08-14] V2 Voice & Mouth Synchronization
+**Goal:** Restore UniVoice VoIP 3D spatialization and `MouthAnimator` support for the new Player_V2 architecture.
+**Changes:**
+- **`PlayerV2_Controller.cs` [MODIFIED]**: Added `[SyncVar] public int ConnectionId = -1` to act as the network peer identifier for UniVoice.
+- **`MyNetworkManager.cs` [MODIFIED]**: Updated `OnServerAddPlayer` to inject the Steam/Mirror `connectionId` into the `PlayerV2_Controller` on spawn.
+- **`UniVoicePlayerAudio.cs` & `MouthAnimator.cs` [MODIFIED]**: 
+  - Updated `TryFindPeerId` / `OnStartClient` logic to recursively search for `PlayerV2_Controller` to fetch the `ConnectionId`.
+  - Fixed 3D Spatialization for V2: The `UniVoicePlayerAudio` now correctly tracks the physical `HipsRigidbody` instead of the static prefab root, ensuring voices always emanate from the moving avatar.
+  - Added a `_inputHandler` (`PlayerInputHandler`) field to `MouthAnimator` to read the `IsVacuuming` state directly from the generic input instead of relying on the deprecated V1 `PlayerVacuumController`.
+  - Corrected `MouthAnimator` baseline scaling: Set `_minScale` to `(0,0,0)` and `_maxScale` to `(2,2,2)`. A target scale of 50% now perfectly resolves to `(1,1,1)`, allowing the 3D mouth bones to start at their exact original size.
+- **`Eye.cs` [MODIFIED]**:
+  - Changed the default camera tracking mode (when no explicit target is in view). Instead of projecting a point 50m ahead and using `Quaternion.LookRotation` with world `Vector3.up` (which caused twisting and incorrect pitch offsets), it now directly targets `Camera.main.transform.rotation`. This perfectly compensates for the head's pitch multiplier, forcing the eyes to look completely down even if the head physically can't.
+**Justification:** The new V2 multi-body architecture doesn't use the monolithic V1 `PlayerController`, breaking the peer ID lookup. Adding the ID to the V2 hub and adapting the audio scripts allows seamless fallback compatibility. By listening to the `PlayerInputHandler` instead of the Vacuum controller, the mouth animation reacts to the "2-clicks" input instantly without needing the vacuum physics to be ported yet.## [2026-08-14] Jump Physics Overhaul & Asynchronous Wheel Retraction Animation
+**Goal:** Fix the non-intuitive mass-dependent jump force, implement heavier "Hollow Knight" style fall gravity, and add a juicy asynchronous retraction animation to the wheels when jumping.
+**Changes:**
+- **`PlayerV2_Movement.cs` [MODIFIED]**:
+  - Refactored `JumpForce` application: Now subtracts existing Y velocity before applying `ForceMode.VelocityChange`. This prevents players from exploiting the suspension bounce to jump exponentially higher, ensuring a consistent max jump height.
+  - Added hard-landing detection tracking previous frame's `currentVelocity.y` to trigger shock absorption upon impact.
+- **`PlayerV2_Suspension.cs` [MODIFIED]**:
+  - Implemented dynamic `OnHardLanding` damper increase. Temporarily multiplies the wheel springs' `Damper` by 5 upon heavy impact, rapidly dissipating the stored kinetic energy and removing the bouncy landing effect while preserving normal suspension bounciness during regular locomotion.
+  - Added `TriggerJumpRetraction()` method calling an `IEnumerator AnimateWheelRetraction(joint)`.
+  - On jump, each wheel waits a tiny random delay (`Random.Range(0.01f, MaxRandomRetractionDelay)`) before suddenly snapping up its ConfigurableJoint `targetPosition` to `RetractedExtension` (pulling the spring up).
+  - After a brief hold, the spring lerps smoothly back down to its standard `TargetExtension`.
+- **`PlayerV2_Movement.cs` [MODIFIED]**:
+  - Replaced `ForceMode.Impulse` with `ForceMode.VelocityChange` for the `JumpForce`. This ignores the Rigidbody's mass entirely, allowing intuitive and predictable values (e.g., 8 instead of 500).
+  - Implemented `FallGravityMultiplier` (default 3x). In `FixedUpdate()`, if vertical velocity is negative (falling), additional downward acceleration is applied to make the character feel heavier and snap faster to the ground.
+**Justification:** Using `VelocityChange` provides designer-friendly values without having to calculate $F = m \cdot \Delta v$. The "Hollow Knight" gravity multiplier is an industry-standard trick to ensure jumps feel responsive on the way up but snappy and weighty on the way down. The asynchronous wheel retraction utilizes Unity's physics springs dynamically mid-air, creating a highly polished, organic "cartoony" leap animation without needing a dedicated Animator.
+## [2026-08-14] Eye tracking & Pupil Interpolation
+**Goal:** Smooth out pupil movements with a dedicated speed setting and ensure eyes/pupils target the camera's center view when no specific target is found.
+**Changes:**
+- **`Eye.cs` [MODIFIED]**:
+  - Added `_pupilRotationSpeed` to configure the speed of pupil tracking independently.
+  - Calculated `_pupilTargetLocalRotation` and applied smooth `Quaternion.Slerp` in `ApplyRotation()`.
+  - Added a fallback in `CalculateTargetRotation()` to fetch `Camera.main.transform` and target `position + forward * 50f` when no active entity target is detected by the `PlayerViewRange`.
+**Justification:** Instantly snapping the pupil feels mechanical; separating its slerp speed adds a more organic, biological feel. Targeting the camera's center view natively gives a sense of focus, visually decoupling the head's physical delay from what the player is actually looking at.
 ## [2026-08-13] PlayerV2 Arms Physical System
 **Goal:** Port the physical, procedural arm-reaching system from V1 to V2 (`PlayerV2_Arms`) and implement a Gizmo tool.
 **Changes:**
@@ -1660,3 +1695,44 @@
 
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Head.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Head.cs) (Renamed alignment variables; Locked Y and Z joint motions).
+
+## [2026-08-14] - Eyes Targeting System & Proportional Pitch (PlayerV2)
+
+### Technical Justification & Details
+- **Proportional Pitch System**:
+  - The head cannot inherit 100% of the input Pitch without clipping its chin or neck into the torso mesh at extreme angles.
+  - Implemented `PitchMultiplier` in `PlayerV2_Head.cs` (default 70%) to limit the physical joint rotation to only 70% of the player's camera pitch.
+  - Updated `PlayerV2_Look.cs` to apply the remaining 30% local pitch directly to the `CameraTransform`, ensuring the actual aim remains 100% faithful to the mouse input while maintaining a realistic head pose.
+- **Eyes & Pupil Targeting (75% / 100%)**:
+  - Updated `Eye.cs` to use weighted target interpolation (`_eyeTargetWeight = 0.75f` and `_pupilTargetWeight = 1.0f`).
+  - The outer eye mesh now aims 75% toward the target object, while the internal pupil bone aims at 100%. This creates a highly organic, saccadic tracking feel.
+- **Gizmos Added**:
+  - Added visual debug rays in `PlayerV2_Gizmos.cs`:
+    - **Yellow**: Head physical target (70% input).
+    - **Red**: Head current physical state.
+    - **Cyan**: Camera aim (100% input).
+    - **Magenta**: Eye tube aim (75% target tracking).
+    - **Green**: Pupil aim (100% target tracking).
+
+### Code Modified/Added
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Added Slerp weighting logic and accessors).
+- [MODIFY] [PlayerV2_Head.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Head.cs) (Added `PitchMultiplier`).
+- [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Compensates for the 70% head pitch by adding the remaining 30% to the camera).
+- [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Added Camera, Eye, and Pupil rays).
+
+## [2026-08-14] - Anti-Vomit Camera Fluidity & Gizmos Refactoring (PlayerV2)
+
+### Technical Justification & Details
+- **"Anti-Vomit" Camera Smoothing & Anticipation**:
+  - Previously, the Camera's rotation was strictly inheriting the Head's physical rotation. Any slight physics-based overshoot or bounce of the Head during fast Torso yaw rotations caused the Camera to bounce identically, inducing motion sickness ("vomito" effect).
+  - Modified `PlayerV2_Look.cs` to fully decouple the Camera's *World Rotation* from the Head's physics using a clean, linear slider (`HeadMovementBlend`).
+  - At `0.0`, the camera calculates a mathematically pure target look rotation based entirely on mouse input (`targetStable`), completely bypassing the physical head's joint limits and micro-bounces.
+  - At `1.0`, the camera is fully attached to the physical bouncing head.
+  - **CRITICAL HOTFIX**: Removed the `Time.deltaTime` Slerp smoothing entirely. Because the Camera is physically parented to the Head, using a time-based Slerp caused it to "drag" behind the physics updates, creating an unwanted lag where the camera inherited the head's bounce even at `0.0`, and causing framerate saccades. The camera now explicitly and instantly sets its World Rotation to the interpolated target every `LateUpdate`, providing flawless FPS fluidity.
+- **Gizmos Modularization**:
+  - Replaced the generic 3 toggles in `PlayerV2_Gizmos.cs` with 7 specific, granular toggles: `ShowViewRangeGizmos`, `ShowVacuumArmGizmos`, `ShowShooterArmGizmos`, `ShowHeadAnglesGizmos`, `ShowEyesGizmos`, `ShowCameraAnticipationGizmos`, and `ShowSuspensionGizmos`.
+  - The Camera's anticipated view vector is now independently visualizable to tune the smoothing values.
+
+### Code Modified/Added
+- [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Added Slerp smoothing, Anticipation multipliers, and World Space rotation decoupling).
+- [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Expanded Gizmo toggles into highly granular inspector parameters and added Anticipation rendering).

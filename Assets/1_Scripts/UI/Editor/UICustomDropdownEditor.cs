@@ -24,6 +24,7 @@ public class UICustomDropdownEditor : Editor
     private SerializedProperty _itemTemplateProp;
     private SerializedProperty _itemParentProp;
     private SerializedProperty _listBorderProp;
+    private SerializedProperty _accordionExtraSpacingProp;
 
     private SerializedProperty _hoverDurationProp;
     private SerializedProperty _hoverSizeOffsetProp;
@@ -71,6 +72,7 @@ public class UICustomDropdownEditor : Editor
         _itemTemplateProp = serializedObject.FindProperty("_itemTemplate");
         _itemParentProp = serializedObject.FindProperty("_itemParent");
         _listBorderProp = serializedObject.FindProperty("_listBorder");
+        _accordionExtraSpacingProp = serializedObject.FindProperty("_accordionExtraSpacing");
 
         _hoverDurationProp = serializedObject.FindProperty("_hoverDuration");
         _hoverSizeOffsetProp = serializedObject.FindProperty("_hoverSizeOffset");
@@ -154,6 +156,7 @@ public class UICustomDropdownEditor : Editor
             EditorGUILayout.PropertyField(_itemTemplateProp);
             EditorGUILayout.PropertyField(_itemParentProp);
             EditorGUILayout.PropertyField(_listBorderProp);
+            EditorGUILayout.PropertyField(_accordionExtraSpacingProp);
             EditorGUI.indentLevel--;
         }
 

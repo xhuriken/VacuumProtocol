@@ -45,7 +45,7 @@ public class MyNetworkManager : NetworkManager
             NetworkServer.AddPlayerForConnection(conn, _playerInstance.gameObject);
             Debug.Log($"[MyNetwork] Lobby Player Added for connection {conn.connectionId}");
         }
-        else if (sceneName.StartsWith("SteamTest"))
+        else if (sceneName != "Lobby")
         {
             // Spawn the actual game player (Mecha)
             GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab);
@@ -54,6 +54,10 @@ public class MyNetworkManager : NetworkManager
             if (gamePlayerInstance.TryGetComponent(out PlayerController controller))
             {
                 controller.ConnectionId = conn.connectionId;
+            }
+            else if (gamePlayerInstance.TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2Controller))
+            {
+                v2Controller.ConnectionId = conn.connectionId;
             }
 
             // Assign the new mecha object as the player's primary object

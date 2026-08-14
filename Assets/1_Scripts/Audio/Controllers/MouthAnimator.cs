@@ -10,7 +10,7 @@ using UnityEngine;
 public class MouthAnimator : NetworkBehaviour
 {
     [Header("Animation Settings")]
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: The transform of the mouth to scale.\nUse Case: Scaling the mesh.\nJustification: Decoupled from the root to allow animating only a specific child part.")]
     private Transform _mouthTransform;
 
@@ -39,24 +39,27 @@ public class MouthAnimator : NetworkBehaviour
     [Tooltip("Role: Scale multiplier for Bone 3 change from baseline.")]
     private float _bone3Multiplier = 0.5f;
 
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: The base scale when silent.\nUse Case: Rest state.\nJustification: Prevents the mouth from completely disappearing (scale 0) when not talking.")]
-    private Vector3 _minScale = Vector3.one;
+    private Vector3 _minScale = Vector3.zero;
 
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: The peak scale when shouting.\nUse Case: Active state.\nJustification: Limits maximum mouth size to prevent model clipping.")]
-    private Vector3 _maxScale = new Vector3(1.5f, 1.5f, 1.5f);
+    private Vector3 _maxScale = new Vector3(2f, 2f, 2f);
 
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: Multiplier for raw RMS volume.\nUse Case: Visual exaggeration.\nJustification: Audio peak values are often very small (0.05), so we multiply them to reach a 0-1 range for the Lerp.")]
     private float _sensitivity = 15f;
 
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: Speed of the mouth opening/closing.\nUse Case: Smoothing.\nJustification: Raw volume data is jittery; interpolating it creates a natural jaw movement.")]
     private float _smoothSpeed = 15f;
 
     [Tooltip("Role: Link to the vacuum controller.\nUse Case: Checking vacuum state.\nJustification: When vacuuming, we bypass the mic to force the mouth wide open.")]
     [SerializeField] private PlayerVacuumController _vacuumController;
+
+    [Tooltip("Role: Link to the V2 Input handler.\nUse Case: Checking vacuum state in V2.\nJustification: When vacuuming, we bypass the mic to force the mouth wide open.")]
+    [SerializeField] private PlayerInputHandler _inputHandler;
 
     [Tooltip("Role: Link to the vacuum audio controller.\nUse Case: Lobby Dummy vacuum state.\nJustification: In the lobby, there's no gameplay controller, so we read the audio state directly.")]
     [SerializeField] private VacuumAudioController _vacuumAudioController;
@@ -69,7 +72,7 @@ public class MouthAnimator : NetworkBehaviour
     private AudioSource _remoteVoiceSource;
 
     [Header("Debug")]
-    [SerializeField] 
+    [SerializeField]
     [Tooltip("Role: Enable console spam for debugging.\nUse Case: Tracing peer IDs.\nJustification: Only active when actively debugging VoIP issues.")]
     private bool _enableDebugLogs = false;
 
@@ -87,6 +90,7 @@ public class MouthAnimator : NetworkBehaviour
     {
         if (_mouthTransform == null) _mouthTransform = transform;
         if (_vacuumController == null) _vacuumController = GetComponentInParent<PlayerVacuumController>();
+        if (_inputHandler == null) _inputHandler = GetComponentInParent<PlayerInputHandler>();
         if (_vacuumAudioController == null) _vacuumAudioController = GetComponentInParent<VacuumAudioController>();
     }
 
@@ -126,16 +130,16 @@ public class MouthAnimator : NetworkBehaviour
     {
         // Try to find the ConnectionId on this object or parents
         if (TryGetComponent(out PlayerController m) && m.ConnectionId != -1)
-
             _peerId = m.ConnectionId;
         else if (GetComponentInParent<PlayerController>() != null && GetComponentInParent<PlayerController>().ConnectionId != -1)
-
             _peerId = GetComponentInParent<PlayerController>().ConnectionId;
+        else if (TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2) && v2.ConnectionId != -1)
+            _peerId = v2.ConnectionId;
+        else if (GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>() != null && GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>().ConnectionId != -1)
+            _peerId = GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>().ConnectionId;
         else if (TryGetComponent(out PlayerObjectController c) && c.ConnectionId != -1)
-
             _peerId = c.ConnectionId;
         else if (GetComponentInParent<PlayerObjectController>() != null && GetComponentInParent<PlayerObjectController>().ConnectionId != -1)
-
             _peerId = GetComponentInParent<PlayerObjectController>().ConnectionId;
 
         if (_peerId != -1 && _enableDebugLogs)
@@ -241,7 +245,7 @@ public class MouthAnimator : NetworkBehaviour
         }
 
         // 2. Bypass: Force mouth open if vacuuming
-        bool isVacuumingGame = (_vacuumController != null && _vacuumController.IsVacuuming);
+        bool isVacuumingGame = (_vacuumController != null && _vacuumController.IsVacuuming) || (_inputHandler != null && _inputHandler.IsVacuuming);
         bool isVacuumingLobby = (_vacuumAudioController != null && _vacuumAudioController.IsActive);
 
         if (isVacuumingGame || isVacuumingLobby)

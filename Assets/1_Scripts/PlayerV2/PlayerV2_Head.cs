@@ -23,6 +23,10 @@ namespace VacuumProtocol.PlayerV2
         private PlayerV2_Controller _controller;
         private Rigidbody _headRb;
 
+        [Header("Pitch Scaling")]
+        [Tooltip("Le pourcentage de l'input de pitch que la tête physique va suivre (ex: 0.7 = 70%).")]
+        public float PitchMultiplier = 0.7f;
+
         public float CurrentTargetPitch { get; private set; }
 
         [Header("Spring Settings (Muscles)")]
@@ -95,10 +99,12 @@ namespace VacuumProtocol.PlayerV2
         public void SetTargetPitch(float targetPitch)
         {
             if (NeckJoints == null || NeckJoints.Length == 0) return;
-            CurrentTargetPitch = targetPitch;
+            
+            // La tête ne prend que 70% de l'input pour éviter de rentrer dans le torse
+            CurrentTargetPitch = targetPitch * PitchMultiplier;
 
             // Diviser l'angle par le nombre d'articulations pour une courbe fluide
-            float pitchPerJoint = targetPitch / NeckJoints.Length;
+            float pitchPerJoint = CurrentTargetPitch / NeckJoints.Length;
 
             // Attention: ConfigurableJoint.targetRotation est inversé dans Unity par rapport au repère local
             // On inverse le signe ici pour corriger le mouvement de la souris.

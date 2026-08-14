@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
+using VacuumProtocol.Player.Visuals;
 
 namespace VacuumProtocol.PlayerV2
 {
@@ -12,17 +13,13 @@ namespace VacuumProtocol.PlayerV2
     public class PlayerV2_Gizmos : MonoBehaviour
     {
         [Header("Gizmo Toggles")]
-        [BoxGroup("Modules")]
-        [Tooltip("Affiche les sphères de la racine des bras, de la main, et la ligne de visée.")]
-        public bool ShowArmsGizmos = true;
-        
-        [BoxGroup("Modules")]
-        [Tooltip("Affiche les forces de la tête et du cou.")]
-        public bool ShowHeadGizmos = true;
-
-        [BoxGroup("Modules")]
-        [Tooltip("Affiche les raycasts de suspension.")]
-        public bool ShowSuspensionGizmos = true;
+        [BoxGroup("Modules")] public bool ShowViewRangeGizmos = true;
+        [BoxGroup("Modules")] public bool ShowVacuumArmGizmos = true;
+        [BoxGroup("Modules")] public bool ShowShooterArmGizmos = true;
+        [BoxGroup("Modules")] public bool ShowHeadAnglesGizmos = true;
+        [BoxGroup("Modules")] public bool ShowEyesGizmos = true;
+        [BoxGroup("Modules")] public bool ShowCameraGizmos = true;
+        [BoxGroup("Modules")] public bool ShowSuspensionGizmos = true;
 
         private PlayerV2_Controller _controller;
 
@@ -34,14 +31,24 @@ namespace VacuumProtocol.PlayerV2
                 if (_controller == null) return;
             }
 
-            if (ShowArmsGizmos && _controller.ArmsController != null)
+            if (ShowVacuumArmGizmos && _controller.ArmsController != null)
             {
                 DrawArmsGizmos();
             }
 
-            if (ShowHeadGizmos && _controller.HeadController != null)
+            if (ShowHeadAnglesGizmos && _controller.HeadController != null)
             {
-                DrawHeadGizmos();
+                DrawHeadAnglesGizmos();
+            }
+
+            if (ShowEyesGizmos)
+            {
+                DrawEyesGizmos();
+            }
+
+            if (ShowCameraGizmos && _controller.CameraTransform != null)
+            {
+                DrawCameraGizmos();
             }
 
             if (ShowSuspensionGizmos)
@@ -91,7 +98,7 @@ namespace VacuumProtocol.PlayerV2
             }
         }
 
-        private void DrawHeadGizmos()
+        private void DrawHeadAnglesGizmos()
         {
             var head = _controller.HeadController;
             if (head.NeckJoints == null || head.NeckJoints.Length == 0) return;
@@ -114,14 +121,43 @@ namespace VacuumProtocol.PlayerV2
                 Rigidbody headRb = head.NeckJoints[head.NeckJoints.Length - 1].GetComponent<Rigidbody>();
                 if (headRb != null && _controller.TorsoRigidbody != null)
                 {
+                    // 1. Envie de la Tête (70% Pitch) - JAUNE
                     Quaternion targetRot = _controller.TorsoRigidbody.rotation * Quaternion.Euler(head.CurrentTargetPitch, 0f, 0f);
                     Vector3 targetForward = targetRot * Vector3.forward;
-                    
                     Gizmos.color = Color.yellow;
-                    Gizmos.DrawRay(headRb.position, targetForward * 0.5f);
+                    Gizmos.DrawRay(headRb.position, targetForward * 1.5f);
                     
+                    // 2. Tête Actuelle Physique - ROUGE
                     Gizmos.color = Color.red;
-                    Gizmos.DrawRay(headRb.position, headRb.transform.forward * 0.5f);
+                    Gizmos.DrawRay(headRb.position, headRb.transform.forward * 1.5f);
+                }
+            }
+        }
+
+        private void DrawCameraGizmos()
+        {
+            // 3. Caméra (100% Pitch / Input) - CYAN
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(_controller.CameraTransform.position, _controller.CameraTransform.forward * 2f);
+        }
+
+        private void DrawEyesGizmos()
+        {
+            // 4 & 5. Yeux (75%) et Pupilles (100%) - MAGENTA & VERT
+            Eye[] eyes = GetComponentsInChildren<Eye>();
+            foreach (var eye in eyes)
+            {
+                if (eye != null)
+                {
+                    Gizmos.color = Color.magenta;
+                    Gizmos.DrawRay(eye.transform.position, eye.transform.forward * 2.5f);
+                    
+                    Transform pupil = eye.GetPupilBone();
+                    if (pupil != null)
+                    {
+                        Gizmos.color = Color.green;
+                        Gizmos.DrawRay(pupil.position, pupil.forward * 3f);
+                    }
                 }
             }
         }

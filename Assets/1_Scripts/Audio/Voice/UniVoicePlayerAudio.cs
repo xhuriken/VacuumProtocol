@@ -11,6 +11,7 @@ public class UniVoicePlayerAudio : NetworkBehaviour
 {
     private int _cachedId = -1;
     private bool _hasConfiguredAudio = false;
+    private Transform _followTarget;
 
     /// <summary>
     /// Description: Caches the Mirror connection ID of this player.
@@ -19,9 +20,24 @@ public class UniVoicePlayerAudio : NetworkBehaviour
     /// </summary>
     public override void OnStartClient()
     {
+        _followTarget = transform; // Défaut (racine du prefab)
+
         // Cache the connection ID from the player's movement or controller component
-        if (TryGetComponent(out PlayerController m)) _cachedId = m.ConnectionId;
-        else if (TryGetComponent(out PlayerObjectController c)) _cachedId = c.ConnectionId;
+        if (TryGetComponent(out PlayerController m)) 
+        {
+            _cachedId = m.ConnectionId;
+        }
+        else if (TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2)) 
+        {
+            _cachedId = v2.ConnectionId;
+            // IMPORTANT : En V2, la racine ne bouge pas. Il faut suivre le corps physique !
+            if (v2.HipsRigidbody != null) _followTarget = v2.HipsRigidbody.transform;
+            else if (v2.TorsoRigidbody != null) _followTarget = v2.TorsoRigidbody.transform;
+        }
+        else if (TryGetComponent(out PlayerObjectController c)) 
+        {
+            _cachedId = c.ConnectionId;
+        }
     }
 
     /// <summary>
@@ -39,8 +55,9 @@ public class UniVoicePlayerAudio : NetworkBehaviour
         {
             var audioSource = (output as StreamedAudioSourceOutput).Stream.UnityAudioSource;
 
-            // Move the audio source to the player's position (slightly elevated for better voice source feel)
-            audioSource.transform.position = transform.position + Vector3.up * 1.5f;
+            // Move the audio source to the physical player's position (slightly elevated for better voice source feel)
+            Vector3 basePos = _followTarget != null ? _followTarget.position : transform.position;
+            audioSource.transform.position = basePos + Vector3.up * 1.5f;
             
             // Configure the 3D audio settings only once to avoid overriding inspector tweaks and save performance
             if (!_hasConfiguredAudio)

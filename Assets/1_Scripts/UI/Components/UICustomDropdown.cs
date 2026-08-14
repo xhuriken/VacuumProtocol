@@ -1,13 +1,13 @@
 using System.Collections.Generic;
+using DG.Tweening;
+using Febucci.UI.Core;
+using Shapes;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
-using TMPro;
-using Shapes;
-using DG.Tweening;
-using Febucci.UI.Core;
+using UnityEngine.UI;
 
 
 /// <summary>
@@ -30,6 +30,7 @@ public class UICustomDropdown : UICustomButtonBase
     #endregion
 
     #region Serialized Fields & References
+    public float _accordionExtraSpacing = 10f;
 
     [Header("Header Shapes References")]
     [Tooltip("Role: The main outline rectangle shape component for the header.\nUse Case: Visual outline.\nJustification: Animated on hover.")]
@@ -146,6 +147,7 @@ public class UICustomDropdown : UICustomButtonBase
     [SerializeField]
     private DropdownEvent _onValueChanged = new DropdownEvent();
 
+
     #endregion
 
     [Header("Dropdown Configuration")]
@@ -180,6 +182,8 @@ public class UICustomDropdown : UICustomButtonBase
     private TypewriterCore _textAnimatorPlayer;
     private List<UICustomDropdownItem> _instantiatedItems = new List<UICustomDropdownItem>();
     private bool _isListHovered = false;
+
+    private LayoutElement _spacerLayoutElement;
 
     #endregion
 
@@ -261,12 +265,33 @@ public class UICustomDropdown : UICustomButtonBase
     {
         _rectTransform = GetComponent<RectTransform>();
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!Application.isPlaying) return;
-        #endif
+#endif
+
 
         CacheOriginalStates();
         InitializeDefaultVisuals();
+    }
+
+    private void EnsureSpacer()
+    {
+        if (_spacerLayoutElement == null && Application.isPlaying && transform.parent != null)
+        {
+            // Only create spacer if we are inside a LayoutGroup
+            if (transform.parent.GetComponent<LayoutGroup>() != null)
+            {
+                GameObject spacerGO = new GameObject(gameObject.name + "_Spacer");
+                RectTransform spacerRt = spacerGO.AddComponent<RectTransform>();
+                spacerRt.SetParent(transform.parent, false);
+                spacerRt.SetSiblingIndex(transform.GetSiblingIndex() + 1);
+
+
+                _spacerLayoutElement = spacerGO.AddComponent<LayoutElement>();
+                _spacerLayoutElement.preferredHeight = 0f;
+                _spacerLayoutElement.ignoreLayout = true;
+            }
+        }
     }
 
     /// <summary>
@@ -276,11 +301,12 @@ public class UICustomDropdown : UICustomButtonBase
     {
         UpdateDimensions();
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!Application.isPlaying) return;
-        #endif
+#endif
 
         // Rotate header dashed border on hover
+
         if (IsHovered && _rect != null && _rect.Dashed)
         {
             _currentDashOffset += Time.deltaTime * _dashRotationSpeed;
@@ -319,7 +345,7 @@ public class UICustomDropdown : UICustomButtonBase
         }
     }
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     /// <summary>
     /// Description: Unity OnValidate callback. Clamps selection index and updates header text inside the editor.
     /// Context: Editor layout synchronization.
@@ -353,16 +379,18 @@ public class UICustomDropdown : UICustomButtonBase
         // Snap arrow configuration in editor
         AnimateArrow(false);
     }
-    #endif
+#endif
+
 
     /// <summary>
     /// Description: Unity OnEnable callback.
     /// </summary>
     private void OnEnable()
     {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!Application.isPlaying) return;
-        #endif
+#endif
+
 
         if (_isCached)
         {
@@ -377,13 +405,30 @@ public class UICustomDropdown : UICustomButtonBase
     {
         base.OnDisable();
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!Application.isPlaying) return;
-        #endif
+#endif
+
 
         KillActiveTweens();
         ClearInstantiatedItems();
         _isListOpen = false;
+
+
+        if (_spacerLayoutElement != null)
+        {
+            _spacerLayoutElement.ignoreLayout = true;
+            _spacerLayoutElement.preferredHeight = 0f;
+        }
+    }
+
+    protected virtual void OnDestroy()
+    {
+        if (_spacerLayoutElement != null && _spacerLayoutElement.gameObject != null)
+        {
+            if (Application.isPlaying) Destroy(_spacerLayoutElement.gameObject);
+            else DestroyImmediate(_spacerLayoutElement.gameObject);
+        }
     }
 
     #endregion
@@ -582,6 +627,45 @@ public class UICustomDropdown : UICustomButtonBase
         }
         _isListHovered = false;
 
+        // Animate Accordion Spacer if in a LayoutGroup
+        EnsureSpacer();
+        if (_spacerLayoutElement != null)
+        {
+            _spacerLayoutElement.transform.SetSiblingIndex(transform.GetSiblingIndex() + 1);
+            float baseHeight = 0f;
+            if (_itemParent != null && _itemTemplate != null)
+            {
+                float itemHeight = _itemTemplate.GetComponent<RectTransform>().rect.height;
+                var vlg = _itemParent.GetComponent<VerticalLayoutGroup>();
+                float spacing = vlg != null ? vlg.spacing : 0f;
+                float padding = vlg != null ? vlg.padding.top + vlg.padding.bottom : 0f;
+                
+                baseHeight = (_options.Count * itemHeight) + (Mathf.Max(0, _options.Count - 1) * spacing) + padding + 8f;
+            }
+            else
+            {
+                baseHeight = _templateContainer != null ? _templateContainer.sizeDelta.y : 0f;
+            }
+            
+            float targetHeight = baseHeight + _accordionExtraSpacing;
+            
+            _spacerLayoutElement.ignoreLayout = false;
+            _spacerLayoutElement.DOKill();
+
+            RectTransform spacerRt = _spacerLayoutElement.GetComponent<RectTransform>();
+            DOTween.To(() => _spacerLayoutElement.preferredHeight, x => 
+            {
+                _spacerLayoutElement.preferredHeight = x;
+                _spacerLayoutElement.minHeight = x;
+                spacerRt.sizeDelta = new Vector2(spacerRt.sizeDelta.x, x);
+                if (transform.parent != null)
+                {
+                    LayoutRebuilder.MarkLayoutForRebuild(transform.parent as RectTransform);
+                }
+            }, targetHeight, _animationDuration)
+                .SetEase(Ease.OutCubic);
+        }
+
         // Trigger typewriter effects on all opened items for tech aesthetic
         foreach (var item in _instantiatedItems)
         {
@@ -611,6 +695,31 @@ public class UICustomDropdown : UICustomButtonBase
                 _templateContainer.gameObject.SetActive(false);
                 ClearInstantiatedItems();
             });
+
+        // Animate Accordion Spacer collapse
+        if (_spacerLayoutElement != null)
+        {
+            _spacerLayoutElement.DOKill();
+            RectTransform spacerRt = _spacerLayoutElement.GetComponent<RectTransform>();
+            DOTween.To(() => _spacerLayoutElement.preferredHeight, x => 
+            {
+                _spacerLayoutElement.preferredHeight = x;
+                _spacerLayoutElement.minHeight = x;
+                spacerRt.sizeDelta = new Vector2(spacerRt.sizeDelta.x, x);
+                if (transform.parent != null)
+                {
+                    LayoutRebuilder.MarkLayoutForRebuild(transform.parent as RectTransform);
+                }
+            }, 0f, _animationDuration)
+                .SetEase(Ease.InCubic)
+                .OnComplete(() =>
+                {
+                    if (_spacerLayoutElement != null)
+                    {
+                        _spacerLayoutElement.ignoreLayout = true;
+                    }
+                });
+        }
 
         // Collapse list border outline animations
         if (_listBorder != null)
@@ -642,8 +751,9 @@ public class UICustomDropdown : UICustomButtonBase
         if (_buttonText != null)
         {
             _originalTextScale = _buttonText.transform.localScale;
-            
+
             // Query typewriter component specifically matching the header text gameobject
+
             _textAnimatorPlayer = _buttonText.GetComponent<TypewriterCore>();
             if (_textAnimatorPlayer == null)
             {
@@ -681,7 +791,8 @@ public class UICustomDropdown : UICustomButtonBase
             _rect.DashSize = _dashSize;
             _rect.DashSpacing = 0f;
             _rect.Thickness = _originalThickness;
-            
+
+
             if (Interactable)
             {
                 _rect.Color = _originalRectColor;
@@ -755,14 +866,15 @@ public class UICustomDropdown : UICustomButtonBase
             // Sync template list border rectangle
             if (_templateContainer != null && _listBorder != null)
             {
-                #if UNITY_EDITOR
+#if UNITY_EDITOR
                 if (!Application.isPlaying && _itemParent != null)
                 {
                     Canvas.ForceUpdateCanvases();
                 }
-                #endif
+#endif
 
                 // Auto update template container height based on item parent height (which has ContentSizeFitter)
+
                 if (_itemParent != null)
                 {
                     float targetHeight = _itemParent.rect.height + 8f;
@@ -848,9 +960,10 @@ public class UICustomDropdown : UICustomButtonBase
     {
         base.OnInteractableChanged(isInteractable);
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         if (!Application.isPlaying) return;
-        #endif
+#endif
+
 
         KillActiveTweens();
         AnimateInteractableTransition(isInteractable);
@@ -911,13 +1024,13 @@ public class UICustomDropdown : UICustomButtonBase
         {
             if (item != null)
             {
-                #if UNITY_EDITOR
+#if UNITY_EDITOR
                 if (!Application.isPlaying)
                 {
                     DestroyImmediate(item.gameObject);
                     continue;
                 }
-                #endif
+#endif
                 Destroy(item.gameObject);
             }
         }

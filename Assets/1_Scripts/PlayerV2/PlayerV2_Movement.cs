@@ -26,8 +26,12 @@ namespace VacuumProtocol.PlayerV2
         public float Deceleration = 15f;
 
         [Header("Jump Settings")]
-        [Tooltip("Force d'impulsion appliquée aux Hips lors du saut (multipliée par la compression).")]
-        public float JumpForce = 15f;
+        [Tooltip("Vélocité instantanée (indépendante de la masse) appliquée aux Hips lors du saut.")]
+        public float JumpForce = 8f;
+
+        [Header("Gravity Settings")]
+        [Tooltip("Multiplicateur de gravité en chute (rend la chute plus lourde, style Hollow Knight).")]
+        public float FallGravityMultiplier = 3f;
 
         [Tooltip("Rayon de la sphère de détection (doit être environ la taille de ta roue).")]
         public float WheelRadius = 0.15f;
@@ -50,6 +54,8 @@ namespace VacuumProtocol.PlayerV2
         private PlayerV2_Suspension _suspension;
         
         private bool _isGrounded;
+        private bool _wasGrounded;
+        private float _lastVerticalVelocity;
         private float _currentCompressionMultiplier;
 
         private void Awake()
@@ -79,34 +85,36 @@ namespace VacuumProtocol.PlayerV2
             // --- Jump ---
             if (_input.JumpTriggered)
             {
-                Debug.Log($"[Jump Debug 1] Input JUMP reçu dans Update ! (Grounded: {_isGrounded})");
-                
                 if (_isGrounded)
                 {
                     float finalJumpForce = JumpForce * _currentCompressionMultiplier;
-                    Debug.Log($"[Jump Debug 2] Calcul Force : Base={JumpForce} * Multiplier={_currentCompressionMultiplier:F2} = FinalForce={finalJumpForce:F2}");
                     
                     // Sécurité : Ne saute pas si la force est trop faible (roues pendouillantes)
                     if (finalJumpForce > 1f)
                     {
-                        // L'impulsion (one-shot) est appliquée ici. Unity l'intègrera au prochain cycle physique.
-                        _controller.HipsRigidbody.AddForce(Vector3.up * finalJumpForce, ForceMode.Impulse);
-                        Debug.Log($"[Jump Debug 3] SUCCÈS ! Force de {finalJumpForce:F1} appliquée sur le Rigidbody.");
+                        Vector3 currentVel = _controller.HipsRigidbody.linearVelocity;
+                        
+                        // Calcul de la force à appliquer pour atteindre EXACTEMENT la vélocité désirée.
+                        // Cela empêche le joueur de cumuler le rebond de la suspension et le saut pour s'envoler.
+                        float forceToApply = finalJumpForce - currentVel.y;
+
+                        if (forceToApply > 0)
+                        {
+                            _controller.HipsRigidbody.AddForce(Vector3.up * forceToApply, ForceMode.VelocityChange);
+                        }
+                        
+                        if (_suspension != null)
+                        {
+                            _suspension.TriggerJumpRetraction();
+                        }
                     }
-                    else
-                    {
-                        Debug.Log("[Jump Debug 3] ECHEC : Force trop faible car suspension étirée (Multiplier trop proche de 0).");
-                    }
-                }
-                else
-                {
-                    Debug.Log("[Jump Debug 2] ECHEC : Le joueur n'est pas Grounded.");
                 }
             }
         }
 
         private void UpdateGroundCheckAndCompression()
         {
+            _wasGrounded = _isGrounded;
             _isGrounded = false;
             float totalWheelY = 0f;
             int wheelCount = 0;
@@ -137,6 +145,18 @@ namespace VacuumProtocol.PlayerV2
                 
                 // InverseLerp : si distance = MaxExtension, multiplier = 0. Si distance = MinCompression, multiplier = 1.
                 _currentCompressionMultiplier = Mathf.InverseLerp(JumpMaxExtensionDistance, JumpMinCompressionDistance, distanceToWheels);
+            }
+
+            // Détection de l'atterrissage
+            if (_isGrounded && !_wasGrounded)
+            {
+                if (_lastVerticalVelocity < -2f)
+                {
+                    if (_suspension != null)
+                    {
+                        _suspension.OnHardLanding(Mathf.Abs(_lastVerticalVelocity));
+                    }
+                }
             }
         }
 
@@ -197,6 +217,14 @@ namespace VacuumProtocol.PlayerV2
                 horizontalVelocity = horizontalVelocity.normalized * MaxSpeed;
                 _controller.HipsRigidbody.linearVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
             }
+
+            // Effet de chute plus lourde (Hollow Knight style)
+            if (currentVelocity.y < 0 && !_isGrounded)
+            {
+                _controller.HipsRigidbody.AddForce(Physics.gravity * (FallGravityMultiplier - 1f), ForceMode.Acceleration);
+            }
+
+            _lastVerticalVelocity = currentVelocity.y;
         }
         
         private void OnDrawGizmosSelected()

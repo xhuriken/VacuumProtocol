@@ -817,17 +817,17 @@ ConfigurableJoint:
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
   m_SecondaryAxis: {x: 0, y: 1, z: 0}
-  m_XMotion: 2
-  m_YMotion: 2
-  m_ZMotion: 2
-  m_AngularXMotion: 2
+  m_XMotion: 0
+  m_YMotion: 1
+  m_ZMotion: 0
+  m_AngularXMotion: 0
   m_AngularYMotion: 2
-  m_AngularZMotion: 2
+  m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
     damper: 0
   m_LinearLimit:
-    limit: 0
+    limit: 0.5
     bounciness: 0
     contactDistance: 0
   m_AngularXLimitSpring:
@@ -852,7 +852,7 @@ ConfigurableJoint:
     limit: 0
     bounciness: 0
     contactDistance: 0
-  m_TargetPosition: {x: 0, y: 0, z: 0}
+  m_TargetPosition: {x: 0, y: 0.35, z: 0}
   m_TargetVelocity: {x: 0, y: 0, z: 0}
   m_XDrive:
     serializedVersion: 4
@@ -862,7 +862,7 @@ ConfigurableJoint:
     useAcceleration: 0
   m_YDrive:
     serializedVersion: 4
-    positionSpring: 0
+    positionSpring: 500
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
@@ -2370,7 +2370,6 @@ GameObject:
   - component: {fileID: 279577304037859192}
   - component: {fileID: 679975171571666169}
   - component: {fileID: 6081403777989489320}
-  - component: {fileID: 813772507179146325}
   - component: {fileID: 261248993784961924}
   - component: {fileID: 3687826983274393566}
   - component: {fileID: 6085732871604657447}
@@ -2507,7 +2506,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3125667587702381230}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 36c42284660df7b458e5b94014b5cc2a, type: 3}
   m_Name: 
@@ -2521,35 +2520,6 @@ MonoBehaviour:
   RootNote: 0
   SemitoneShift: 0
   _enableDebugLogs: 0
---- !u!114 &813772507179146325
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3125667587702381230}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a09917e32aac6b648b209bc33a741e4b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.Player.PhysicalHeadController
-  _lookComponent: {fileID: 0}
-  _neckRootTransform: {fileID: 2044302067384928448}
-  _controlledJoints:
-  - Joint: {fileID: 0}
-    PitchMultiplier: 0.15
-    StartLocalRotation: {x: 0, y: 0, z: 0, w: 0}
-  - Joint: {fileID: 0}
-    PitchMultiplier: 0.35
-    StartLocalRotation: {x: 0, y: 0, z: 0, w: 0}
-  - Joint: {fileID: 0}
-    PitchMultiplier: 0.45
-    StartLocalRotation: {x: 0, y: 0, z: 0, w: 0}
-  _jointSpringForce: 3000
-  _jointDamping: 100
-  _neckAngularDrag: 15
-  _autoConfigurePhysics: 1
-  _enableDebugLogs: 0
 --- !u!114 &261248993784961924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2557,7 +2527,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3125667587702381230}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 19923ef57d0744340ad4d892ce84222a, type: 3}
   m_Name: 
@@ -2566,17 +2536,18 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _mouthTransform: {fileID: 0}
-  _mouthBone1: {fileID: 1810430071715155610}
-  _mouthBone2: {fileID: 7073044691481403252}
-  _mouthBone3: {fileID: 5982002924693095623}
+  _mouthBone1: {fileID: 7073044691481403252}
+  _mouthBone2: {fileID: 5982002924693095623}
+  _mouthBone3: {fileID: 1810430071715155610}
   _bone1Multiplier: 1
   _bone2Multiplier: 0.75
   _bone3Multiplier: 0.5
-  _minScale: {x: 1, y: 1, z: 1}
-  _maxScale: {x: 1.5, y: 1.5, z: 1.5}
+  _minScale: {x: 0.1, y: 0.1, z: 1}
+  _maxScale: {x: 1.5, y: 1.5, z: 1}
   _sensitivity: 15
   _smoothSpeed: 15
   _vacuumController: {fileID: 0}
+  _inputHandler: {fileID: 2617675305823865494}
   _vacuumAudioController: {fileID: 6081403777989489320}
   IsLobbyPreviewDummy: 0
   _enableDebugLogs: 0
@@ -2830,17 +2801,17 @@ ConfigurableJoint:
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
   m_SecondaryAxis: {x: 0, y: 1, z: 0}
-  m_XMotion: 2
-  m_YMotion: 2
-  m_ZMotion: 2
-  m_AngularXMotion: 2
+  m_XMotion: 0
+  m_YMotion: 1
+  m_ZMotion: 0
+  m_AngularXMotion: 0
   m_AngularYMotion: 2
-  m_AngularZMotion: 2
+  m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
     damper: 0
   m_LinearLimit:
-    limit: 0
+    limit: 0.5
     bounciness: 0
     contactDistance: 0
   m_AngularXLimitSpring:
@@ -2865,7 +2836,7 @@ ConfigurableJoint:
     limit: 0
     bounciness: 0
     contactDistance: 0
-  m_TargetPosition: {x: 0, y: 0, z: 0}
+  m_TargetPosition: {x: 0, y: 0.35, z: 0}
   m_TargetVelocity: {x: 0, y: 0, z: 0}
   m_XDrive:
     serializedVersion: 4
@@ -2875,7 +2846,7 @@ ConfigurableJoint:
     useAcceleration: 0
   m_YDrive:
     serializedVersion: 4
-    positionSpring: 0
+    positionSpring: 500
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
@@ -2957,7 +2928,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3543648546805914382}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90975f836ca50d741a599be54c2dd0af, type: 3}
   m_Name: 
@@ -2965,9 +2936,13 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _playerViewRange: {fileID: 0}
+  _playerViewRange: {fileID: 8116493350128248048}
   _pupilBone: {fileID: 4677036919257376459}
-  _rotationSpeed: 8
+  _cameraTransform: {fileID: 9016200845356353673}
+  _eyeTargetWeight: 0.75
+  _pupilTargetWeight: 1
+  _rotationSpeed: 6
+  _pupilRotationSpeed: 12
   _enableDebugLogs: 0
 --- !u!1 &3637681867347882589
 GameObject:
@@ -4074,17 +4049,17 @@ ConfigurableJoint:
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
   m_SecondaryAxis: {x: 0, y: 1, z: 0}
-  m_XMotion: 2
-  m_YMotion: 2
-  m_ZMotion: 2
-  m_AngularXMotion: 2
+  m_XMotion: 0
+  m_YMotion: 1
+  m_ZMotion: 0
+  m_AngularXMotion: 0
   m_AngularYMotion: 2
-  m_AngularZMotion: 2
+  m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
     damper: 0
   m_LinearLimit:
-    limit: 0
+    limit: 0.5
     bounciness: 0
     contactDistance: 0
   m_AngularXLimitSpring:
@@ -4109,7 +4084,7 @@ ConfigurableJoint:
     limit: 0
     bounciness: 0
     contactDistance: 0
-  m_TargetPosition: {x: 0, y: 0, z: 0}
+  m_TargetPosition: {x: 0, y: 0.35, z: 0}
   m_TargetVelocity: {x: 0, y: 0, z: 0}
   m_XDrive:
     serializedVersion: 4
@@ -4119,7 +4094,7 @@ ConfigurableJoint:
     useAcceleration: 0
   m_YDrive:
     serializedVersion: 4
-    positionSpring: 0
+    positionSpring: 500
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
@@ -4855,17 +4830,17 @@ ConfigurableJoint:
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
   m_SecondaryAxis: {x: 0, y: 1, z: 0}
-  m_XMotion: 2
-  m_YMotion: 2
-  m_ZMotion: 2
-  m_AngularXMotion: 2
+  m_XMotion: 0
+  m_YMotion: 1
+  m_ZMotion: 0
+  m_AngularXMotion: 0
   m_AngularYMotion: 2
-  m_AngularZMotion: 2
+  m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
     damper: 0
   m_LinearLimit:
-    limit: 0
+    limit: 0.5
     bounciness: 0
     contactDistance: 0
   m_AngularXLimitSpring:
@@ -4890,7 +4865,7 @@ ConfigurableJoint:
     limit: 0
     bounciness: 0
     contactDistance: 0
-  m_TargetPosition: {x: 0, y: 0, z: 0}
+  m_TargetPosition: {x: 0, y: 0.35, z: 0}
   m_TargetVelocity: {x: 0, y: 0, z: 0}
   m_XDrive:
     serializedVersion: 4
@@ -4900,7 +4875,7 @@ ConfigurableJoint:
     useAcceleration: 0
   m_YDrive:
     serializedVersion: 4
-    positionSpring: 0
+    positionSpring: 500
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
@@ -5927,7 +5902,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 75
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -6394,6 +6369,8 @@ GameObject:
   - component: {fileID: 6958107395344632637}
   - component: {fileID: 7863588130516080460}
   - component: {fileID: 1880859776367098239}
+  - component: {fileID: 8116493350128248048}
+  - component: {fileID: 7389513676377221693}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -6619,6 +6596,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  ConnectionId: -1
   HipsRigidbody: {fileID: 5102196501453554336}
   TorsoRigidbody: {fileID: 484248005638760554}
   CameraTransform: {fileID: 9016200845356353673}
@@ -6644,9 +6622,10 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   Sensitivity: 0.15
-  MaxTurnSpeed: 480
+  MaxTurnSpeed: 720
   MinPitch: -85
   MaxPitch: 85
+  HeadMovementBlend: 0.05
 --- !u!114 &2766040700898991758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6664,16 +6643,17 @@ MonoBehaviour:
   syncInterval: 0
   MoveSpeed: 4
   MaxSpeed: 10
-  Acceleration: 15
+  Acceleration: 10
   Deceleration: 15
-  JumpForce: 350
+  JumpForce: 9
+  FallGravityMultiplier: 5
   WheelRadius: 0.15
   GroundLayer:
     serializedVersion: 2
     m_Bits: 8
   JumpMaxExtensionDistance: 0.6
   JumpMinCompressionDistance: 0.2
-  EnableDebugLogs: 1
+  EnableDebugLogs: 0
 --- !u!114 &3825330330323797389
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6695,6 +6675,13 @@ MonoBehaviour:
   Damper: 50
   SuspensionTravel: 0.5
   TargetExtension: 0.35
+  RetractedExtension: 0.1
+  RetractionDamper: 0
+  MaxRandomRetractionDelay: 0.2
+  RetractionHoldDuration: 0.5
+  RelaxationSpeed: 100
+  HardLandingDamperMultiplier: 10
+  LandingDamperRecoveryTime: 0.25
 --- !u!114 &5635042367070615883
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6781,6 +6768,10 @@ MonoBehaviour:
   - {fileID: 8096197021597533589}
   - {fileID: 5419818016562868763}
   - {fileID: 7697673176420547219}
+  UseAlignmentForce: 1
+  HeadAlignmentTorque: 1500
+  HeadAlignmentDamping: 100
+  PitchMultiplier: 0.5
   SpringForce: 5000
   SpringDamper: 500
   MaxForce: 10000
@@ -6857,9 +6848,53 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a332b63277d4b840982444127bbc14b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.PlayerV2.PlayerV2_Gizmos
-  ShowArmsGizmos: 1
-  ShowHeadGizmos: 1
-  ShowSuspensionGizmos: 1
+  ShowViewRangeGizmos: 0
+  ShowVacuumArmGizmos: 0
+  ShowShooterArmGizmos: 0
+  ShowHeadAnglesGizmos: 1
+  ShowEyesGizmos: 1
+  ShowCameraGizmos: 1
+  ShowSuspensionGizmos: 0
+--- !u!114 &8116493350128248048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4de2c3ecc4f465d4793df894204f566f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerViewRange
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _viewDistance: 10
+  _viewAngle: 105
+  _entityLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  _obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  _viewReference: {fileID: 9016200845356353673}
+  _showDebugLogs: 1
+--- !u!114 &7389513676377221693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 964d6b716c2907c4e84e827560505c11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UniVoicePlayerAudio
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!1 &7751720572721550308
 GameObject:
   m_ObjectHideFlags: 0
@@ -7683,7 +7718,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8730375404968820185}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90975f836ca50d741a599be54c2dd0af, type: 3}
   m_Name: 
@@ -7691,9 +7726,13 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _playerViewRange: {fileID: 0}
+  _playerViewRange: {fileID: 8116493350128248048}
   _pupilBone: {fileID: 6790713113753281097}
+  _cameraTransform: {fileID: 9016200845356353673}
+  _eyeTargetWeight: 0.75
+  _pupilTargetWeight: 1
   _rotationSpeed: 8
+  _pupilRotationSpeed: 12
   _enableDebugLogs: 0
 --- !u!1 &8733102399014298494
 GameObject:

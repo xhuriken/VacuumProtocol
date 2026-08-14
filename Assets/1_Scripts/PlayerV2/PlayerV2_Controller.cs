@@ -10,6 +10,9 @@ namespace VacuumProtocol.PlayerV2
     /// </summary>
     public class PlayerV2_Controller : NetworkBehaviour
     {
+        [Tooltip("Role: The network connection ID of this client.\nUse Case: Mirror syncing.\nJustification: Allows scripts like the voice chat system to map this specific avatar to a UniVoice network stream.")]
+        [SyncVar] public int ConnectionId = -1;
+
         [Header("Physics Bodies")]
         [Tooltip("Role: Rigidbody de la base (mouvement).\nUse Case: Déplacement et attache des roues.")]
         public Rigidbody HipsRigidbody;

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
+using System.Reflection;
 using Adrenak.UniMic;
 using Adrenak.UniVoice;
-using System.Reflection;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Description: Presenter that bridges UI components with SettingsManager properties.
@@ -101,7 +101,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_microphoneDropdown != null)
         {
             _microphoneDropdown.ClearOptions();
-            var devices = new List<string>(Mic.AvailableDevices.ConvertAll(d => d.Name));
+            var devices = new List<string>(UnityEngine.Microphone.devices);
             _microphoneDropdown.AddOptions(devices);
 
             int selectedIndex = devices.IndexOf(current.ActiveMicrophoneDevice);
@@ -297,10 +297,10 @@ public class SettingsUIPresenter : MonoBehaviour
 
     private void OnMicrophoneSelected(int index)
     {
-        var devices = Mic.AvailableDevices;
-        if (index < 0 || index >= devices.Count) return;
+        var devices = UnityEngine.Microphone.devices;
+        if (index < 0 || index >= devices.Length) return;
 
-        string selectedDevice = devices[index].Name;
+        string selectedDevice = devices[index];
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.ActiveMicrophoneDevice = selectedDevice;

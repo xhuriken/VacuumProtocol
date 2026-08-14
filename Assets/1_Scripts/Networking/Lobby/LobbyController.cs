@@ -48,6 +48,10 @@ public class LobbyController : MonoBehaviour
     [Tooltip("Role: Reference to the local player's controller script.\nUse Case: Network commands.\nJustification: Required to send CmdStartGame or CmdSetReady.")]
     public PlayerObjectController LocalPlayerController;
 
+    [Header("Game Settings")]
+    [Tooltip("Role: The name of the scene to load when starting the game.\nUse Case: Scene transition.\nJustification: Allows changing the level without editing code.")]
+    public string GameSceneName = "MECHA";
+
     [Header("Ready System")]
     [Tooltip("Role: Custom button component for starting the game.\nUse Case: Disabling/enabling the start button.\nJustification: Only interactable for the host when everyone is ready.")]
     public UICustomButtonBase StartGameButton;
@@ -92,7 +96,7 @@ public class LobbyController : MonoBehaviour
     /// </summary>
     public void StartGame()
     {
-        LocalPlayerController.CanStartGame("SteamTest");
+        LocalPlayerController.CanStartGame(GameSceneName);
     }
 
     /// <summary>

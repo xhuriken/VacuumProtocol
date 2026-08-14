@@ -15,7 +15,7 @@ namespace VacuumProtocol.Player.Visuals
         [SerializeField] private Renderer _modelRenderer;
 
 
-        [Tooltip("Role: The audio controller for the vacuum sound.\nUse Case: Audio customization.\nJustification: Needs a direct reference to inject the chosen musical root note into the synthesis engine.")]
+        [Tooltip("Role: The audio controller for the vacuum sound.\nUse Case: Audio customization.\nJustification: Needs a direct reference to inject the chosen musical root note into the synthesis engine. (Optional on V2 Dummy)")]
         [SerializeField] private VacuumAudioController _vacuumAudio;
 
         [Header("Preview Settings")]
@@ -185,11 +185,6 @@ namespace VacuumProtocol.Player.Visuals
             else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyColor failed because _instancedMaterial is null! Did you assign _modelRenderer?");
         }
 
-        /// <summary>
-        /// Description: Updates the root note in the audio controller.
-        /// Context: Internal execution.
-        /// Justification: Passes the enum value to the audio synthesis system.
-        /// </summary>
         private void ApplyNote(MusicalNote note)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] ApplyNote called with note: {note}");
@@ -198,7 +193,7 @@ namespace VacuumProtocol.Player.Visuals
                 if (EnableDebugLogs) Debug.Log("[PlayerCustomization] VacuumAudioController found, applying note.");
                 _vacuumAudio.SetRootNote(note);
             }
-            else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyNote failed because _vacuumAudio is null!");
+            // Silent fallback for V2 where vacuum audio might not be fully migrated yet
         }
 
         #endregion
@@ -247,11 +242,6 @@ namespace VacuumProtocol.Player.Visuals
             }
         }
 
-        /// <summary>
-        /// Description: Universal entry point to test the vacuum sound.
-        /// Context: Called by UI testing buttons.
-        /// Justification: Safely routes the test command either through the network (for other players to hear) or locally for offline dummies.
-        /// </summary>
         public void RequestVacuumTest(bool isVacuuming)
         {
             if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVacuumTest called ({isVacuuming}). NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
@@ -267,7 +257,6 @@ namespace VacuumProtocol.Player.Visuals
                 {
                     _vacuumAudio.SetVacuumState(isVacuuming);
                 }
-                else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] Vacuum audio is null!");
             }
         }
 
@@ -324,7 +313,6 @@ namespace VacuumProtocol.Player.Visuals
             {
                 _vacuumAudio.SetVacuumState(isVacuuming);
             }
-            else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] RpcTestVacuum failed: _vacuumAudio is null!");
         }
 
         #endregion
