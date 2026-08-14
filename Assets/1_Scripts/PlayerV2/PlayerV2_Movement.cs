@@ -153,9 +153,9 @@ namespace VacuumProtocol.PlayerV2
 
             Vector2 moveInput = _input.MoveInput;
 
-            // Calcul de la direction désirée par rapport à là où l'on regarde (Camera)
-            Vector3 forward = _controller.CameraTransform.forward;
-            Vector3 right = _controller.CameraTransform.right;
+            // Calcul de la direction désirée par rapport au Torso (évite le zigzag si la tête balance)
+            Vector3 forward = _controller.TorsoRigidbody.transform.forward;
+            Vector3 right = _controller.TorsoRigidbody.transform.right;
             forward.y = 0f; right.y = 0f;
             
             if (forward.sqrMagnitude > 0.01f) forward.Normalize();

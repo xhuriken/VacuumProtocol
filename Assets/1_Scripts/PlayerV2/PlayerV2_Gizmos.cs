@@ -108,6 +108,22 @@ namespace VacuumProtocol.PlayerV2
                     }
                 }
             }
+
+            if (head.UseAlignmentForce && head.NeckJoints.Length > 0)
+            {
+                Rigidbody headRb = head.NeckJoints[head.NeckJoints.Length - 1].GetComponent<Rigidbody>();
+                if (headRb != null && _controller.TorsoRigidbody != null)
+                {
+                    Quaternion targetRot = _controller.TorsoRigidbody.rotation * Quaternion.Euler(head.CurrentTargetPitch, 0f, 0f);
+                    Vector3 targetForward = targetRot * Vector3.forward;
+                    
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawRay(headRb.position, targetForward * 0.5f);
+                    
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawRay(headRb.position, headRb.transform.forward * 0.5f);
+                }
+            }
         }
 
         private void DrawSuspensionGizmos()

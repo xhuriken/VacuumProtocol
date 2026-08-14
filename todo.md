@@ -7,3 +7,4 @@
 - [x] Tester le mouvement et la rotation (Tourelle) - Bugs physiques résolus (FreezeRotation, friction, vitesse max).
 - [x] Simplifier le script Wheels.cs (KISS) suite au bug du lock angularYMotion de la suspension.
 - [x] Implémenter la tête/cou physique (ragdoll + piloté) avec `PlayerV2_Head.cs`.
+- [x] Fix Head drift/offset contre la rotation du Torso en appliquant une force d'alignement.

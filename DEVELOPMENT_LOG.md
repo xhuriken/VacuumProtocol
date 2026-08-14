@@ -1647,3 +1647,16 @@
 
 
 
+## [2026-08-14] - Strict Yaw Locking & Inspector Override Fix (PlayerV2_Head)
+
+### Technical Justification & Details
+- **Inspector Value Override Fix**:
+  - The values for `AlignmentTorque` and `AlignmentDamping` were not updating in the Editor Play Mode because Unity preserved the old serialized values from the Prefab.
+  - Renamed variables to `HeadAlignmentTorque` and `HeadAlignmentDamping` to force Unity to serialize them as new fields, ensuring the high muscle-like default values (`1500f`, `100f`) are adopted instantly.
+- **Strict Yaw/Roll Physics Locking**:
+  - Despite the alignment torque, the head was still lagging on the Yaw axis because the underlying `ConfigurableJoint`s were set to `angularYMotion = Limited`, allowing the physics solver to bend the neck during fast Torso rotations.
+  - Set `angularYMotion` and `angularZMotion` to `ConfigurableJointMotion.Locked` in `PlayerV2_Head.Start()`.
+  - The neck joints now act as strict hinges that only permit Pitch (X-axis) bending. The Head now inherits the Torso's Yaw instantly and immaculately, while remaining physically springy when looking up and down.
+
+### Code Modified/Added
+- [MODIFY] [PlayerV2_Head.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Head.cs) (Renamed alignment variables; Locked Y and Z joint motions).

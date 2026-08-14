@@ -14,6 +14,17 @@ namespace VacuumProtocol.PlayerV2
         [Tooltip("Role: Liste des articulations du cou jusqu'à la tête.\nUse Case: Répartir le pitch équitablement sur l'ensemble.")]
         public ConfigurableJoint[] NeckJoints;
 
+        [Header("Alignment Settings (Physics)")]
+        public bool UseAlignmentForce = true;
+        [Tooltip("Force de rotation pour garder la tête alignée sur le torse. Même principe que les bras.")]
+        public float HeadAlignmentTorque = 1500f;
+        public float HeadAlignmentDamping = 100f;
+
+        private PlayerV2_Controller _controller;
+        private Rigidbody _headRb;
+
+        public float CurrentTargetPitch { get; private set; }
+
         [Header("Spring Settings (Muscles)")]
         [Tooltip("Force qui pousse la tête vers la cible. Haut = Muscle fort.")]
         public float SpringForce = 5000f;
@@ -24,6 +35,12 @@ namespace VacuumProtocol.PlayerV2
         [Header("Limits & Tracking")]
         [Tooltip("Limite d'angle pour chaque os (en degrés)")]
         public float JointAngleLimit = 30f;
+
+        private void Awake()
+        {
+            _controller = GetComponentInParent<PlayerV2_Controller>();
+            if (_controller == null) _controller = GetComponent<PlayerV2_Controller>();
+        }
 
         private void Start()
         {
@@ -41,6 +58,8 @@ namespace VacuumProtocol.PlayerV2
 
                 SoftJointLimit limit = new SoftJointLimit { limit = JointAngleLimit };
 
+                _headRb = NeckJoints[NeckJoints.Length - 1].GetComponent<Rigidbody>();
+
                 foreach (var joint in NeckJoints)
                 {
                     if (joint != null)
@@ -56,13 +75,11 @@ namespace VacuumProtocol.PlayerV2
 
                         // Limite les rotations pour éviter que le cou se torde dans tous les sens
                         joint.angularXMotion = ConfigurableJointMotion.Limited;
-                        joint.angularYMotion = ConfigurableJointMotion.Limited;
-                        joint.angularZMotion = ConfigurableJointMotion.Limited;
+                        joint.angularYMotion = ConfigurableJointMotion.Locked;
+                        joint.angularZMotion = ConfigurableJointMotion.Locked;
 
                         joint.lowAngularXLimit = new SoftJointLimit { limit = -JointAngleLimit };
                         joint.highAngularXLimit = limit;
-                        joint.angularYLimit = limit;
-                        joint.angularZLimit = limit;
 
                         // Empêche les deux os connectés de se repousser physiquement (peut causer l'étirement)
                         joint.enableCollision = false;
@@ -78,6 +95,7 @@ namespace VacuumProtocol.PlayerV2
         public void SetTargetPitch(float targetPitch)
         {
             if (NeckJoints == null || NeckJoints.Length == 0) return;
+            CurrentTargetPitch = targetPitch;
 
             // Diviser l'angle par le nombre d'articulations pour une courbe fluide
             float pitchPerJoint = targetPitch / NeckJoints.Length;
@@ -92,6 +110,31 @@ namespace VacuumProtocol.PlayerV2
                 {
                     joint.targetRotation = targetRot;
                 }
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            if (!isOwned || !UseAlignmentForce || _headRb == null || _controller == null || _controller.TorsoRigidbody == null) return;
+
+            // La cible: Rotation du Torso (Yaw) + Pitch désiré (X)
+            Quaternion torsoRot = _controller.TorsoRigidbody.rotation;
+            Quaternion targetRotation = torsoRot * Quaternion.Euler(CurrentTargetPitch, 0f, 0f);
+
+            // Calcul de la différence de rotation
+            Quaternion deltaRotation = targetRotation * Quaternion.Inverse(_headRb.rotation);
+            deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
+
+            if (!float.IsNaN(axis.x) && !float.IsNaN(axis.y) && !float.IsNaN(axis.z) && axis.sqrMagnitude > 0.001f)
+            {
+                if (angle > 180f) angle -= 360f;
+                
+                // Application de la force (torque)
+                Vector3 alignmentTorque = axis * (angle * HeadAlignmentTorque * Mathf.Deg2Rad);
+                Vector3 rotationalDamping = -_headRb.angularVelocity * HeadAlignmentDamping;
+                Vector3 netTorque = (alignmentTorque + rotationalDamping) * _headRb.mass;
+                
+                _headRb.AddTorque(netTorque, ForceMode.Force);
             }
         }
     }
