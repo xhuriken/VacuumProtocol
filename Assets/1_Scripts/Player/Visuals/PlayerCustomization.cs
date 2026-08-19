@@ -18,6 +18,13 @@ namespace VacuumProtocol.Player.Visuals
         [Tooltip("Role: The audio controller for the vacuum sound.\nUse Case: Audio customization.\nJustification: Needs a direct reference to inject the chosen musical root note into the synthesis engine. (Optional on V2 Dummy)")]
         [SerializeField] private VacuumAudioController _vacuumAudio;
 
+        [Header("Material Indices")]
+        [Tooltip("Role: The submesh material index for the robot body.\nUse Case: Visual customization.\nJustification: Used to apply skins to the main chassis.")]
+        [SerializeField] private int _bodyMaterialIndex = 0;
+
+        [Tooltip("Role: The submesh material index for the robot's eyes (Iris).\nUse Case: Visual customization.\nJustification: Used to apply custom drawn pupil textures.")]
+        [SerializeField] private int _eyeMaterialIndex = 2;
+
         [Header("Preview Settings")]
         [Tooltip("Role: Disables networking hooks for preview mannequins.\nUse Case: Main Menu.\nJustification: Check this ONLY on your Lobby Dummy prefab so it stays completely offline and local, allowing players to preview colors without throwing network errors.")]
         public bool IsLobbyDummy = false;
@@ -26,15 +33,27 @@ namespace VacuumProtocol.Player.Visuals
         [Tooltip("Role: Enable verbose logging.\nUse Case: Debugging customization.\nJustification: Used to trace whether colors are failing to load from PlayerPrefs or failing to sync over the network.")]
         public bool EnableDebugLogs = true;
 
+        [System.Serializable]
+        public struct PlayerVisualPreset
+        {
+            public string PresetName;
+            public Color BaseColor;
+            public Texture BaseMap;
+        }
+
+        [Header("Visual Presets")]
+        [Tooltip("Role: Predefined visual styles.\nUse Case: Selection from UI.\nJustification: Allows setting both color and texture dynamically.")]
+        public PlayerVisualPreset[] VisualPresets;
+
         // SyncVars automatically sync from the server to all clients. 
         // When they change, they trigger the hook methods.
-        [SyncVar(hook = nameof(OnColorChanged))]
-        public Color PlayerColor = Color.white;
+        [SyncVar(hook = nameof(OnVisualIndexChanged))]
+        public int PlayerVisualIndex = 0;
 
         [SyncVar(hook = nameof(OnNoteChanged))]
         public MusicalNote PlayerRootNote = MusicalNote.C;
 
-    private Material _instancedMaterial;
+        private Material[] _instancedMaterials;
 
         /// <summary>
         /// Description: Dynamic setter/getter for model renderer, used by PlayerBoneBridge at startup.
@@ -47,28 +66,59 @@ namespace VacuumProtocol.Player.Visuals
                 _modelRenderer = value;
                 if (_modelRenderer != null)
                 {
-                    if (_instancedMaterial != null)
+                    if (_instancedMaterials != null)
                     {
-                        Destroy(_instancedMaterial);
+                        foreach (var mat in _instancedMaterials) 
+                            if (mat != null) Destroy(mat);
                     }
-                    _instancedMaterial = _modelRenderer.material;
-                    // Apply currently synced color immediately if we are initializing late
-                    ApplyColor(PlayerColor);
+                    _instancedMaterials = _modelRenderer.materials;
+                    // Apply currently synced visuals immediately if we are initializing late
+                    ApplyVisuals(PlayerVisualIndex);
                 }
             }
         }
 
         /// <summary>
-        /// Description: Awake callback. Clones the material.
+        /// Description: Awake callback. Clones the materials.
         /// Context: Lifecycle event.
-        /// Justification: We must create an instanced material so changing one player's color doesn't accidentally tint every player in the match who shares the same base material.
+        /// Justification: We must create instanced materials so changing one player's color or eyes doesn't accidentally tint every player in the match who shares the same base materials.
         /// </summary>
         private void Awake()
         {
-            // Create an instanced material so changing color doesn't affect all players
-            if (_modelRenderer != null && _instancedMaterial == null)
+            // Create instanced materials by accessing .materials property
+            if (_modelRenderer != null && _instancedMaterials == null)
             {
-                _instancedMaterial = _modelRenderer.material;
+                _instancedMaterials = _modelRenderer.materials;
+            }
+        }
+
+        /// <summary>
+        /// Description: Start callback. Used by the offline dummy to load saved data.
+        /// Context: Lifecycle event.
+        /// Justification: The Lobby Dummy doesn't run OnStartLocalPlayer, so it must load its saved look locally on startup.
+        /// </summary>
+        private void Start()
+        {
+            if (IsLobbyDummy)
+            {
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Lobby Dummy loading saved customization on Start.");
+                
+                if (PlayerPrefs.HasKey("PlayerVisualIndex"))
+                {
+                    PlayerVisualIndex = PlayerPrefs.GetInt("PlayerVisualIndex");
+                    ApplyVisuals(PlayerVisualIndex);
+                }
+                else if (PlayerPrefs.HasKey("PlayerColorHex"))
+                {
+                    PlayerVisualIndex = 0; // Fallback
+                    ApplyVisuals(0);
+                }
+
+                if (PlayerPrefs.HasKey("PlayerNoteIndex"))
+                {
+                    PlayerRootNote = (MusicalNote)PlayerPrefs.GetInt("PlayerNoteIndex");
+                    ApplyNote(PlayerRootNote);
+                }
             }
         }
 
@@ -83,7 +133,7 @@ namespace VacuumProtocol.Player.Visuals
             if (IsLobbyDummy) return;
 
             // Apply the current synced values to this client immediately upon joining
-            ApplyColor(PlayerColor);
+            ApplyVisuals(PlayerVisualIndex);
             ApplyNote(PlayerRootNote);
         }
 
@@ -109,13 +159,19 @@ namespace VacuumProtocol.Player.Visuals
         private void LoadSavedCustomization()
         {
             if (EnableDebugLogs) Debug.Log("[PlayerCustomization] LoadSavedCustomization called.");
-            if (PlayerPrefs.HasKey("PlayerColorHex"))
+            if (PlayerPrefs.HasKey("PlayerVisualIndex"))
+            {
+                int savedIndex = PlayerPrefs.GetInt("PlayerVisualIndex");
+                if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] Found saved visual index: {savedIndex}");
+                CmdChangeVisual(savedIndex); // If offline, this will throw a warning, which is why we might need to use RequestVisualChange instead
+            }
+            else if (PlayerPrefs.HasKey("PlayerColorHex")) // Legacy migration fallback
             {
                 string hex = PlayerPrefs.GetString("PlayerColorHex");
-                if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] Found saved color hex: {hex}");
                 if (ColorUtility.TryParseHtmlString(hex, out Color savedColor))
                 {
-                    CmdChangeColor(savedColor); // If offline, this will throw a warning, which is why we might need to use RequestColorChange instead
+                    // Fallback to visual index 0 as a default if an old color exists
+                    CmdChangeVisual(0); 
                 }
             }
 
@@ -134,24 +190,27 @@ namespace VacuumProtocol.Player.Visuals
         /// </summary>
         private void OnDestroy()
         {
-            if (_instancedMaterial != null)
+            if (_instancedMaterials != null)
             {
-                Destroy(_instancedMaterial);
+                foreach (var mat in _instancedMaterials)
+                {
+                    if (mat != null) Destroy(mat);
+                }
             }
         }
 
         #region Hooks (Executed on all clients)
 
         /// <summary>
-        /// Description: SyncVar Hook for color changes.
-        /// Context: Triggered on all clients when the server updates PlayerColor.
+        /// Description: SyncVar Hook for visual changes.
+        /// Context: Triggered on all clients when the server updates PlayerVisualIndex.
         /// Justification: Automatically applies visual updates to remote avatars when they change their settings.
         /// </summary>
-        private void OnColorChanged(Color oldColor, Color newColor)
+        private void OnVisualIndexChanged(int oldIndex, int newIndex)
         {
             if (IsLobbyDummy) return;
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] SyncVar Hook OnColorChanged triggered. New Color: {newColor}");
-            ApplyColor(newColor);
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] SyncVar Hook OnVisualIndexChanged triggered. New Index: {newIndex}");
+            ApplyVisuals(newIndex);
         }
 
         /// <summary>
@@ -167,22 +226,52 @@ namespace VacuumProtocol.Player.Visuals
         }
 
         /// <summary>
-        /// Description: Pushes a color into the material shader.
+        /// Description: Pushes a color and texture into the material shader based on preset index.
         /// Context: Internal execution.
-        /// Justification: Supports both Standard (_Color) and URP (_BaseColor) shader property naming conventions.
+        /// Justification: Supports both Standard (_Color, _MainTex) and URP (_BaseColor, _BaseMap) shader property naming conventions.
         /// </summary>
-        private void ApplyColor(Color color)
+        private void ApplyVisuals(int index)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] ApplyColor called with color: {color}");
-            if (_instancedMaterial != null)
+            if (VisualPresets == null || index < 0 || index >= VisualPresets.Length)
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Material found, applying color.");
-                // Assumes the standard shader color property. Change "_Color" to "_BaseColor" if using URP/HDRP.
-                _instancedMaterial.SetColor("_Color", color);
-
-                _instancedMaterial.SetColor("_BaseColor", color); // Safe fallback for URP
+                if (EnableDebugLogs) Debug.LogWarning($"[PlayerCustomization] ApplyVisuals failed. Invalid index {index} or no presets defined.");
+                return;
             }
-            else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyColor failed because _instancedMaterial is null! Did you assign _modelRenderer?");
+
+            PlayerVisualPreset preset = VisualPresets[index];
+
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] ApplyVisuals called with index: {index} ({preset.PresetName})");
+            if (_instancedMaterials != null && _bodyMaterialIndex >= 0 && _bodyMaterialIndex < _instancedMaterials.Length)
+            {
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Material found, applying texture to body.");
+                
+                // Textures ONLY (the BaseColor is just for the UI button)
+                if (preset.BaseMap != null)
+                {
+                    _instancedMaterials[_bodyMaterialIndex].SetTexture("_MainTex", preset.BaseMap);
+                    _instancedMaterials[_bodyMaterialIndex].SetTexture("_BaseMap", preset.BaseMap); // Safe fallback for URP
+                }
+            }
+            else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyVisuals failed because _instancedMaterials is null or index out of bounds! Did you assign _modelRenderer?");
+        }
+
+        /// <summary>
+        /// Description: Applies a texture specifically to the eye material.
+        /// Context: Local execution (for now).
+        /// Justification: Used by the custom eye painter system to override the Iris material.
+        /// </summary>
+        public void ApplyLocalEyeTexture(Texture2D eyeTexture)
+        {
+            if (EnableDebugLogs) Debug.Log("[PlayerCustomization] ApplyLocalEyeTexture called.");
+            if (_instancedMaterials != null && _eyeMaterialIndex >= 0 && _eyeMaterialIndex < _instancedMaterials.Length)
+            {
+                if (eyeTexture != null)
+                {
+                    _instancedMaterials[_eyeMaterialIndex].SetTexture("_MainTex", eyeTexture);
+                    _instancedMaterials[_eyeMaterialIndex].SetTexture("_BaseMap", eyeTexture); // Safe fallback for URP
+                }
+            }
+            else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyLocalEyeTexture failed. Invalid material array or index.");
         }
 
         private void ApplyNote(MusicalNote note)
@@ -201,23 +290,23 @@ namespace VacuumProtocol.Player.Visuals
         #region Public Requests (Safe for both Networked and Offline Dummies)
 
         /// <summary>
-        /// Description: Universal entry point to change player color.
-        /// Context: Called by the UI color picker.
+        /// Description: Universal entry point to change player visual preset.
+        /// Context: Called by the UI preset picker.
         /// Justification: Safely handles both networked multiplayer avatars (sends a Command) and offline lobby dummies (applies locally without network errors).
         /// </summary>
-        public void RequestColorChange(Color newColor)
+        public void RequestVisualChange(int presetIndex)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestColorChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVisualChange called. NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
             if (!IsLobbyDummy && isOwned)
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Sending CmdChangeColor to server.");
-                CmdChangeColor(newColor);
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Sending CmdChangeVisual to server.");
+                CmdChangeVisual(presetIndex);
             }
             else
             {
-                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Applying color locally (Preview Mode or No Authority).");
-                PlayerColor = newColor;
-                ApplyColor(newColor);
+                if (EnableDebugLogs) Debug.Log("[PlayerCustomization] Applying visual locally (Preview Mode or No Authority).");
+                PlayerVisualIndex = presetIndex;
+                ApplyVisuals(presetIndex);
             }
         }
 
@@ -265,15 +354,15 @@ namespace VacuumProtocol.Player.Visuals
         #region Commands (Executed on the Server, requested by the Local Client)
 
         /// <summary>
-        /// Description: Called by the local client's UI to request a color change.
+        /// Description: Called by the local client's UI to request a visual preset change.
         /// Context: Mirror Command.
         /// Justification: The server must own the SyncVar. Updating it here pushes it to all clients automatically.
         /// </summary>
         [Command]
-        private void CmdChangeColor(Color newColor)
+        private void CmdChangeVisual(int newIndex)
         {
-            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] Server executing CmdChangeColor: {newColor}");
-            PlayerColor = newColor; // This updates the SyncVar on the server, pushing it to all clients
+            if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] Server executing CmdChangeVisual: {newIndex}");
+            PlayerVisualIndex = newIndex; // This updates the SyncVar on the server, pushing it to all clients
         }
 
         /// <summary>

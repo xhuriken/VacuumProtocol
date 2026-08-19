@@ -39,13 +39,19 @@ using UnityEngine.InputSystem;
         private bool _isInitialized = false;
 
         /// <summary>
-        /// Description: Unlocks input listening.
+        /// Description: Unlocks input listening and enables the PlayerInput component.
         /// Context: Mirror NetworkBehaviour callback fired when this client assumes authority.
-        /// Justification: We drop all input callbacks until the local player is fully authorized.
+        /// Justification: We drop all input callbacks until the local player is fully authorized. Enabling PlayerInput here avoids device pairing conflicts.
         /// </summary>
         public override void OnStartLocalPlayer()
         {
             _isInitialized = true;
+            
+            PlayerInput playerInput = GetComponent<PlayerInput>();
+            if (playerInput != null)
+            {
+                playerInput.enabled = true;
+            }
         }
 
         /// <summary>

@@ -37,10 +37,15 @@ namespace VacuumProtocol.Player.Visuals
         [SerializeField] private bool _enableDebugLogs = false;
 
         private Quaternion _initialLocalRotation;
-        private Quaternion _targetLocalRotation;
+        
+        [SyncVar]
+        private Quaternion _syncedTargetLocalRotation;
 
         private Quaternion _pupilInitialLocalRot;
-        private Quaternion _pupilTargetLocalRotation;
+        
+        [SyncVar]
+        private Quaternion _syncedPupilTargetLocalRotation;
+        
         private Quaternion _pupilInitialWorldRotOffset;
 
         /// <summary>
@@ -64,10 +69,10 @@ namespace VacuumProtocol.Player.Visuals
             }
 
             _initialLocalRotation = transform.localRotation;
-            _targetLocalRotation = _initialLocalRotation;
+            _syncedTargetLocalRotation = _initialLocalRotation;
 
             _pupilInitialLocalRot = _pupilBone.localRotation;
-            _pupilTargetLocalRotation = _pupilInitialLocalRot;
+            _syncedPupilTargetLocalRotation = _pupilInitialLocalRot;
             
             // Cache the initial pupil offset relative to the eye transform
             _pupilInitialWorldRotOffset = Quaternion.Inverse(transform.rotation) * _pupilBone.rotation;
@@ -78,10 +83,30 @@ namespace VacuumProtocol.Player.Visuals
         /// </summary>
         private void Update()
         {
-            if (!isLocalPlayer) return;
+            if (isLocalPlayer)
+            {
+                CalculateTargetRotation();
+            }
 
-            CalculateTargetRotation();
             ApplyRotation();
+        }
+
+        [Command]
+        private void CmdSetEyeTargets(Quaternion eyeRot, Quaternion pupilRot)
+        {
+            _syncedTargetLocalRotation = eyeRot;
+            _syncedPupilTargetLocalRotation = pupilRot;
+        }
+
+        private void UpdateSyncedTargets(Quaternion newEyeRot, Quaternion newPupilRot)
+        {
+            if (Quaternion.Angle(_syncedTargetLocalRotation, newEyeRot) > 1f ||
+                Quaternion.Angle(_syncedPupilTargetLocalRotation, newPupilRot) > 1f)
+            {
+                CmdSetEyeTargets(newEyeRot, newPupilRot);
+                _syncedTargetLocalRotation = newEyeRot;
+                _syncedPupilTargetLocalRotation = newPupilRot;
+            }
         }
 
 
@@ -128,11 +153,13 @@ namespace VacuumProtocol.Player.Visuals
 
                 // L'oeil ne tourne qu'à X% vers la cible
                 Quaternion eyeTargetWorld = Quaternion.Slerp(baseWorldRot, worldLookRot, _eyeTargetWeight);
-                _targetLocalRotation = Quaternion.Inverse(transform.parent.rotation) * eyeTargetWorld;
+                Quaternion newTargetLocal = Quaternion.Inverse(transform.parent.rotation) * eyeTargetWorld;
 
                 // La pupille tourne à Y% vers la cible
                 Quaternion pupilTargetWorld = Quaternion.Slerp(baseWorldRot, worldLookRot, _pupilTargetWeight);
-                _pupilTargetLocalRotation = Quaternion.Inverse(_pupilBone.parent.rotation) * (pupilTargetWorld * _pupilInitialWorldRotOffset);
+                Quaternion newPupilTargetLocal = Quaternion.Inverse(_pupilBone.parent.rotation) * (pupilTargetWorld * _pupilInitialWorldRotOffset);
+
+                UpdateSyncedTargets(newTargetLocal, newPupilTargetLocal);
 
                 if (_enableDebugLogs && _playerViewRange.HighestPriorityEntity != null)
                 {
@@ -142,8 +169,7 @@ namespace VacuumProtocol.Player.Visuals
             else
             {
                 // Reset both to forward-facing orientations if target is lost
-                _targetLocalRotation = _initialLocalRotation;
-                _pupilTargetLocalRotation = _pupilInitialLocalRot;
+                UpdateSyncedTargets(_initialLocalRotation, _pupilInitialLocalRot);
             }
         }
 
@@ -158,13 +184,13 @@ namespace VacuumProtocol.Player.Visuals
         {
             transform.localRotation = Quaternion.Slerp(
                 transform.localRotation,
-                _targetLocalRotation,
+                _syncedTargetLocalRotation,
                 Time.deltaTime * _rotationSpeed
             );
 
             _pupilBone.localRotation = Quaternion.Slerp(
                 _pupilBone.localRotation,
-                _pupilTargetLocalRotation,
+                _syncedPupilTargetLocalRotation,
                 Time.deltaTime * _pupilRotationSpeed
             );
         }

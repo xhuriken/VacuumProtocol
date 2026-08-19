@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4052174062689661696}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_01_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 6419017230471057109}
   - component: {fileID: 8260642764417561362}
   - component: {fileID: 3105700532475062781}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -227,7 +227,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4144061977863630557}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_02_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -258,7 +258,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2527096402754453551}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -290,7 +290,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6051546333625999677}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -325,7 +325,7 @@ GameObject:
   - component: {fileID: 1329014898945391912}
   - component: {fileID: 6566802747004410306}
   - component: {fileID: 5462530879514723464}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.004
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -509,7 +509,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2044302067384928448}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -544,7 +544,7 @@ GameObject:
   - component: {fileID: 1101818116384347258}
   - component: {fileID: 848363158358385675}
   - component: {fileID: 7701644509083024322}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -731,7 +731,9 @@ GameObject:
   - component: {fileID: 5786146030887080759}
   - component: {fileID: 2456262083950237744}
   - component: {fileID: 5281850991627715403}
-  m_Layer: 0
+  - component: {fileID: 212821718094077803}
+  - component: {fileID: 3042778858666805178}
+  m_Layer: 7
   m_Name: Wheel_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -904,6 +906,74 @@ ConfigurableJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!114 &212821718094077803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 962238424799496764}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 8664895047213964742}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &3042778858666805178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 962238424799496764}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 8664895047213964742}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &1033271229719817223
 GameObject:
   m_ObjectHideFlags: 0
@@ -916,7 +986,7 @@ GameObject:
   - component: {fileID: 4794598658722742527}
   - component: {fileID: 1435718361296986147}
   - component: {fileID: 2785918567500878399}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.005
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1100,7 +1170,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7755944287867765315}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BoneBridgeRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1132,7 +1202,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4619375920611955683}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1171,7 +1241,7 @@ GameObject:
   - component: {fileID: 8981508395273085907}
   - component: {fileID: 1942353500288909413}
   - component: {fileID: 8456275129571517038}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.005
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1355,7 +1425,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2025230524911891964}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Eye.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1387,7 +1457,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2725006708651615471}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1423,7 +1493,7 @@ GameObject:
   - component: {fileID: 7035348718850407212}
   - component: {fileID: 8657805825301879574}
   - component: {fileID: 1880678482393350633}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.004
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1607,7 +1677,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1109598479603210460}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1639,7 +1709,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7795262183154842485}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.003
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1671,7 +1741,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4918571698250879296}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Int
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1703,7 +1773,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8134154194129082311}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Shoulder.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1735,7 +1805,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2502731041126311057}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Armature
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1767,7 +1837,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4479819714039365297}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.R_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1801,7 +1871,7 @@ GameObject:
   - component: {fileID: 3392971392463823080}
   - component: {fileID: 6318085873750765007}
   - component: {fileID: 4059056826309297263}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.002
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1985,7 +2055,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 61516802641568555}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Ext_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2016,7 +2086,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3687447560131143494}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BackPack_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2047,7 +2117,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8138743245022556035}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2081,7 +2151,7 @@ GameObject:
   - component: {fileID: 1788316877118329111}
   - component: {fileID: 7750382054768229038}
   - component: {fileID: 5419818016562868763}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2242,7 +2312,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5219730381759185418}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_04_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2273,7 +2343,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3314579958038456582}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2305,7 +2375,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8608306197321010887}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Shoulder.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2337,7 +2407,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8405480561869433640}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.L_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2374,7 +2444,7 @@ GameObject:
   - component: {fileID: 3687826983274393566}
   - component: {fileID: 6085732871604657447}
   - component: {fileID: 7697673176420547219}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2400,6 +2470,7 @@ Transform:
   - {fileID: 1810430071715155610}
   - {fileID: 5982002924693095623}
   - {fileID: 9016200845356353673}
+  - {fileID: 4462103124797371366}
   m_Father: {fileID: 1788316877118329111}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!82 &679975171571666169
@@ -2715,7 +2786,9 @@ GameObject:
   - component: {fileID: 4539278660189860590}
   - component: {fileID: 617051425746210605}
   - component: {fileID: 6303153614011900691}
-  m_Layer: 0
+  - component: {fileID: 4024053081005168862}
+  - component: {fileID: 3331115015682039649}
+  m_Layer: 7
   m_Name: Wheel_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2888,6 +2961,74 @@ ConfigurableJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!114 &4024053081005168862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3379755079358925308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 9145544056190252051}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &3331115015682039649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3379755079358925308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 9145544056190252051}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &3543648546805914382
 GameObject:
   m_ObjectHideFlags: 0
@@ -2898,7 +3039,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6096312768173007931}
   - component: {fileID: 7484388616755375700}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Eye.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2956,7 +3097,7 @@ GameObject:
   - component: {fileID: 1924315036240543669}
   - component: {fileID: 2048797570182678508}
   - component: {fileID: 5022873679416453419}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3140,7 +3281,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6651005042191066506}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3172,7 +3313,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 593245442781958406}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Base_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3203,7 +3344,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1089880700547993262}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3238,7 +3379,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3617795477594291496}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.Base.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3270,7 +3411,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1300504425940736273}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_03_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3301,7 +3442,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8531062877673517285}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Shoulder.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3336,7 +3477,7 @@ GameObject:
   - component: {fileID: 1881049452463880681}
   - component: {fileID: 5509367252901856545}
   - component: {fileID: 5949515329003193633}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.002
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3520,7 +3661,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3372873585887455747}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3553,7 +3694,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9098600996464382211}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3585,7 +3726,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2261095809456252890}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BackPack_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3616,7 +3757,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6116236276388611115}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Base_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3647,7 +3788,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6128540428246547794}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Shoulder.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3682,7 +3823,7 @@ GameObject:
   - component: {fileID: 7700669255958435573}
   - component: {fileID: 5628896504680421363}
   - component: {fileID: 2775269124938534283}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3865,7 +4006,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6790713113753281097}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3897,7 +4038,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6068139863917249625}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Int_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3928,7 +4069,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5809909537175880380}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BackPack
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3963,7 +4104,9 @@ GameObject:
   - component: {fileID: 1702181570414169307}
   - component: {fileID: 6257215353167965061}
   - component: {fileID: 5019459838073048666}
-  m_Layer: 0
+  - component: {fileID: 39451269854205101}
+  - component: {fileID: 559731083288810687}
+  m_Layer: 7
   m_Name: Wheel_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4136,6 +4279,74 @@ ConfigurableJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!114 &39451269854205101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5040572873300327642}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2367265795261997978}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &559731083288810687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5040572873300327642}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2367265795261997978}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &5057368382001059625
 GameObject:
   m_ObjectHideFlags: 0
@@ -4145,7 +4356,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5149757000451159071}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_03_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4176,7 +4387,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2120326482673261674}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.R_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4207,7 +4418,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6778828436189758824}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.004
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4242,7 +4453,7 @@ GameObject:
   - component: {fileID: 6488685955020214884}
   - component: {fileID: 9013705109339850747}
   - component: {fileID: 7632830642271233196}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.003
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4426,7 +4637,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5945393295726439568}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Armature
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4458,7 +4669,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2257567280449275439}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.L_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4492,7 +4703,7 @@ GameObject:
   - component: {fileID: 1707120553722905118}
   - component: {fileID: 4017917699388092632}
   - component: {fileID: 585726307689391377}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4676,7 +4887,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3380876174469788416}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SKM_Robot_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4709,7 +4920,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4115927212883673470}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4732,6 +4943,37 @@ Transform:
   - {fileID: 5802564052667327068}
   m_Father: {fileID: 5774223339913163353}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5855743453695796826
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4462103124797371366}
+  m_Layer: 7
+  m_Name: HeadTarget
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4462103124797371366
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5855743453695796826}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.228, z: 0.163}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 279577304037859192}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5908770066134748397
 GameObject:
   m_ObjectHideFlags: 0
@@ -4744,7 +4986,9 @@ GameObject:
   - component: {fileID: 8365284726194128744}
   - component: {fileID: 3531011137725588272}
   - component: {fileID: 4466784954185208815}
-  m_Layer: 0
+  - component: {fileID: 3426923721534764394}
+  - component: {fileID: 2276085023584946586}
+  m_Layer: 7
   m_Name: Wheel_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4917,6 +5161,74 @@ ConfigurableJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!114 &3426923721534764394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5908770066134748397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2274714783428938082}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &2276085023584946586
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5908770066134748397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2274714783428938082}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &5961304177961180801
 GameObject:
   m_ObjectHideFlags: 0
@@ -4926,7 +5238,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5774223339913163353}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4962,7 +5274,7 @@ GameObject:
   - component: {fileID: 5441802875012732489}
   - component: {fileID: 7820382298290121729}
   - component: {fileID: 4856288818739700168}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5172,7 +5484,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8307838638083189174}
   - component: {fileID: 3449925798189837407}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SKM_Robot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5247,7 +5559,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: 8122882980560417245, guid: b6f7bce7ef41698458aa3b7ab55060d1, type: 3}
   m_Bones:
@@ -5304,7 +5616,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7593050512019133438}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.R_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5335,7 +5647,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3515346241371944490}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Int_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5369,7 +5681,7 @@ GameObject:
   - component: {fileID: 2254176414872483012}
   - component: {fileID: 4623480936708710723}
   - component: {fileID: 3947565541660503160}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.003
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5555,7 +5867,7 @@ GameObject:
   - component: {fileID: 3193645684829668146}
   - component: {fileID: 2958201261224611057}
   - component: {fileID: 8096197021597533589}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5716,7 +6028,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1951637358308185089}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5748,7 +6060,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4232876623845400803}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Eye.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5780,7 +6092,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2196330595928578616}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5812,7 +6124,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5982002924693095623}
-  m_Layer: 0
+  - component: {fileID: 1447135110703793994}
+  m_Layer: 7
   m_Name: Mouth.Int
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5835,6 +6148,40 @@ Transform:
   - {fileID: 3515346241371944490}
   m_Father: {fileID: 279577304037859192}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1447135110703793994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6722142233801509122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 5982002924693095623}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &6816134958080868827
 GameObject:
   m_ObjectHideFlags: 0
@@ -5981,7 +6328,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9185136174797207805}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.Base.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6013,7 +6360,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7854085608330824952}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Torso
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6048,7 +6395,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1810430071715155610}
-  m_Layer: 0
+  - component: {fileID: 5447160850984920431}
+  m_Layer: 7
   m_Name: Mouth.Ext
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6071,6 +6419,40 @@ Transform:
   - {fileID: 61516802641568555}
   m_Father: {fileID: 279577304037859192}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5447160850984920431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7058315866315695782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 1810430071715155610}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &7117953580879128620
 GameObject:
   m_ObjectHideFlags: 0
@@ -6080,7 +6462,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7681004165468411738}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6112,7 +6494,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6857988782055969870}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_02_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6143,7 +6525,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6182744348667823927}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.004
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6175,7 +6557,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3023966504502290057}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BackPack
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6207,7 +6589,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5419896905537479101}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.003
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6239,7 +6621,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5802564052667327068}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.002
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6273,7 +6655,7 @@ GameObject:
   - component: {fileID: 2792166194028952634}
   - component: {fileID: 143805663180168710}
   - component: {fileID: 5102196501453554336}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6371,6 +6753,11 @@ GameObject:
   - component: {fileID: 1880859776367098239}
   - component: {fileID: 8116493350128248048}
   - component: {fileID: 7389513676377221693}
+  - component: {fileID: 5573647271570119521}
+  - component: {fileID: 1570883629236888298}
+  - component: {fileID: 4845161797695345595}
+  - component: {fileID: 5344364744022903997}
+  - component: {fileID: 8472237941368704926}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -6402,7 +6789,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7637031514935271185}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
@@ -6596,6 +6983,9 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  _name: PlayerName
+  _priorityLevel: 1
+  _lookAtPoint: {fileID: 4462103124797371366}
   ConnectionId: -1
   HipsRigidbody: {fileID: 5102196501453554336}
   TorsoRigidbody: {fileID: 484248005638760554}
@@ -6772,6 +7162,7 @@ MonoBehaviour:
   HeadAlignmentTorque: 1500
   HeadAlignmentDamping: 100
   PitchMultiplier: 0.5
+  CurrentTargetPitch: 0
   SpringForce: 5000
   SpringDamper: 500
   MaxForce: 10000
@@ -6879,7 +7270,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   _viewReference: {fileID: 9016200845356353673}
-  _showDebugLogs: 1
+  _showDebugLogs: 0
 --- !u!114 &7389513676377221693
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6895,6 +7286,181 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &5573647271570119521
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 971a075d648430a4f994762ad5f575e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.Player.Visuals.PlayerCustomization
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _modelRenderer: {fileID: 3449925798189837407}
+  _vacuumAudio: {fileID: 6081403777989489320}
+  _bodyMaterialIndex: 0
+  _eyeMaterialIndex: 2
+  IsLobbyDummy: 0
+  EnableDebugLogs: 0
+  VisualPresets:
+  - PresetName: Blue
+    BaseColor: {r: 0, g: 0.03137255, b: 1, a: 1}
+    BaseMap: {fileID: 2800000, guid: d0f27f5a672760648ac4741d59b6428d, type: 3}
+  - PresetName: Red
+    BaseColor: {r: 1, g: 0, b: 0, a: 1}
+    BaseMap: {fileID: 2800000, guid: 39dd08ddb2f176848bd32d8c4c2ddef3, type: 3}
+  - PresetName: Green
+    BaseColor: {r: 0, g: 1, b: 0.12644672, a: 1}
+    BaseMap: {fileID: 2800000, guid: a7aab0d71a1df2e47b115aea8a9aa173, type: 3}
+  - PresetName: Purple
+    BaseColor: {r: 1, g: 0, b: 0.93442965, a: 1}
+    BaseMap: {fileID: 2800000, guid: d0a19005f098e7c47bc166f2f108f255, type: 3}
+  - PresetName: BlackFace
+    BaseColor: {r: 0, g: 0, b: 0, a: 1}
+    BaseMap: {fileID: 2800000, guid: be8acf9fc5d4c3747a7ff824f8b911a9, type: 3}
+  PlayerVisualIndex: 0
+  PlayerRootNote: 0
+--- !u!114 &1570883629236888298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2792166194028952634}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &4845161797695345595
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2792166194028952634}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &5344364744022903997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 8947995227809742863}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!114 &8472237941368704926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 8947995227809742863}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &7751720572721550308
 GameObject:
   m_ObjectHideFlags: 0
@@ -6906,7 +7472,7 @@ GameObject:
   - component: {fileID: 6350476654365029310}
   - component: {fileID: 183868090791901972}
   - component: {fileID: 6657221081099905607}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7067,7 +7633,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7894956291012628530}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7099,7 +7665,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2499691269801709820}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7131,7 +7697,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2231526719136906249}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.005
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7163,7 +7729,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 822226331271339506}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hand.L_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7194,7 +7760,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4028692721269933491}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Ext_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7225,7 +7791,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9148794710822701544}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mouth.Ext
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7259,7 +7825,7 @@ GameObject:
   - component: {fileID: 6964986639024486957}
   - component: {fileID: 9212113928988786548}
   - component: {fileID: 933197570028120540}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.Base.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7338,7 +7904,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5800431725961595049}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7370,7 +7936,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7073044691481403252}
-  m_Layer: 0
+  - component: {fileID: 4713604205189444691}
+  m_Layer: 7
   m_Name: Mouth.Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7393,6 +7960,40 @@ Transform:
   - {fileID: 6116236276388611115}
   m_Father: {fileID: 279577304037859192}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4713604205189444691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8513341237419894598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 1
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 7073044691481403252}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1 &8563368030652051722
 GameObject:
   m_ObjectHideFlags: 0
@@ -7402,7 +8003,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8570754061429711902}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_04_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7436,7 +8037,7 @@ GameObject:
   - component: {fileID: 484248005638760554}
   - component: {fileID: 5090447920876513866}
   - component: {fileID: 2459666677272217753}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Torso
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7623,7 +8224,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5728953268523390432}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Neck_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7655,7 +8256,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6698442345372775141}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7688,7 +8289,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2790450299134849239}
   - component: {fileID: 501105137432574597}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Eye.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7743,7 +8344,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 189577507060817601}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.L.002
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7775,7 +8376,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2589187873590850309}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Wheel_01_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7806,7 +8407,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4677036919257376459}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Iris.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7838,7 +8439,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6763869764307430597}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.R.005
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7872,7 +8473,7 @@ GameObject:
   - component: {fileID: 4579867385719283683}
   - component: {fileID: 6053172677114292442}
   - component: {fileID: 2010109033139643061}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Arm.Base.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}

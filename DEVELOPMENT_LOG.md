@@ -1,6 +1,52 @@
 # Development Log
 
-## [2026-08-14] V2 Voice & Mouth Synchronization
+## [2026-08-19] PlayerV2 Procedural Multiplayer Visuals (Head & Eye Sync)
+**Goal:** Synchronize procedural physics/visuals (head pitch, eye tracking) across the network without relying on heavy `NetworkTransform` components.
+**Changes:**
+- **`PlayerV2_Head.cs` [MODIFIED]**: Promoted `CurrentTargetPitch` to a `[SyncVar]` with a `[Command]` and Hook. The local player predicts the pitch locally, while remote players receive the target pitch and apply it directly to the `ConfigurableJoint.targetRotation`. The local physics engine on each client handles the smooth `SlerpDrive` transition.
+- **`Eye.cs` [MODIFIED]**: Promoted `_targetLocalRotation` and `_pupilTargetLocalRotation` to `[SyncVar]`. Only the local player runs the target tracking calculations (`CalculateTargetRotation`), while all clients run the `ApplyRotation` Slerp.
+**Justification:** This guarantees 100% smooth, perfectly interpolated procedural animations for the head and eyes on all clients without the enormous bandwidth cost of placing NetworkTransforms on small bones.
+
+## [2026-08-19] PlayerV2 Multiplayer Bugfixes (Camera, Input, Physics)
+**Goal:** Fix severe multiplayer instantiation issues on `PlayerV2` where multiple clients shared global states (cameras, inputs) and suffered from physics explosions when spawning.
+**Changes:**
+- **`PlayerV2_Controller.cs` [MODIFIED]**: Added `isOwned` checks in `Start()` to automatically disable the `Camera` and `AudioListener` components for remote players. This prevents the "2 audio listeners" warning and stops the host's view from being hijacked by joining clients.
+- **`PlayerInputHandler.cs` [MODIFIED]**: Added `isOwned` check in `Start()` to disable the `UnityEngine.InputSystem.PlayerInput` component for remote players. This guarantees a player's hardware inputs only drive their own local avatar.
+- **`PlayerV2_Head.cs` [MODIFIED]**: Removed the `!isOwned` return check from `Start()`. 
+**Justification:** The most critical bug (host's head detaching when player 2 joins) was caused by the remote player bypassing joint configuration. Without springs, limits, or collision exemptions, the remote player's ragdoll head would violently explode upon spawn, physics-colliding with the host. By forcing physical joint configuration for *all* instances (local and remote) while only restricting *input driving* to the local player, the multiplayer stability is fully restored.
+## [2026-08-19] Dynamic Map Spawn Manager
+**Goal:** Implement a dynamic player spawn system in the game map to easily configure up to 10 spawn points with positions and orientations.
+**Changes:**
+- **`MapSpawnManager.cs` [NEW]**: A singleton script placed in the game scene that holds a list of `Transform` spawn points and circularly returns the next available point. It automatically registers its points to `Mirror.NetworkManager.RegisterStartPosition()` in `Awake()`, making it instantly compatible with the default NetworkManager HUD used for local testing. It now strictly throws a `Debug.LogError` if no points are configured.
+- **`MyNetworkManager.cs` [MODIFIED]**: Updated `OnServerAddPlayer` to check for `MapSpawnManager.Instance` when spawning the in-game player (`sceneName != "Lobby"`). It now dynamically fetches the position and rotation from the manager. Enforces strict checks by throwing a `Debug.LogError` instead of silently falling back to `Vector3.zero` if the manager or points are missing.
+**Justification:** Mirror's default spawning system is rigid. This custom `MapSpawnManager` provides a KISS approach allowing designers to visually drop empty GameObjects in the scene. By registering native Mirror start positions, it supports both the custom Steam lobby workflow and standard local NetworkManager tests perfectly. Following the newly created strict "No Silent Fallbacks" global rule, it prevents silent bugs by shouting loudly if spawn setup is forgotten.
+
+## [2026-08-15] Custom Eye Textures & Lobby UI Tabs
+**Goal:** Restructure the Lobby UI into Tabs (Appearance, Drawing, Audio) and allow players to save hand-drawn textures to apply them specifically to the character's eye material (M_Iris).
+**Changes:**
+- **`CustomizationMenuTabs.cs` [NEW]**: Simple UI tab controller logic to toggle between different customization panels.
+- **`CustomEyeTextureManager.cs` [NEW]**: Static helper for Disk I/O. Saves `Texture2D` as PNGs to `%AppData%/VacuumProtocol/CustomEyes/` and loads them.
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Added logic to listen to `TextureEditorPanelUI.OnTextureSaved`. Instantiates buttons dynamically for every loaded eye texture, applying them to the Dummy locally.
+- **`PlayerCustomization.cs` [MODIFIED]**: Upgraded `_instancedMaterial` to an array `_instancedMaterials` to clone all materials on the SkinnedMeshRenderer. Added `ApplyLocalEyeTexture()` targeting `_eyeMaterialIndex` (Index 2 : M_Iris).
+**Justification:** Prepares the groundwork for advanced personalization. Saving textures locally as PNGs decoupled the painting logic from the network limitation. A dedicated Mirror `[Command]` will be needed in the future to chunk and broadcast these raw bytes to other clients in multiplayer.
+## [2026-08-15] Player Customization Save Fix (Lobby Dummy)
+**Goal:** Ensure the offline Lobby Dummy automatically loads the player's saved visual and audio customizations on startup.
+**Changes:**
+- **`PlayerCustomization.cs` [MODIFIED]**: Added a `Start()` callback specifically to check `if (IsLobbyDummy)`. If true, it loads the saved `PlayerVisualIndex` and `PlayerNoteIndex` from `PlayerPrefs` and applies them instantly.
+**Justification:** Mirror network scripts typically block `OnStartLocalPlayer()` for offline dummies to avoid network errors. Adding an explicit local loading routine in `Start()` ensures the player sees their correct saved skin in the main menu as soon as the game launches.
+## [2026-08-15] Player Customization Presets & Dynamic Lobby Player Count
+**Goal:** Replace the basic hex color customization system with curated visual presets containing both a UI color and a character `BaseMap` texture. Also add a dynamic "Current/Max" player count text to the lobby UI.
+**Changes:**
+- **`PlayerCustomization.cs` [MODIFIED]**:
+  - Replaced `PlayerColor` with `PlayerVisualIndex` (`[SyncVar]`).
+  - Added a `PlayerVisualPreset` struct (contains `PresetName`, `BaseColor`, `BaseMap`).
+  - Updated `ApplyVisuals()` to map both the color and the texture directly to the `_instancedMaterial` (supporting Standard/URP shader naming).
+- **`LobbyCustomizationUI.cs` [MODIFIED]**:
+  - Changed `SetPlayerColor` to `SetPlayerVisualPreset(int presetIndex)`. It now saves `PlayerVisualIndex` to PlayerPrefs and requests the change via the server.
+- **`LobbyController.cs` [MODIFIED]**:
+  - Added `PlayerCountText` reference.
+  - Implemented `UpdatePlayerCountText()` that reads `Manager.GamePlayers.Count` and `Manager.maxConnections` to display dynamic UI text `(e.g., 1/5)`.
+**Justification:** Moving to presets rather than raw Hex colors allows full-fledged character material customization (applying different robot skin textures or decals) instead of just single-color tints. The player count logic ensures the lobby properly communicates real server availability without hardcoding values.## [2026-08-14] V2 Voice & Mouth Synchronization
 **Goal:** Restore UniVoice VoIP 3D spatialization and `MouthAnimator` support for the new Player_V2 architecture.
 **Changes:**
 - **`PlayerV2_Controller.cs` [MODIFIED]**: Added `[SyncVar] public int ConnectionId = -1` to act as the network peer identifier for UniVoice.

@@ -105,10 +105,12 @@ public class PlayerViewRange : NetworkBehaviour
                 // Line-of-sight check to ensure no obstacles are blocking the view
                 if (!Physics.Raycast(_viewReference.position, directionToTarget, distanceToTarget, _obstacleLayer))
                 {
-                    if (target.TryGetComponent(out IEntity entity))
+                    IEntity entity = target.GetComponentInParent<IEntity>();
+                    if (entity != null)
                     {
-                        // Don't detect ourselves
-                        if (entity.gameObject == this.gameObject) continue;
+                        // Don't detect ourselves (comparaison sécurisée)
+                        MonoBehaviour entityMono = entity as MonoBehaviour;
+                        if (entityMono != null && entityMono.gameObject == this.gameObject) continue;
 
                         if (_showDebugLogs) Debug.Log($"<color=green>[ViewRange] Entity Accepted:</color> {entity.Name}, Prio: {entity.PriorityLevel}");
                         _detectedEntities.Add(entity);

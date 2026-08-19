@@ -27,7 +27,10 @@ namespace VacuumProtocol.PlayerV2
         [Tooltip("Le pourcentage de l'input de pitch que la tête physique va suivre (ex: 0.7 = 70%).")]
         public float PitchMultiplier = 0.7f;
 
-        public float CurrentTargetPitch { get; private set; }
+        [SyncVar(hook = nameof(OnPitchChanged))]
+        public float CurrentTargetPitch;
+
+        private float _lastSentPitch = -999f;
 
         [Header("Spring Settings (Muscles)")]
         [Tooltip("Force qui pousse la tête vers la cible. Haut = Muscle fort.")]
@@ -48,8 +51,6 @@ namespace VacuumProtocol.PlayerV2
 
         private void Start()
         {
-            if (!isOwned) return;
-
             // Configure automatiquement les ressorts des joints au démarrage
             if (NeckJoints != null && NeckJoints.Length > 0)
             {
@@ -92,6 +93,12 @@ namespace VacuumProtocol.PlayerV2
             }
         }
 
+        [Command]
+        private void CmdSetPitch(float targetPitch)
+        {
+            CurrentTargetPitch = targetPitch;
+        }
+
         /// <summary>
         /// Répartit le pitch désiré sur tous les os du cou de manière équitable.
         /// </summary>
@@ -100,11 +107,37 @@ namespace VacuumProtocol.PlayerV2
         {
             if (NeckJoints == null || NeckJoints.Length == 0) return;
             
-            // La tête ne prend que 70% de l'input pour éviter de rentrer dans le torse
-            CurrentTargetPitch = targetPitch * PitchMultiplier;
+            float newPitch = targetPitch * PitchMultiplier;
 
+            if (isOwned)
+            {
+                // Appliquer localement immédiatement (Prédiction)
+                CurrentTargetPitch = newPitch;
+                ApplyPitchToJoints(newPitch);
+
+                // N'envoie la commande que si la différence est notable (0.5 degré)
+                if (Mathf.Abs(newPitch - _lastSentPitch) > 0.5f)
+                {
+                    CmdSetPitch(newPitch);
+                    _lastSentPitch = newPitch;
+                }
+            }
+        }
+
+        private void OnPitchChanged(float oldPitch, float newPitch)
+        {
+            if (!isOwned)
+            {
+                ApplyPitchToJoints(newPitch);
+            }
+        }
+
+        private void ApplyPitchToJoints(float pitch)
+        {
+            if (NeckJoints == null || NeckJoints.Length == 0) return;
+            
             // Diviser l'angle par le nombre d'articulations pour une courbe fluide
-            float pitchPerJoint = CurrentTargetPitch / NeckJoints.Length;
+            float pitchPerJoint = pitch / NeckJoints.Length;
 
             // Attention: ConfigurableJoint.targetRotation est inversé dans Unity par rapport au repère local
             // On inverse le signe ici pour corriger le mouvement de la souris.

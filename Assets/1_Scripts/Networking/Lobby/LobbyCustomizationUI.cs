@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using VacuumProtocol.Player.Visuals;
+using VacuumProtocol.UI.TextureEditor;
 
 namespace VacuumProtocol.Networking.Lobby
 {
@@ -21,57 +23,112 @@ namespace VacuumProtocol.Networking.Lobby
         [Tooltip("Role: Toggle for debug logs.\nUse Case: Troubleshooting.\nJustification: Customization UI can spam console during rapid color switching.")]
         public bool EnableDebugLogs = true;
 
+        [Header("UI Tabs & Editor Integration")]
+        public CustomizationMenuTabs MenuTabs;
+        public TextureEditorPanelUI TextureEditor;
+        public int AppearanceTabIndex = 0;
+
+        [Header("Custom Eyes UI")]
+        public GameObject CustomEyeButtonPrefab;
+        public Transform CustomEyeListContainer;
+        private List<GameObject> _spawnedEyeButtons = new List<GameObject>();
+
+        private void Start()
+        {
+            if (TextureEditor != null)
+            {
+                TextureEditor.OnTextureSaved += HandleTextureSaved;
+            }
+            RefreshCustomEyeButtons();
+        }
+
+        private void OnDestroy()
+        {
+            if (TextureEditor != null)
+            {
+                TextureEditor.OnTextureSaved -= HandleTextureSaved;
+            }
+        }
+
+        private void HandleTextureSaved(Texture2D newTexture)
+        {
+            CustomEyeTextureManager.SaveCustomEyeTexture(newTexture);
+            RefreshCustomEyeButtons();
+            
+            if (MenuTabs != null)
+            {
+                MenuTabs.OpenTab(AppearanceTabIndex);
+            }
+
+            SetLocalEyeTexture(newTexture);
+        }
+
+        public void RefreshCustomEyeButtons()
+        {
+            if (CustomEyeButtonPrefab == null || CustomEyeListContainer == null) return;
+
+            // Clear old buttons
+            foreach (var btn in _spawnedEyeButtons) Destroy(btn);
+            _spawnedEyeButtons.Clear();
+
+            List<Texture2D> savedTextures = CustomEyeTextureManager.LoadAllCustomEyeTextures();
+            foreach (var tex in savedTextures)
+            {
+                GameObject newBtn = Instantiate(CustomEyeButtonPrefab, CustomEyeListContainer);
+                _spawnedEyeButtons.Add(newBtn);
+
+                // Set preview image
+                RawImage rawImg = newBtn.GetComponentInChildren<RawImage>();
+                if (rawImg != null) rawImg.texture = tex;
+                
+                // If the user uses a standard Image with sprite, it requires conversion, so RawImage is preferred for dynamic textures.
+
+                Button btnComp = newBtn.GetComponent<Button>();
+                if (btnComp != null)
+                {
+                    btnComp.onClick.AddListener(() => SetLocalEyeTexture(tex));
+                }
+            }
+        }
+
+        public void SetLocalEyeTexture(Texture2D tex)
+        {
+            if (EnableDebugLogs) Debug.Log($"[LobbyUI] Setting local eye texture: {(tex != null ? tex.name : "null")}");
+            // Applied locally only (network sync of custom image bytes to be implemented later)
+            var targetPlayer = GetTargetPlayer();
+            if (targetPlayer != null)
+            {
+                targetPlayer.ApplyLocalEyeTexture(tex);
+            }
+        }
+
         // ----------------------------------------------------
         // PUBLIC METHODS TO LINK IN THE UNITY INSPECTOR (On Click Events)
         // ----------------------------------------------------
 
         /// <summary>
-        /// Description: Call this from a UI Button (On Click) and pass the Color you want.
+        /// Description: Call this from a UI Button (On Click) and pass the preset index you want.
         /// Context: Unity UI Event.
-        /// Justification: Standard way to apply a pure Unity Color to the customization system.
+        /// Justification: Standard way to apply a visual preset (Color + Texture) to the customization system.
         /// </summary>
-        public void SetPlayerColor(Color newColor)
+        public void SetPlayerVisualPreset(int presetIndex)
         {
-            if (EnableDebugLogs) Debug.Log($"[LobbyUI] SetPlayerColor called with color {newColor}");
+            if (EnableDebugLogs) Debug.Log($"[LobbyUI] SetPlayerVisualPreset called with index {presetIndex}");
+            
+            // SAVE IT LOCALLY!
+            PlayerPrefs.SetInt("PlayerVisualIndex", presetIndex);
+            PlayerPrefs.Save();
+            
             var targetPlayer = GetTargetPlayer();
             if (targetPlayer != null)
             {
-                if (EnableDebugLogs) Debug.Log($"[LobbyUI] Target player found. Requesting color change...");
-                targetPlayer.RequestColorChange(newColor);
+                if (EnableDebugLogs) Debug.Log($"[LobbyUI] Target player found. Requesting visual preset change...");
+                targetPlayer.RequestVisualChange(presetIndex);
             }
-            else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Color change aborted.");
+            else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Visual change aborted.");
         }
 
-        /// <summary>
-        /// Description: Unity's Inspector Button OnClick doesn't support the Color type. Use this method instead and pass a string.
-        /// Context: Unity UI Event (InputField or string-based Button).
-        /// Justification: Allows players to paste raw Hex codes directly into the UI.
-        /// </summary>
-        public void SetPlayerColorHex(string hexColor)
-        {
-            if (EnableDebugLogs) Debug.Log($"[LobbyUI] SetPlayerColorHex called with string '{hexColor}'");
-            // Auto-add '#' if the user forgot it and typed a 6-character hex code
-            if (!hexColor.StartsWith("#") && hexColor.Length == 6)
-            {
-                hexColor = "#" + hexColor;
-                if (EnableDebugLogs) Debug.Log($"[LobbyUI] Auto-added '#' -> new string is '{hexColor}'");
-            }
-
-            if (ColorUtility.TryParseHtmlString(hexColor, out Color parsedColor))
-            {
-                if (EnableDebugLogs) Debug.Log($"[LobbyUI] Successfully parsed hex '{hexColor}' into Color {parsedColor}");
-                // SAVE IT LOCALLY!
-                PlayerPrefs.SetString("PlayerColorHex", hexColor);
-                PlayerPrefs.Save();
-
-
-                SetPlayerColor(parsedColor);
-            }
-            else
-            {
-                Debug.LogError($"[LobbyUI] Invalid color string: {hexColor}. Please use a hex format like #FF0000 or names like red, blue.");
-            }
-        }
+        // (Legacy) hex parsing removed because the new system uses Preset Indices instead.
 
         /// <summary>
         /// Description: Call this from a UI Button (On Click) and pass the integer value of the Enum.

@@ -26,25 +26,30 @@ public class LobbyController : MonoBehaviour
     [Tooltip("Role: Displays the Steam lobby's name.\nUse Case: UI Update.\nJustification: Confirms to the user which lobby they joined.")]
     public TextMeshProUGUI LobbyNameText;
 
+    [Tooltip("Role: Displays the current player count.\nUse Case: UI Update.\nJustification: Shows how many players are in the lobby.")]
+    public TextMeshProUGUI PlayerCountText;
+
+
+
     [Header("Player Data")]
     [Tooltip("Role: Container for all player UI items.\nUse Case: Instantiation parent.\nJustification: A VerticalLayoutGroup usually manages this to list players.")]
     public GameObject PlayerListViewContent;
-    
+
     [Tooltip("Role: The prefab for a single player in the list.\nUse Case: Instantiation.\nJustification: Contains the Steam avatar, name, and ready status.")]
     public GameObject PlayerListItemPrefab;
-    
+
     [Tooltip("Role: Reference to the local player's network object.\nUse Case: Local state checks.\nJustification: Used to read the local Ready state for the button.")]
     public GameObject LocalPlayerObject;
 
     [Header("Lobby State")]
     [Tooltip("Role: Tracks the Steam Lobby ID.\nUse Case: State tracking.\nJustification: Exposed for inspector debugging.")]
     public ulong CurrentLobbyId;
-    
+
     [Tooltip("Role: Tracks if the host's player item has been created.\nUse Case: Initialization flag.\nJustification: Ensures we don't duplicate the host in the list.")]
     public bool PlayerItemCreated = false;
-    
+
     private List<PlayerListItem> PlayerListItems = new List<PlayerListItem>();
-    
+
     [Tooltip("Role: Reference to the local player's controller script.\nUse Case: Network commands.\nJustification: Required to send CmdStartGame or CmdSetReady.")]
     public PlayerObjectController LocalPlayerController;
 
@@ -55,7 +60,7 @@ public class LobbyController : MonoBehaviour
     [Header("Ready System")]
     [Tooltip("Role: Custom button component for starting the game.\nUse Case: Disabling/enabling the start button.\nJustification: Only interactable for the host when everyone is ready.")]
     public UICustomButtonBase StartGameButton;
-    
+
     [Tooltip("Role: Text showing the Ready button status.\nUse Case: UI feedback.\nJustification: Switches between 'Plug' (Ready) and 'Unplug' (Not Ready).")]
     public TextMeshProUGUI ReadyButtonText;
 
@@ -179,6 +184,21 @@ public class LobbyController : MonoBehaviour
         if (PlayerListItems.Count < Manager.GamePlayers.Count) { CreateClientPlayerItem(); } // Add new clients
         if (PlayerListItems.Count > Manager.GamePlayers.Count) { RemovePlayerItem(); } // Handle player disconnection
         if (PlayerListItems.Count == Manager.GamePlayers.Count) { UpdatePlayerItem(); } // Update existing items
+
+        UpdatePlayerCountText();
+    }
+
+    /// <summary>
+    /// Description: Updates the player count text.
+    /// Context: Called anytime the player list changes.
+    /// Justification: Keeps the UI synchronized with the actual number of players vs max capacity.
+    /// </summary>
+    private void UpdatePlayerCountText()
+    {
+        if (PlayerCountText != null && Manager != null)
+        {
+            PlayerCountText.text = $"{Manager.GamePlayers.Count}/{Manager.maxConnections}";
+        }
     }
 
     /// <summary>

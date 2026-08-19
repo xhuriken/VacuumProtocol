@@ -13,7 +13,7 @@ public class MyNetworkManager : NetworkManager
 {
     [Tooltip("Role: The player representation used inside the Steam Lobby.\nUse Case: Spawning the UI proxy.\nJustification: We don't want to spawn the heavy physical robot in the UI lobby.")]
     [SerializeField] private PlayerObjectController _playerPrefab;
-    
+
     [Tooltip("Role: The actual physical robot prefab used in the game level.\nUse Case: Spawning the gameplay avatar.\nJustification: Instantiated only when transitioning to a gameplay scene.")]
     [SerializeField] private GameObject _gamePlayerPrefab;
 
@@ -48,7 +48,28 @@ public class MyNetworkManager : NetworkManager
         else if (sceneName != "Lobby")
         {
             // Spawn the actual game player (Mecha)
-            GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab);
+            Vector3 spawnPosition = Vector3.zero;
+            Quaternion spawnRotation = Quaternion.identity;
+
+            if (MapSpawnManager.Instance != null)
+            {
+                Transform spawnPoint = MapSpawnManager.Instance.GetNextSpawnPoint();
+                if (spawnPoint != null)
+                {
+                    spawnPosition = spawnPoint.position;
+                    spawnRotation = spawnPoint.rotation;
+                }
+                else
+                {
+                    Debug.LogError("[MyNetworkManager] GetNextSpawnPoint a retourné null ! (Aucun point de spawn configuré dans MapSpawnManager).");
+                }
+            }
+            else
+            {
+                Debug.LogError("[MyNetworkManager] Aucun MapSpawnManager trouvé dans la scène de jeu !");
+            }
+
+            GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab, spawnPosition, spawnRotation);
 
             // Link the connection ID for voice synchronization
             if (gamePlayerInstance.TryGetComponent(out PlayerController controller))

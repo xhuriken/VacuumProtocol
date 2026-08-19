@@ -17,3 +17,13 @@
 - [x] Implémenter le multiplicateur de gravité en chute (Hollow Knight style).
 - [x] Adapter le code UniVoice et MouthAnimator pour le Player_V2 (ConnectionId, InputHandler 2-clics, Suivi 3D des Hips, Correction Scale Bouche).
 - [x] Corriger le suivi de pitch des yeux (utilisation de la rotation directe de la caméra pour contrer le multiplicateur de la tête).
+- [x] Remplacer la sélection de couleur par des presets (Couleur + Texture BaseMap) dans la customisation du joueur.
+- [x] Ajouter l'affichage dynamique du nombre de joueurs (Current/Max) dans le lobby.
+- [x] Fournir la procédure UI pour aligner LobbyName à gauche et PlayerCount à droite dans le LayoutGroup.
+- [x] Restructurer l'UI du Lobby en Onglets (Apparence, Dessin, Audio) avec `CustomizationMenuTabs.cs`.
+- [x] Câbler le Texture Painter pour sauvegarder les dessins en local (.png) via `CustomEyeTextureManager.cs`.
+- [x] Assigner les textures peintes au deuxième Material (Index 2 : M_Iris) du robot via `PlayerCustomization.cs`.
+- [ ] [Network] Créer un Command pour découper et envoyer les octets (Bytes) d'une texture custom au serveur afin de synchroniser les yeux dessinés en multijoueur.
+- [x] Créer le script `MapSpawnManager.cs` (Singleton, liste de Transform pour les points de spawn).
+- [x] Modifier `MyNetworkManager.cs` pour utiliser `MapSpawnManager.Instance.GetSpawnPoint(connectionId)` lors du spawn d'un joueur en jeu.
+- [x] Mettre à jour `DEVELOPMENT_LOG.md` avec ces ajouts.

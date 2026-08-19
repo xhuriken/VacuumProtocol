@@ -13,10 +13,18 @@ using VacuumProtocol.Networking.Lobby;
 public class UIColorsPalettes : MonoBehaviour
 {
 
-    [Header("Color Palette Options")]
     [Tooltip("Role: Array of colors.\nUse Case: Assigning colors to buttons.\nJustification: Provides exactly 16 color choices.")]
     [SerializeField]
     private Color[] _colors = new Color[16];
+
+    [Header("Dynamic Presets (Lobby Mode)")]
+    [Tooltip("Role: Enable to override the generic colors with the player's Visual Presets.\nUse Case: Lobby Player Customization.")]
+    [SerializeField]
+    private bool _usePlayerPresets = false;
+
+    [Tooltip("Role: The player prefab or dummy to pull the presets from.\nUse Case: Lobby Player Customization.")]
+    [SerializeField]
+    private VacuumProtocol.Player.Visuals.PlayerCustomization _playerCustomization;
 
     [Header("Debug")]
     [Tooltip("Role: Flag to output logs.\nUse Case: Tracking initialization.\nJustification: Helps diagnose missing connections.")]
@@ -124,6 +132,18 @@ public class UIColorsPalettes : MonoBehaviour
             }
         }
 
+        // Override colors array if using dynamic player presets
+        if (_usePlayerPresets && _playerCustomization != null && _playerCustomization.VisualPresets != null)
+        {
+            var presets = _playerCustomization.VisualPresets;
+            _colors = new Color[presets.Length];
+            for (int i = 0; i < presets.Length; i++)
+            {
+                _colors[i] = presets[i].BaseColor;
+            }
+            if (_enableDebugLogs) Debug.Log($"[UIColorsPalettes] Overrode colors with {presets.Length} dynamic Visual Presets from PlayerCustomization.");
+        }
+
         // Fetch all custom color buttons in the children of this GameObject
         ColorButtonUI[] buttons = GetComponentsInChildren<ColorButtonUI>(true);
         if (_enableDebugLogs) Debug.Log($"[UIColorsPalettes] Found {buttons.Length} child custom color buttons to initialize.");
@@ -131,14 +151,19 @@ public class UIColorsPalettes : MonoBehaviour
         // Loop through all custom buttons and configure them based on our color palette
         for (int i = 0; i < buttons.Length; i++)
         {
-            // Stop configuring if we exceed the color palette list size
+            ColorButtonUI currentButton = buttons[i];
+
+            // If there are more buttons than colors, hide the excess buttons
             if (i >= _colors.Length)
             {
-                if (_enableDebugLogs) Debug.LogWarning($"[UIColorsPalettes] More child buttons exist ({buttons.Length}) than colors defined ({_colors.Length}). Remaining buttons will be left unconfigured.");
-                break;
+                if (_enableDebugLogs) Debug.LogWarning($"[UIColorsPalettes] Hiding excess button {i}.");
+                currentButton.gameObject.SetActive(false);
+                continue;
             }
 
-            ColorButtonUI currentButton = buttons[i];
+            // Ensure the button is active if it's within range
+            currentButton.gameObject.SetActive(true);
+
             Color buttonColor = _colors[i];
 
             // Assign the palette color to the custom shape button, which handles coloring nested shapes
@@ -148,6 +173,7 @@ public class UIColorsPalettes : MonoBehaviour
             string hexColor = "#" + ColorUtility.ToHtmlStringRGB(buttonColor);
 
             // Clean previous listeners and add dynamic event dispatching
+            int capturedIndex = i;
             string capturedHex = hexColor; // Prevent closure variable capture issue in C# loops
             Color capturedColor = buttonColor;
             currentButton.onClick.RemoveAllListeners();
@@ -160,14 +186,20 @@ public class UIColorsPalettes : MonoBehaviour
                 // 2. Fallback to Lobby Customization if present
                 if (_lobbyCustomizationUI != null)
                 {
-                    _lobbyCustomizationUI.SetPlayerColorHex(capturedHex);
+                    if (_usePlayerPresets)
+                    {
+                        _lobbyCustomizationUI.SetPlayerVisualPreset(capturedIndex);
+                    }
                 }
                 else
                 {
                     LobbyCustomizationUI dynamicLobbyUI = FindAnyObjectByType<LobbyCustomizationUI>();
                     if (dynamicLobbyUI != null)
                     {
-                        dynamicLobbyUI.SetPlayerColorHex(capturedHex);
+                        if (_usePlayerPresets)
+                        {
+                            dynamicLobbyUI.SetPlayerVisualPreset(capturedIndex);
+                        }
                     }
                 }
             });
