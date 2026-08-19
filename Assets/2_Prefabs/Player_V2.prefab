@@ -6758,6 +6758,7 @@ GameObject:
   - component: {fileID: 4845161797695345595}
   - component: {fileID: 5344364744022903997}
   - component: {fileID: 8472237941368704926}
+  - component: {fileID: 4855294185999831831}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -7461,6 +7462,24 @@ MonoBehaviour:
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
+--- !u!114 &4855294185999831831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b535586c157af34a8001a3b7cce7422, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.Player.Visuals.NetworkTextureTransfer
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _pupilRenderer: {fileID: 3449925798189837407}
+  _materialIndex: 2
+  _materialTextureProperty: _BaseMap
 --- !u!1 &7751720572721550308
 GameObject:
   m_ObjectHideFlags: 0

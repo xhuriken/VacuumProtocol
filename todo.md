@@ -23,7 +23,11 @@
 - [x] Restructurer l'UI du Lobby en Onglets (Apparence, Dessin, Audio) avec `CustomizationMenuTabs.cs`.
 - [x] Câbler le Texture Painter pour sauvegarder les dessins en local (.png) via `CustomEyeTextureManager.cs`.
 - [x] Assigner les textures peintes au deuxième Material (Index 2 : M_Iris) du robot via `PlayerCustomization.cs`.
-- [ ] [Network] Créer un Command pour découper et envoyer les octets (Bytes) d'une texture custom au serveur afin de synchroniser les yeux dessinés en multijoueur.
+- [x] [Network] Créer un Command pour découper et envoyer les octets (Bytes) d'une texture custom au serveur afin de synchroniser les yeux dessinés en multijoueur.
+- [x] Lier la sauvegarde locale (PlayerPrefs) du chemin de texture dans l'UI du Lobby pour `NetworkTextureTransfer.cs`.
 - [x] Créer le script `MapSpawnManager.cs` (Singleton, liste de Transform pour les points de spawn).
 - [x] Modifier `MyNetworkManager.cs` pour utiliser `MapSpawnManager.Instance.GetSpawnPoint(connectionId)` lors du spawn d'un joueur en jeu.
-- [x] Mettre à jour `DEVELOPMENT_LOG.md` avec ces ajouts.
+- [x] Expliquer la configuration de l'éditeur Unity pour la preview des yeux du Dummy dans le Lobby.
+- [x] Fixer le bug d'assignation de texture sur les boutons d'yeux instanciés (problème de closure C# et/ou Inspector Events).
+- [x] Ajouter un tableau `DefaultEyeTextures` pour instancier proprement les textures par défaut via le code au lieu de l'Inspecteur du Prefab.
+- [x] Fixer l'absence de clic sur les Custom Vector Buttons en ajoutant un fallback `UICustomButtonBase`.

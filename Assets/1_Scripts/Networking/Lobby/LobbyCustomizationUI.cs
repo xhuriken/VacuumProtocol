@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using VacuumProtocol.Player.Visuals;
 using VacuumProtocol.UI.TextureEditor;
 
@@ -28,9 +28,14 @@ namespace VacuumProtocol.Networking.Lobby
         public TextureEditorPanelUI TextureEditor;
         public int AppearanceTabIndex = 0;
 
+        [Tooltip("Role: Elements to hide when the Texture Editor is open.\nUse Case: Fullscreen drawing.")]
+        public GameObject[] ElementsToHideWhenDrawing;
+
         [Header("Custom Eyes UI")]
         public GameObject CustomEyeButtonPrefab;
         public Transform CustomEyeListContainer;
+        [Tooltip("Role: Base textures always available.\nUse Case: Default eyes like the Circle.")]
+        public Texture2D[] DefaultEyeTextures;
         private List<GameObject> _spawnedEyeButtons = new List<GameObject>();
 
         private void Start()
@@ -38,6 +43,7 @@ namespace VacuumProtocol.Networking.Lobby
             if (TextureEditor != null)
             {
                 TextureEditor.OnTextureSaved += HandleTextureSaved;
+                TextureEditor.OnEditorClosed += CloseTextureEditor;
             }
             RefreshCustomEyeButtons();
         }
@@ -47,6 +53,7 @@ namespace VacuumProtocol.Networking.Lobby
             if (TextureEditor != null)
             {
                 TextureEditor.OnTextureSaved -= HandleTextureSaved;
+                TextureEditor.OnEditorClosed -= CloseTextureEditor;
             }
         }
 
@@ -54,13 +61,47 @@ namespace VacuumProtocol.Networking.Lobby
         {
             CustomEyeTextureManager.SaveCustomEyeTexture(newTexture);
             RefreshCustomEyeButtons();
-            
+
+            CloseTextureEditor();
+
+            SetLocalEyeTexture(newTexture);
+        }
+
+        public void OpenTextureEditor()
+        {
+            if (ElementsToHideWhenDrawing != null)
+            {
+                foreach (var element in ElementsToHideWhenDrawing)
+                {
+                    if (element != null)
+                    {
+                        if (EnableDebugLogs) Debug.Log($"[LobbyUI] Désactivation de : {element.name}");
+                        element.SetActive(false);
+                    }
+                }
+            }
+            if (TextureEditor != null) TextureEditor.gameObject.SetActive(true);
+        }
+
+        public void CloseTextureEditor()
+        {
+            if (ElementsToHideWhenDrawing != null)
+            {
+                foreach (var element in ElementsToHideWhenDrawing)
+                {
+                    if (element != null)
+                    {
+                        if (EnableDebugLogs) Debug.Log($"[LobbyUI] Réactivation de : {element.name}");
+                        element.SetActive(true);
+                    }
+                }
+            }
+            if (TextureEditor != null) TextureEditor.gameObject.SetActive(false);
+
             if (MenuTabs != null)
             {
                 MenuTabs.OpenTab(AppearanceTabIndex);
             }
-
-            SetLocalEyeTexture(newTexture);
         }
 
         public void RefreshCustomEyeButtons()
@@ -71,22 +112,48 @@ namespace VacuumProtocol.Networking.Lobby
             foreach (var btn in _spawnedEyeButtons) Destroy(btn);
             _spawnedEyeButtons.Clear();
 
+            // 1. Instantiate Default Textures first
+            if (DefaultEyeTextures != null)
+            {
+                foreach (var tex in DefaultEyeTextures)
+                {
+                    if (tex != null) SpawnEyeButton(tex);
+                }
+            }
+
+            // 2. Instantiate Custom Saved Textures
             List<Texture2D> savedTextures = CustomEyeTextureManager.LoadAllCustomEyeTextures();
             foreach (var tex in savedTextures)
             {
-                GameObject newBtn = Instantiate(CustomEyeButtonPrefab, CustomEyeListContainer);
-                _spawnedEyeButtons.Add(newBtn);
+                if (tex != null) SpawnEyeButton(tex);
+            }
+        }
 
-                // Set preview image
-                RawImage rawImg = newBtn.GetComponentInChildren<RawImage>();
-                if (rawImg != null) rawImg.texture = tex;
-                
-                // If the user uses a standard Image with sprite, it requires conversion, so RawImage is preferred for dynamic textures.
+        private void SpawnEyeButton(Texture2D tex)
+        {
+            Texture2D capturedTex = tex;
+            GameObject newBtn = Instantiate(CustomEyeButtonPrefab, CustomEyeListContainer);
+            _spawnedEyeButtons.Add(newBtn);
 
-                Button btnComp = newBtn.GetComponent<Button>();
-                if (btnComp != null)
+            // Set preview image
+            RawImage rawImg = newBtn.GetComponentInChildren<RawImage>();
+            if (rawImg != null) rawImg.texture = capturedTex;
+
+            // If the user uses a standard Image with sprite, it requires conversion, so RawImage is preferred for dynamic textures.
+
+            Button btnComp = newBtn.GetComponent<Button>();
+            if (btnComp != null)
+            {
+                btnComp.onClick.RemoveAllListeners();
+                btnComp.onClick.AddListener(() => SetLocalEyeTexture(capturedTex));
+            }
+            else
+            {
+                UICustomButtonBase customBtnComp = newBtn.GetComponent<UICustomButtonBase>();
+                if (customBtnComp != null)
                 {
-                    btnComp.onClick.AddListener(() => SetLocalEyeTexture(tex));
+                    customBtnComp.onClick.RemoveAllListeners();
+                    customBtnComp.onClick.AddListener(() => SetLocalEyeTexture(capturedTex));
                 }
             }
         }
@@ -94,6 +161,22 @@ namespace VacuumProtocol.Networking.Lobby
         public void SetLocalEyeTexture(Texture2D tex)
         {
             if (EnableDebugLogs) Debug.Log($"[LobbyUI] Setting local eye texture: {(tex != null ? tex.name : "null")}");
+            
+            // Save the path for the multiplayer NetworkTextureTransfer script
+            if (tex != null && !string.IsNullOrEmpty(tex.name))
+            {
+                string path = System.IO.Path.Combine(CustomEyeTextureManager.GetFolderPath(), tex.name + ".png");
+                if (System.IO.File.Exists(path))
+                {
+                    PlayerPrefs.SetString("SelectedEyeTexture", path);
+                }
+                else
+                {
+                    PlayerPrefs.SetString("SelectedEyeTexture", ""); // It's a default Unity texture, handled differently
+                }
+                PlayerPrefs.Save();
+            }
+
             // Applied locally only (network sync of custom image bytes to be implemented later)
             var targetPlayer = GetTargetPlayer();
             if (targetPlayer != null)
@@ -114,11 +197,11 @@ namespace VacuumProtocol.Networking.Lobby
         public void SetPlayerVisualPreset(int presetIndex)
         {
             if (EnableDebugLogs) Debug.Log($"[LobbyUI] SetPlayerVisualPreset called with index {presetIndex}");
-            
+
             // SAVE IT LOCALLY!
             PlayerPrefs.SetInt("PlayerVisualIndex", presetIndex);
             PlayerPrefs.Save();
-            
+
             var targetPlayer = GetTargetPlayer();
             if (targetPlayer != null)
             {
@@ -214,7 +297,7 @@ namespace VacuumProtocol.Networking.Lobby
         private PlayerCustomization GetTargetPlayer()
         {
             // 1. If you manually linked the dummy player in the scene, use it!
-            if (PreviewPlayer != null) 
+            if (PreviewPlayer != null)
             {
                 if (EnableDebugLogs) Debug.Log("[LobbyUI] GetTargetPlayer returned the manually linked PreviewPlayer.");
                 return PreviewPlayer;
@@ -232,7 +315,7 @@ namespace VacuumProtocol.Networking.Lobby
             var fallback = FindObjectOfType<PlayerCustomization>();
             if (fallback != null && EnableDebugLogs) Debug.Log("[LobbyUI] GetTargetPlayer returned a fallback player found in the scene.");
             else if (fallback == null && EnableDebugLogs) Debug.LogWarning("[LobbyUI] FindObjectOfType failed. No PlayerCustomization found in the scene.");
-            
+
             return fallback;
         }
     }

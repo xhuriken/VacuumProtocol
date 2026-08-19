@@ -77,12 +77,21 @@ namespace VacuumProtocol.UI.TextureEditor
         [Tooltip("Role: Apply / Save texture button.\nUse Case: Texture export.")]
         [SerializeField] private UICustomButtonBase _saveButton;
 
+        [Tooltip("Role: Close editor button without saving.\nUse Case: Cancel drawing.")]
+        [SerializeField] private UICustomButtonBase _closeButton;
+
         /// <summary>
         /// Description: Event emitted when player saves/applies their drawn texture.
         /// Context: Subscribed to by Lobby Customization manager to assign texture to player avatar/pupils/skin.
         /// Justification: Decouples texture creation from destination application.
         /// </summary>
         public event Action<Texture2D> OnTextureSaved;
+
+        /// <summary>
+        /// Description: Event emitted when player closes the editor without saving.
+        /// Context: Subscribed to by Lobby Customization manager to return to main menu.
+        /// </summary>
+        public event Action OnEditorClosed;
 
         private void Start()
         {
@@ -153,6 +162,7 @@ namespace VacuumProtocol.UI.TextureEditor
             if (_redoButton != null) _redoButton.onClick.AddListener(OnRedoClicked);
             if (_clearButton != null) _clearButton.onClick.AddListener(OnClearClicked);
             if (_saveButton != null) _saveButton.onClick.AddListener(OnSaveClicked);
+            if (_closeButton != null) _closeButton.onClick.AddListener(OnCloseClicked);
 
             // Sliders Value Changed & Save triggers (PointerUp)
             if (_brushSizeSlider != null)
@@ -367,6 +377,12 @@ namespace VacuumProtocol.UI.TextureEditor
                 Debug.Log($"[TextureEditorPanelUI] Texture saved ({result.width}x{result.height})!");
                 OnTextureSaved?.Invoke(result);
             }
+        }
+
+        private void OnCloseClicked()
+        {
+            Debug.Log("[TextureEditorPanelUI] Editor closed without saving.");
+            OnEditorClosed?.Invoke();
         }
 
         private void HandleColorPickedFromCanvas(Color color)

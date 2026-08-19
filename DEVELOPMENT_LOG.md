@@ -1,5 +1,23 @@
 # Development Log
 
+## [2026-08-19] Eye Texture Button Dynamic Assignment Fix
+**Goal:** Fix a bug where clicking any instantiated eye texture button would apply the incorrect texture or the default prefab texture, and allow clean default textures to be injected.
+**Changes:**
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Added `btnComp.onClick.RemoveAllListeners()` before assigning the dynamic texture to prevent any Inspector-assigned default Unity Events on the prefab from overwriting the dynamic choice.
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Added a fallback for `UICustomButtonBase` in case the prefab uses a custom Shapes/vector UI component rather than the standard UGUI `Button`.
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Implemented a local scope copy `Texture2D capturedTex = tex;` inside the `foreach` loop to guarantee C# closure safety.
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Added `public Texture2D[] DefaultEyeTextures` to cleanly inject base textures (like Circle or Square) from the Inspector without needing manual persistent scene buttons. Extracted instantiation into `SpawnEyeButton(Texture2D tex)`.
+**Justification:** Custom vector UI components inherit from `UICustomButtonBase` (not `UnityEngine.UI.Button`). By adding a fallback `GetComponent<UICustomButtonBase>()`, the script seamlessly supports both standard Unity Buttons and custom Shapes-based interactables.
+
+## [2026-08-19] NetworkTextureTransfer (UGC Network Chunking)
+**Goal:** Synchronize large User-Generated Content (like 1024x1024 painted custom eye textures) over the Mirror network without relying on external web APIs and without crashing the reliable packet queue.
+**Changes:**
+- **`NetworkTextureTransfer.cs` [NEW]**: A robust, universal script that cuts large files into 16KB chunks. Sends chunks safely with a 0.05s delay via `[Command]` and `[ClientRpc]`. Includes logic for Late-Joiners where the server caches the reconstructed byte array and sends it specifically via `[TargetRpc]` when requested.
+- **`NetworkTextureTransfer.cs` [MODIFIED]**: Refactored to act as a pure network relay. Removed direct Renderer and Material manipulation fields. It now delegates all visual application directly to `PlayerCustomization.ApplyLocalEyeTexture()` to maintain a Single Source of Truth (SSOT).
+- **`CustomEyeTextureManager.cs` [MODIFIED]**: Made `GetFolderPath()` public.
+- **`LobbyCustomizationUI.cs` [MODIFIED]**: Updated `SetLocalEyeTexture` to reconstruct the exact `.png` disk path and save it to `PlayerPrefs.SetString("SelectedEyeTexture", path)` when a custom button is clicked. If a default texture is chosen, it clears the PlayerPrefs entry.
+**Justification:** The previous implementation caused race conditions with `PlayerBoneBridge.cs` and `PlayerCustomization.cs` because both scripts were instantiating and assigning the `.materials` array independently. By routing the network bytes through `PlayerCustomization` (SSOT), it seamlessly updates the correct existing material instances regardless of the shader property (`_MainTex` vs `_BaseMap`).
+
 ## [2026-08-19] PlayerV2 Procedural Multiplayer Visuals (Head & Eye Sync)
 **Goal:** Synchronize procedural physics/visuals (head pitch, eye tracking) across the network without relying on heavy `NetworkTransform` components.
 **Changes:**

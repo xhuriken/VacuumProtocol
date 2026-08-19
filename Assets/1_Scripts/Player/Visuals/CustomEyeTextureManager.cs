@@ -14,7 +14,7 @@ namespace VacuumProtocol.Player.Visuals
     {
         private const string FOLDER_NAME = "CustomEyes";
 
-        private static string GetFolderPath()
+        public static string GetFolderPath()
         {
             string path = Path.Combine(Application.persistentDataPath, FOLDER_NAME);
             if (!Directory.Exists(path))
