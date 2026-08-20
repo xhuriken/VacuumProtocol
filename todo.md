@@ -31,3 +31,17 @@
 - [x] Fixer le bug d'assignation de texture sur les boutons d'yeux instanciés (problème de closure C# et/ou Inspector Events).
 - [x] Ajouter un tableau `DefaultEyeTextures` pour instancier proprement les textures par défaut via le code au lieu de l'Inspecteur du Prefab.
 - [x] Fixer l'absence de clic sur les Custom Vector Buttons en ajoutant un fallback `UICustomButtonBase`.
+- [x] Fixer l'absence de clic sur les Custom Vector Buttons en ajoutant un fallback `UICustomButtonBase`.
+- [x] Fix IEnumerator generic compilation error dans `PlayerV2_Arms.cs` en ajoutant le using `System.Collections`.
+- [x] Fix explosion physique (recul dans le void) au spawn en corrigeant `projectionAngle` (180) et le calcul manuel de `connectedAnchor` dans `PlayerV2_Arms.cs`.
+- [x] Ajouter le paramètre `RetractedSegmentsOffset` pour ignorer les X premiers joints lors de l'accroupissement.
+- [x] Assigner dynamiquement un PhysicMaterial (Zéro Friction) aux bras dans `PlayerV2_Arms.cs` pour un glissement parfait.
+- [x] Retrait de tous les namespaces personnalisés dans le dossier Scripts pour forcer l'usage du global namespace.
+- [x] Correction de PhysicMaterial en PhysicsMaterial (API Unity 6).
+- [x] Résolution de l'erreur de compilation `ColliderGroupType` suite au retrait des namespaces.
+- [x] Correction de la popup Unity "Script Updating Consent" en remplaçant `isLocalPlayer` par `isOwned` dans `PlayerV2_Arms.cs`.
+- [x] Restauration globale de l'enum `ColliderGroupType` dans `PlayerV2_CollisionManager.cs`.
+- [x] Suppression des anciens scripts V1 obsolètes (`PlayerCollisionManager.cs`, etc.).
+- [x] Encapsulation de l'enum `ColliderGroupType` à l'intérieur de la classe `PlayerV2_CollisionManager` pour forcer la résolution de l'erreur fantôme dans l'IDE (contournement du cache OmniSharp).
+- [x] Fix des erreurs de compilation : Adaptation des scripts globaux (`PlayerBoneBridge`, `MouthAnimator`, `UniVoice`, `PlayerVacuumController`) pour utiliser les composants V2 (`PlayerV2_Suspension`, `PlayerV2_Controller`, `PlayerV2_Arms`).
+- [x] Fix erreur de syntaxe C# (dangling else if) introduite dans `MyNetworkManager.cs`.

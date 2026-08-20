@@ -7,7 +7,7 @@ using UnityEngine;
 /// Justification: Coordinates interaction between the physical arms, the inventory, the audio, and the network to unify the vacuuming action.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
-[RequireComponent(typeof(PlayerArmsController))]
+[RequireComponent(typeof(PlayerV2_Arms))]
 [RequireComponent(typeof(PlayerInventory))]
 public class PlayerVacuumController : NetworkBehaviour
 {
@@ -21,7 +21,7 @@ public class PlayerVacuumController : NetworkBehaviour
 
     // Cached references
     private PlayerInputHandler _input;
-    private PlayerArmsController _armsController;
+    private PlayerV2_Arms _armsController;
     private PlayerInventory _inventory;
     private VacuumSuctionZone _suctionZone;
     private bool _wasLeftArmPressed = false;
@@ -43,7 +43,7 @@ public class PlayerVacuumController : NetworkBehaviour
     private void Awake()
     {
         _input = GetComponent<PlayerInputHandler>();
-        _armsController = GetComponent<PlayerArmsController>();
+        _armsController = GetComponent<PlayerV2_Arms>();
         _inventory = GetComponent<PlayerInventory>();
     }
 

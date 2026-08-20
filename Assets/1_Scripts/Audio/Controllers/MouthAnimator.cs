@@ -129,14 +129,10 @@ public class MouthAnimator : NetworkBehaviour
     private void TryFindPeerId()
     {
         // Try to find the ConnectionId on this object or parents
-        if (TryGetComponent(out PlayerController m) && m.ConnectionId != -1)
+        if (TryGetComponent(out PlayerV2_Controller m) && m.ConnectionId != -1)
             _peerId = m.ConnectionId;
-        else if (GetComponentInParent<PlayerController>() != null && GetComponentInParent<PlayerController>().ConnectionId != -1)
-            _peerId = GetComponentInParent<PlayerController>().ConnectionId;
-        else if (TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2) && v2.ConnectionId != -1)
-            _peerId = v2.ConnectionId;
-        else if (GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>() != null && GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>().ConnectionId != -1)
-            _peerId = GetComponentInParent<VacuumProtocol.PlayerV2.PlayerV2_Controller>().ConnectionId;
+        else if (GetComponentInParent<PlayerV2_Controller>() != null && GetComponentInParent<PlayerV2_Controller>().ConnectionId != -1)
+            _peerId = GetComponentInParent<PlayerV2_Controller>().ConnectionId;
         else if (TryGetComponent(out PlayerObjectController c) && c.ConnectionId != -1)
             _peerId = c.ConnectionId;
         else if (GetComponentInParent<PlayerObjectController>() != null && GetComponentInParent<PlayerObjectController>().ConnectionId != -1)

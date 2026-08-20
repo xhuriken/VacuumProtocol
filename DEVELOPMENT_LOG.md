@@ -1,5 +1,63 @@
 # Development Log
 
+## [2026-08-20] Post-Deletion Codebase Adaptation (V1 -> V2)
+**Goal:** Fix compilation errors in global/gameplay scripts that were still referencing the deleted V1 Player scripts.
+**Changes:**
+- **`PlayerBoneBridge.cs` [MODIFIED]**: Replaced `WheelSuspensionController` with `PlayerV2_Suspension` to dynamically extract wheel joints instead of raw transforms.
+- **`PlayerVacuumController.cs` [MODIFIED]**: Swapped the `PlayerArmsController` dependency for `PlayerV2_Arms`. It works perfectly as a 1:1 drop-in replacement since V2 exposes the exact same properties (`LeftHand`, `IsRightArmExtended`, etc.).
+- **`MouthAnimator.cs` & `UniVoicePlayerAudio.cs` [MODIFIED]**: Changed peer ID network lookup to target `PlayerV2_Controller` instead of `PlayerController`. Removed redundant `else if` branches.
+- **`MyNetworkManager.cs` [MODIFIED]**: Fixed a C# syntax error (dangling `else if` without `if`) introduced when the user manually deleted the V1 controller check.
+**Justification:** Instead of deleting valid functionality (like the vacuum or the bone bridge), these scripts were seamlessly upgraded to plug into the new V2 architecture.
+
+## [2026-08-20] Obsolete V1 Scripts Cleanup & API Fix
+**Goal:** Remove old V1 scripts that are fully replaced by V2 and fix remaining API Updater prompts for Mirror deprecated network code.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Replaced `isLocalPlayer` with `isOwned` to fix the Unity "Script Updating Consent" popup caused by Mirror API conflicts.
+- **`PlayerV2_CollisionManager.cs` [MODIFIED]**: Encapsulated the `ColliderGroupType` enum inside the class (`PlayerV2_CollisionManager.ColliderGroupType`) to bypass IDE OmniSharp cache bugs that falsely reported a global namespace collision even after the old file was deleted.
+- **`PlayerArmsController.cs`, `PlayerCollisionManager.cs`, `PhysicalHeadController.cs`, `PlayerController.cs`, `PlayerJumpComponent.cs`, `PlayerLookComponent.cs`, `PlayerMovementComponent.cs`, `WheelSuspensionController.cs` [DELETED]**: Removed from the project entirely.
+**Justification:** The V2 refactor made these core movement and collision scripts obsolete. Deleting them prevents namespace/API confusion and cleans up the codebase. The `isOwned` fix applies the exact same logic as `PlayerV2_Movement` to circumvent Unity's outdated UNET scanner.
+
+## [2026-08-20] Fix ColliderGroupType Definition Conflict
+**Goal:** Fix a compilation error where `ColliderGroupType` was defined twice in the global namespace after removing custom namespaces.
+**Changes:**
+- **`PlayerV2_CollisionManager.cs` [MODIFIED]**: Removed the duplicate definition of the `ColliderGroupType` enum. The script now shares the global enum defined in `PlayerCollisionManager.cs`.
+**Justification:** The recent refactoring removed all custom namespaces, causing identical enums in `Player` and `PlayerV2` scripts to collide in the global namespace. Deleting the duplicate resolves the error while keeping both scripts functional.
+
+## [2026-08-20] Global Namespace Refactoring & PhysicsMaterial Fix
+**Goal:** Remove all custom namespaces (`VacuumProtocol...`) from the codebase and update Unity physics API naming.
+**Changes:**
+- **Codebase [MODIFIED]**: Stripped `namespace VacuumProtocol...` blocks and dedented all C# scripts inside `Assets/1_Scripts/`.
+- **Codebase [MODIFIED]**: Removed all `using VacuumProtocol...;` statements.
+- **Codebase [MODIFIED]**: Renamed `PhysicMaterial` to `PhysicsMaterial` globally to align with modern Unity API standards.
+**Justification:** User requested a complete removal of namespaces to simplify script referencing. Reverted `PhysicMaterial` to `PhysicsMaterial` for correctness.
+
+## [2026-08-20] PlayerV2 Arms Zero Friction Physics
+**Goal:** Prevent the physical arms from snagging or dragging on walls and floors by explicitly removing all friction.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: In `ConfigureArmJointsPhysics`, instantiated a `PhysicMaterial` with 0 static/dynamic friction and `Minimum` combine mode.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Applied this new zero-friction material to all `Collider` components found within both arm hierarchies (`LeftArmRoot` and `RightArmRoot`).
+**Justification:** When arms drag along surfaces, Unity's default friction can cause the physics solver to fight the arm-extension forces, leading to jitter and unwanted torque. Creating and applying a frictionless material dynamically at runtime ensures a perfectly smooth sliding behavior without requiring manual setup on every single collider in the Prefab.
+
+## [2026-08-20] PlayerV2 Arms Retraction Offset
+**Goal:** Allow the user to skip the first X joints when the arms retract during crouch to prevent the upper arm (shoulder connection) from clipping into the torso.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Added `RetractedSegmentsOffset` (default 1) parameter to skip the first `X` joints.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Updated the `AnimateArmRetraction` loops to start at `startIndex` and end at `startIndex + count`.
+**Justification:** Pulling the very first child joint (the upper arm) towards the shoulder pivot often looks unnatural and causes severe clipping with the torso. Adding an offset parameter allows developers to only retract the forearms and wrists while leaving the upper arms locked in place.
+
+## [2026-08-20] PlayerV2 Arms Physics Explosion Fix
+**Goal:** Fix physics glitch where the player instantly shoots backwards into the void upon spawning.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Changed `ConfigurableJoint.projectionDistance` to `0.1f` (10cm) and `projectionAngle` to `180f` (Unity defaults).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Corrected `autoConfigureConnectedAnchor` initialization. Manually calculated the true T-Pose connected anchor using `InverseTransformPoint(worldAnchor)` before disabling the auto-configuration.
+**Justification:** The script was applying a `projectionAngle` of `0.1f` degrees and `projectionDistance` of `0.01f`. In Unity Physics, if a joint violates these extremely tight constraints even slightly (which always happens on spawn due to initial gravity drops), the solver forcefully teleports the Rigidbodies back into position, generating infinite separation velocities (the classic "void explosion"). Additionally, disabling `autoConfigureConnectedAnchor` during `Start()` on a dynamically spawned prefab often caused the joint to latch onto `Vector3.zero`, pulling the arm colliders violently into the torso's center of mass.
+
+## [2026-08-20] IEnumerator Generic Compilation Fix
+**Goal:** Fix compilation error "Using the generic type 'IEnumerator<T>' requires 1 type arguments" in `PlayerV2_Arms.cs`.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Added `using System.Collections;` at the top of the file.
+**Justification:** Unity Coroutines use the non-generic `IEnumerator` from `System.Collections`. Without this namespace imported, the compiler resolves `IEnumerator` to `System.Collections.Generic.IEnumerator<T>`, which requires a type parameter and causes a build failure.
+
 ## [2026-08-19] Eye Texture Button Dynamic Assignment Fix
 **Goal:** Fix a bug where clicking any instantiated eye texture button would apply the incorrect texture or the default prefab texture, and allow clean default textures to be injected.
 **Changes:**
@@ -17,6 +75,37 @@
 - **`CustomEyeTextureManager.cs` [MODIFIED]**: Made `GetFolderPath()` public.
 - **`LobbyCustomizationUI.cs` [MODIFIED]**: Updated `SetLocalEyeTexture` to reconstruct the exact `.png` disk path and save it to `PlayerPrefs.SetString("SelectedEyeTexture", path)` when a custom button is clicked. If a default texture is chosen, it clears the PlayerPrefs entry.
 **Justification:** The previous implementation caused race conditions with `PlayerBoneBridge.cs` and `PlayerCustomization.cs` because both scripts were instantiating and assigning the `.materials` array independently. By routing the network bytes through `PlayerCustomization` (SSOT), it seamlessly updates the correct existing material instances regardless of the shader property (`_MainTex` vs `_BaseMap`).
+
+## [2026-08-19] Head Bouncing (Boing-Boing) & Crouch Prep
+**Goal:** Add a procedural Y-axis bounce effect to the player's head when moving/jumping, and prepare the neck joints for a crouch mechanic.
+**Changes:**
+- **`PlayerV2_Head.cs` [MODIFIED]**: Unlocked `yMotion` (set to `Limited`) on the `ConfigurableJoint`s.
+- **`PlayerV2_Head.cs` [MODIFIED]**: Added `yDrive` (position spring) with configurable `YSpringForce`, `YSpringDamper`, and `YLimit` to create a natural physical bounce.
+- **`PlayerV2_Head.cs` [MODIFIED]**: Added `SetHeadHeightOffset(float offsetY)` which distributes a target Y offset across all neck joints via `joint.targetPosition`.
+**Justification:** By utilizing the existing `ConfigurableJoint` structure and simply unlocking the Y-axis with a linear spring, the physics engine automatically handles the bouncing inertia when jumping or landing, requiring zero manual animation code. `SetHeadHeightOffset` prepares the exact same spring system to seamlessly pull the head down during a crouch.
+
+## [2026-08-19] Player Crouch & Sprint Implementation
+**Goal:** Implement Crouch and Sprint mechanics linked to Unity's new Input System, affecting both movement speed and procedural head retraction.
+**Changes:**
+- **`PlayerInputHandler.cs` [MODIFIED]**: Added `OnCrouch` callback and `IsCrouching` property to bridge the Input System events.
+- **`PlayerV2_Movement.cs` [MODIFIED]**: Introduced tweakable Inspector variables: `SprintSpeedMultiplier` (1.5x), `CrouchSpeedMultiplier` (0.5x), and `CrouchHeadOffset` (-0.3m).
+- **`PlayerV2_Movement.cs` [MODIFIED]**: In `FixedUpdate`, dynamically applied the speed multipliers based on active inputs. In `Update`, added logic to call `HeadController.SetHeadHeightOffset` to physically retract the head when crouching.
+**Justification:** Keeps input routing centralized while granting immediate, highly configurable game feel tweaking via the Inspector. The head lowering uses the existing physical spring system, ensuring extreme fluidity.
+
+## [2026-08-19] Crouch Polish: Head Pitch Lock & Eye Camera Override
+**Goal:** Prevent the physical head from pitching up/down when crouching, and force the eyes to look forward (track camera) instead of tracking entities while crouching.
+**Changes:**
+- **`PlayerV2_Look.cs` [MODIFIED]**: Forces `SetTargetPitch(0f)` on the `HeadController` when `IsCrouching` is true, keeping the physical head perfectly horizontal. The camera naturally compensates for 100% of the pitch rotation.
+- **`Eye.cs` [MODIFIED]**: Grabs a reference to `PlayerInputHandler` via `GetComponentInParent()`. Bypasses the `HighestPriorityEntity` target logic when `IsCrouching` is true, seamlessly falling back to the virtual camera target while preserving the existing 100% pupil and 75% eye tracking weights.
+**Justification:** Keeps the logic perfectly aligned with the SSOT philosophy. The camera movement remains completely unrestricted, but visually, the robot's head stays tucked in and its eyes lock forward, emphasizing a defensive or stealthy crouch posture.
+
+## [2026-08-20] Arm Retraction during Crouch
+**Goal:** Visually shorten the player's arms during crouch without breaking the physics of the hand joint.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Disabled `autoConfigureConnectedAnchor` for all arm joints at startup to lock and cache their default T-Pose world-relative anchors.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Added a Coroutine `AnimateArmRetraction` that gracefully Lerps the `connectedAnchor` of the first X arm segments to `Vector3.zero`.
+- **`PlayerV2_Movement.cs` [MODIFIED]**: Linked the Crouch input state to `ArmsController.SetArmRetraction()`.
+**Justification:** By dynamically Lerping the connectedAnchor to zero, the physical segments of the arm fold instantly and perfectly into their parents. Because `PlayerV2_CollisionManager` disables self-collisions within the arm, this doesn't cause any physics explosions. The hands remain active and physics-driven, just attached to a virtually shorter arm.
 
 ## [2026-08-19] PlayerV2 Procedural Multiplayer Visuals (Head & Eye Sync)
 **Goal:** Synchronize procedural physics/visuals (head pitch, eye tracking) across the network without relying on heavy `NetworkTransform` components.

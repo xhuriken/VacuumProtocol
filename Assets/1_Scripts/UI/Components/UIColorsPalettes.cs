@@ -1,9 +1,8 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using DG.Tweening;
 using Sirenix.OdinInspector;
-using VacuumProtocol.Networking.Lobby;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 /// <summary>
 /// Description: Manages the lobby robot color selection palette by coloring 16 buttons and attaching smooth DOTween scale animations.
@@ -24,7 +23,7 @@ public class UIColorsPalettes : MonoBehaviour
 
     [Tooltip("Role: The player prefab or dummy to pull the presets from.\nUse Case: Lobby Player Customization.")]
     [SerializeField]
-    private VacuumProtocol.Player.Visuals.PlayerCustomization _playerCustomization;
+    private PlayerCustomization _playerCustomization;
 
     [Header("Debug")]
     [Tooltip("Role: Flag to output logs.\nUse Case: Tracking initialization.\nJustification: Helps diagnose missing connections.")]
@@ -78,7 +77,7 @@ public class UIColorsPalettes : MonoBehaviour
     {
         // Reserved for future update logic if necessary.
     }
-    
+
 
     /// <summary>
     /// Description: Programmatically calculates a quantized gradient of 16 colors consisting of grayscale tones and vibrant HSV rainbow hues.
@@ -103,7 +102,7 @@ public class UIColorsPalettes : MonoBehaviour
             float hue = (float)i / hueCount;
             // Convert HSV to RGB with full saturation and value for maximum vibrancy
             Color rainbowColor = Color.HSVToRGB(hue, 1f, 1f);
-            
+
             _colors[3 + i] = rainbowColor;
         }
 

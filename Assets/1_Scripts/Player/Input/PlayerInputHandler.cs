@@ -18,6 +18,9 @@ using UnityEngine.InputSystem;
         /// <summary>Gets a value indicating whether the sprint button is currently held down.</summary>
         public bool IsSprinting { get; private set; }
         
+        /// <summary>Gets a value indicating whether the crouch button is currently held down.</summary>
+        public bool IsCrouching { get; private set; }
+        
         /// <summary>Gets a value indicating whether the jump button was pressed this frame.</summary>
         public bool JumpTriggered { get; private set; }
         
@@ -85,6 +88,17 @@ using UnityEngine.InputSystem;
         {
             if (!_isInitialized) return;
             IsSprinting = context.ReadValueAsButton();
+        }
+
+        /// <summary>
+        /// Description: Input callback for crouching.
+        /// Context: Bound via Unity PlayerInput events.
+        /// Justification: Interpreted as a held button state.
+        /// </summary>
+        public void OnCrouch(InputAction.CallbackContext context)
+        {
+            if (!_isInitialized) return;
+            IsCrouching = context.ReadValueAsButton();
         }
 
         /// <summary>

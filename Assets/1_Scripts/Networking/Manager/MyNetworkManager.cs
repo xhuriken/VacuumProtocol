@@ -72,11 +72,7 @@ public class MyNetworkManager : NetworkManager
             GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab, spawnPosition, spawnRotation);
 
             // Link the connection ID for voice synchronization
-            if (gamePlayerInstance.TryGetComponent(out PlayerController controller))
-            {
-                controller.ConnectionId = conn.connectionId;
-            }
-            else if (gamePlayerInstance.TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2Controller))
+            if (gamePlayerInstance.TryGetComponent(out PlayerV2_Controller v2Controller))
             {
                 v2Controller.ConnectionId = conn.connectionId;
             }

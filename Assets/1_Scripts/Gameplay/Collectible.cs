@@ -44,7 +44,7 @@ public class Collectible : MonoBehaviour, IEntity
 
     /// <summary>
     /// Description: Gets or sets the priority level for detection (higher means more important).
-    /// Context: Satisfies IEntity interface. Used by PlayerLookComponent.
+    /// Context: Satisfies IEntity interface. Used by PlayerV2_Look.
     /// Justification: Resolves conflicts when multiple objects are within the player's field of view.
     /// </summary>
     public int PriorityLevel

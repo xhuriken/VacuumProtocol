@@ -23,18 +23,14 @@ public class UniVoicePlayerAudio : NetworkBehaviour
         _followTarget = transform; // Défaut (racine du prefab)
 
         // Cache the connection ID from the player's movement or controller component
-        if (TryGetComponent(out PlayerController m)) 
-        {
-            _cachedId = m.ConnectionId;
-        }
-        else if (TryGetComponent(out VacuumProtocol.PlayerV2.PlayerV2_Controller v2)) 
+        if (TryGetComponent(out PlayerV2_Controller v2))
         {
             _cachedId = v2.ConnectionId;
             // IMPORTANT : En V2, la racine ne bouge pas. Il faut suivre le corps physique !
             if (v2.HipsRigidbody != null) _followTarget = v2.HipsRigidbody.transform;
             else if (v2.TorsoRigidbody != null) _followTarget = v2.TorsoRigidbody.transform;
         }
-        else if (TryGetComponent(out PlayerObjectController c)) 
+        else if (TryGetComponent(out PlayerObjectController c))
         {
             _cachedId = c.ConnectionId;
         }
@@ -58,16 +54,16 @@ public class UniVoicePlayerAudio : NetworkBehaviour
             // Move the audio source to the physical player's position (slightly elevated for better voice source feel)
             Vector3 basePos = _followTarget != null ? _followTarget.position : transform.position;
             audioSource.transform.position = basePos + Vector3.up * 1.5f;
-            
+
             // Configure the 3D audio settings only once to avoid overriding inspector tweaks and save performance
             if (!_hasConfiguredAudio)
             {
                 audioSource.spatialBlend = 1f;
                 // Linear Rolloff helps voices carry further without dropping off too steeply
-                audioSource.rolloffMode = AudioRolloffMode.Linear; 
+                audioSource.rolloffMode = AudioRolloffMode.Linear;
                 audioSource.minDistance = 3f; // Full volume up to 3 meters
                 audioSource.maxDistance = 40f; // Silence after 40 meters
-                
+
                 _hasConfiguredAudio = true;
             }
         }
