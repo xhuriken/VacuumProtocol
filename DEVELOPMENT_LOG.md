@@ -6,8 +6,8 @@
 - **`PlayerBoneBridge.cs` [MODIFIED]**: Replaced `WheelSuspensionController` with `PlayerV2_Suspension` to dynamically extract wheel joints instead of raw transforms.
 - **`PlayerVacuumController.cs` [MODIFIED]**: Swapped the `PlayerArmsController` dependency for `PlayerV2_Arms`. It works perfectly as a 1:1 drop-in replacement since V2 exposes the exact same properties (`LeftHand`, `IsRightArmExtended`, etc.).
 - **`MouthAnimator.cs` & `UniVoicePlayerAudio.cs` [MODIFIED]**: Changed peer ID network lookup to target `PlayerV2_Controller` instead of `PlayerController`. Removed redundant `else if` branches.
-- **`MyNetworkManager.cs` [MODIFIED]**: Fixed a C# syntax error (dangling `else if` without `if`) introduced when the user manually deleted the V1 controller check.
-**Justification:** Instead of deleting valid functionality (like the vacuum or the bone bridge), these scripts were seamlessly upgraded to plug into the new V2 architecture.
+- **`PlayerV2_Movement.cs` & `PlayerV2_Look.cs` [MODIFIED]**: Replaced `_controller.TorsoRigidbody.transform.forward` with a purely mathematical `yaw` calculation (exposed from `PlayerV2_Look.cs`) to determine movement direction.
+**Justification:** When a player extended an arm, the physics joint pulled the Torso, causing it to physically twist. Because movement was relative to the Torso's physical rotation in V2, this caused the player to veer left or right. Reverting to a math-based yaw calculation perfectly matches the old V1 behavior and completely eliminates the movement drift without requiring extreme mass scale hacks.
 
 ## [2026-08-20] Obsolete V1 Scripts Cleanup & API Fix
 **Goal:** Remove old V1 scripts that are fully replaced by V2 and fix remaining API Updater prompts for Mirror deprecated network code.

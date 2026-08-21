@@ -91,18 +91,20 @@ public class PlayerV2_CollisionManager : MonoBehaviour
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.TorsoA, GroupB = ColliderGroupType.Wheels });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.TorsoB, GroupB = ColliderGroupType.Wheels });
 
-        // Rule 2: Left Arm ignores Right Arm, Wheels, Head/Neck, Other Body, and Torso A
+        // Rule 2: Left Arm ignores Right Arm, Wheels, Head/Neck, Other Body, and Torso A & B
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.RightArm });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.Wheels });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.HeadNeck });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.OtherBody });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.TorsoA });
+        _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.LeftArm, GroupB = ColliderGroupType.TorsoB });
 
-        // Rule 3: Right Arm ignores Wheels, Head/Neck, Other Body, and Torso A
+        // Rule 3: Right Arm ignores Wheels, Head/Neck, Other Body, and Torso A & B
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.RightArm, GroupB = ColliderGroupType.Wheels });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.RightArm, GroupB = ColliderGroupType.HeadNeck });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.RightArm, GroupB = ColliderGroupType.OtherBody });
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.RightArm, GroupB = ColliderGroupType.TorsoA });
+        _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.RightArm, GroupB = ColliderGroupType.TorsoB });
 
         // Rule 4: Head/Neck ignores Wheels, Other Body, Torso A, and Torso B
         _ignoreRules.Add(new CollisionIgnoreRule { GroupA = ColliderGroupType.HeadNeck, GroupB = ColliderGroupType.Wheels });

@@ -1,47 +1,9 @@
-# TODO
+# TODO - Résolution du Drift de Mouvement
 
-- [x] Planifier la refonte physique V2 avec l'approche Multi-Body (Hips + Torso séparés).
-- [ ] Créer les scripts V2 (`PlayerV2_Controller`, `PlayerV2_Look`, `PlayerV2_Movement`, `PlayerV2_Suspension`).
-- [ ] Guider l'utilisateur pour la configuration du Prefab V2 dans Unity (Assignation des Rigidbody, Joints).
-- [ ] Tester le comportement physique de base (gravité, suspension).
-- [x] Tester le mouvement et la rotation (Tourelle) - Bugs physiques résolus (FreezeRotation, friction, vitesse max).
-- [x] Simplifier le script Wheels.cs (KISS) suite au bug du lock angularYMotion de la suspension.
-- [x] Implémenter la tête/cou physique (ragdoll + piloté) avec `PlayerV2_Head.cs`.
-- [x] Fix Head drift/offset contre la rotation du Torso en appliquant une force d'alignement.
-- [x] Implémenter le ciblage des yeux (75%), pupilles (100%) et la répartition du pitch (Tête 70%, Caméra 100%).
-- [x] Fix effet vomito avec lissage et anticipation de la caméra ; refonte des toggles Gizmos.
-- [x] Ajouter le paramètre de Speed pour le smooth slerp des pupilles.
-- [x] Faire cibler le point central regardé par la caméra quand les yeux n'ont aucune cible précise.
-- [x] Remplacer JumpForce par ForceMode.VelocityChange pour un feeling instinctif indépendant de la masse.
-- [x] Ajouter l'animation procédurale de rétractation asynchrone des roues au saut.
-- [x] Implémenter le multiplicateur de gravité en chute (Hollow Knight style).
-- [x] Adapter le code UniVoice et MouthAnimator pour le Player_V2 (ConnectionId, InputHandler 2-clics, Suivi 3D des Hips, Correction Scale Bouche).
-- [x] Corriger le suivi de pitch des yeux (utilisation de la rotation directe de la caméra pour contrer le multiplicateur de la tête).
-- [x] Remplacer la sélection de couleur par des presets (Couleur + Texture BaseMap) dans la customisation du joueur.
-- [x] Ajouter l'affichage dynamique du nombre de joueurs (Current/Max) dans le lobby.
-- [x] Fournir la procédure UI pour aligner LobbyName à gauche et PlayerCount à droite dans le LayoutGroup.
-- [x] Restructurer l'UI du Lobby en Onglets (Apparence, Dessin, Audio) avec `CustomizationMenuTabs.cs`.
-- [x] Câbler le Texture Painter pour sauvegarder les dessins en local (.png) via `CustomEyeTextureManager.cs`.
-- [x] Assigner les textures peintes au deuxième Material (Index 2 : M_Iris) du robot via `PlayerCustomization.cs`.
-- [x] [Network] Créer un Command pour découper et envoyer les octets (Bytes) d'une texture custom au serveur afin de synchroniser les yeux dessinés en multijoueur.
-- [x] Lier la sauvegarde locale (PlayerPrefs) du chemin de texture dans l'UI du Lobby pour `NetworkTextureTransfer.cs`.
-- [x] Créer le script `MapSpawnManager.cs` (Singleton, liste de Transform pour les points de spawn).
-- [x] Modifier `MyNetworkManager.cs` pour utiliser `MapSpawnManager.Instance.GetSpawnPoint(connectionId)` lors du spawn d'un joueur en jeu.
-- [x] Expliquer la configuration de l'éditeur Unity pour la preview des yeux du Dummy dans le Lobby.
-- [x] Fixer le bug d'assignation de texture sur les boutons d'yeux instanciés (problème de closure C# et/ou Inspector Events).
-- [x] Ajouter un tableau `DefaultEyeTextures` pour instancier proprement les textures par défaut via le code au lieu de l'Inspecteur du Prefab.
-- [x] Fixer l'absence de clic sur les Custom Vector Buttons en ajoutant un fallback `UICustomButtonBase`.
-- [x] Fixer l'absence de clic sur les Custom Vector Buttons en ajoutant un fallback `UICustomButtonBase`.
-- [x] Fix IEnumerator generic compilation error dans `PlayerV2_Arms.cs` en ajoutant le using `System.Collections`.
-- [x] Fix explosion physique (recul dans le void) au spawn en corrigeant `projectionAngle` (180) et le calcul manuel de `connectedAnchor` dans `PlayerV2_Arms.cs`.
-- [x] Ajouter le paramètre `RetractedSegmentsOffset` pour ignorer les X premiers joints lors de l'accroupissement.
-- [x] Assigner dynamiquement un PhysicMaterial (Zéro Friction) aux bras dans `PlayerV2_Arms.cs` pour un glissement parfait.
-- [x] Retrait de tous les namespaces personnalisés dans le dossier Scripts pour forcer l'usage du global namespace.
-- [x] Correction de PhysicMaterial en PhysicsMaterial (API Unity 6).
-- [x] Résolution de l'erreur de compilation `ColliderGroupType` suite au retrait des namespaces.
-- [x] Correction de la popup Unity "Script Updating Consent" en remplaçant `isLocalPlayer` par `isOwned` dans `PlayerV2_Arms.cs`.
-- [x] Restauration globale de l'enum `ColliderGroupType` dans `PlayerV2_CollisionManager.cs`.
-- [x] Suppression des anciens scripts V1 obsolètes (`PlayerCollisionManager.cs`, etc.).
-- [x] Encapsulation de l'enum `ColliderGroupType` à l'intérieur de la classe `PlayerV2_CollisionManager` pour forcer la résolution de l'erreur fantôme dans l'IDE (contournement du cache OmniSharp).
-- [x] Fix des erreurs de compilation : Adaptation des scripts globaux (`PlayerBoneBridge`, `MouthAnimator`, `UniVoice`, `PlayerVacuumController`) pour utiliser les composants V2 (`PlayerV2_Suspension`, `PlayerV2_Controller`, `PlayerV2_Arms`).
-- [x] Fix erreur de syntaxe C# (dangling else if) introduite dans `MyNetworkManager.cs`.
+- [x] Analyse de la mécanique physique du PlayerV2 (Hips, Joints, Forces).
+- [x] Identification de la racine du problème de dérive et de ralentissement (Collisions entre Bras et Torso B).
+- [x] Comprendre l'échec de l'application de la 3ème Loi de Newton (Le `connectedMassScale` bloquait le transfert de force, causant une asymétrie de la force opposée).
+- [x] Modification de `PlayerV2_CollisionManager.cs` pour ajouter les règles d'ignorance de collision entre les Bras et Torso B.
+- [x] Mise à jour du `DEVELOPMENT_LOG.md`.
+- [x] Explication claire au joueur.
+

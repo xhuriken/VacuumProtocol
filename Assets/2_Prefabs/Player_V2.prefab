@@ -93,7 +93,7 @@ ConfigurableJoint:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 104524273259980439}
   serializedVersion: 4
-  m_ConnectedBody: {fileID: 933197570028120540}
+  m_ConnectedBody: {fileID: 8066688192514346697}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
   m_Axis: {x: 1, y: 0, z: 0}
@@ -594,7 +594,7 @@ ConfigurableJoint:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 700699492359161198}
   serializedVersion: 4
-  m_ConnectedBody: {fileID: 2010109033139643061}
+  m_ConnectedBody: {fileID: 2807630421743614038}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
   m_Axis: {x: 1, y: 0, z: 0}
@@ -792,7 +792,7 @@ ConfigurableJoint:
   m_YMotion: 1
   m_ZMotion: 0
   m_AngularXMotion: 0
-  m_AngularYMotion: 2
+  m_AngularYMotion: 0
   m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
@@ -2618,7 +2618,7 @@ ConfigurableJoint:
   m_YMotion: 1
   m_ZMotion: 0
   m_AngularXMotion: 0
-  m_AngularYMotion: 2
+  m_AngularYMotion: 0
   m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
@@ -3374,10 +3374,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.1
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Radius: 0.09
+  m_Height: 0.3
+  m_Direction: 0
+  m_Center: {x: -0.11, y: 0, z: 0}
 --- !u!153 &2775269124938534283
 ConfigurableJoint:
   m_ObjectHideFlags: 0
@@ -3648,7 +3648,7 @@ ConfigurableJoint:
   m_YMotion: 1
   m_ZMotion: 0
   m_AngularXMotion: 0
-  m_AngularYMotion: 2
+  m_AngularYMotion: 0
   m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
@@ -4308,7 +4308,7 @@ ConfigurableJoint:
   m_YMotion: 1
   m_ZMotion: 0
   m_AngularXMotion: 0
-  m_AngularYMotion: 2
+  m_AngularYMotion: 0
   m_AngularZMotion: 0
   m_LinearLimitSpring:
     spring: 0
@@ -4519,7 +4519,7 @@ MonoBehaviour:
   _shrinkLerpSpeed: 10
   _vortexTorque: 0
   _centripetalForce: 0
-  _drawGizmos: 1
+  _drawGizmos: 0
 --- !u!54 &5441802875012732489
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4566,10 +4566,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.1
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Radius: 0.09
+  m_Height: 0.24
+  m_Direction: 0
+  m_Center: {x: 0.08, y: 0, z: 0}
 --- !u!153 &4856288818739700168
 ConfigurableJoint:
   m_ObjectHideFlags: 0
@@ -5955,10 +5955,24 @@ MonoBehaviour:
   _leftArmRoot: {fileID: 8608306197321010887}
   _rightArmRoot: {fileID: 8134154194129082311}
   _neckRootTransform: {fileID: 2044302067384928448}
-  _wheelsColliders: []
+  _wheelsColliders:
+  - {fileID: 5786146030887080759}
+  - {fileID: 1702181570414169307}
+  - {fileID: 8365284726194128744}
+  - {fileID: 4539278660189860590}
   _ignoreRules:
   - GroupA: 3
     GroupB: 5
+  - GroupA: 1
+    GroupB: 4
+  - GroupA: 2
+    GroupB: 4
+  - GroupA: 5
+    GroupB: 4
+  - GroupA: 5
+    GroupB: 1
+  - GroupA: 5
+    GroupB: 2
   _enableDebugLogs: 0
 --- !u!114 &7863588130516080460
 MonoBehaviour:
@@ -5985,6 +5999,9 @@ MonoBehaviour:
   HandRotationOffset: {x: 0, y: 0, z: 0}
   ShoulderRotateDuration: 0.5
   ShoulderEase: 27
+  RetractedSegmentsOffset: 1
+  RetractedSegmentsCount: 2
+  RetractionDuration: 0.25
   LockAngularX: 1
   EnableJointProjection: 1
   ShoulderExtendSpringForce: 1500
@@ -6419,7 +6436,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6964986639024486957}
   - component: {fileID: 9212113928988786548}
-  - component: {fileID: 933197570028120540}
+  - component: {fileID: 8066688192514346697}
   m_Layer: 7
   m_Name: Arm.Base.R
   m_TagString: Untagged
@@ -6463,7 +6480,7 @@ MonoBehaviour:
   tipStiffnessMultiplier: 2
   angularLimit: 45
   colliderRadius: 0.05
---- !u!54 &933197570028120540
+--- !u!54 &8066688192514346697
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -6845,7 +6862,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4579867385719283683}
   - component: {fileID: 6053172677114292442}
-  - component: {fileID: 2010109033139643061}
+  - component: {fileID: 2807630421743614038}
   m_Layer: 7
   m_Name: Arm.Base.L
   m_TagString: Untagged
@@ -6889,7 +6906,7 @@ MonoBehaviour:
   tipStiffnessMultiplier: 2
   angularLimit: 45
   colliderRadius: 0.05
---- !u!54 &2010109033139643061
+--- !u!54 &2807630421743614038
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

@@ -83,6 +83,9 @@ public class PlayerV2_Head : NetworkBehaviour
             {
                 if (joint != null)
                 {
+                    // CRITICAL FIX: Empêche la tête/le cou de tirer sur le Torso et de faire dévier le robot
+                    joint.connectedMassScale = 0.00001f;
+
                     // On utilise SlerpDrive pour un comportement de ressort sur les 3 axes
                     joint.rotationDriveMode = RotationDriveMode.Slerp;
                     joint.slerpDrive = drive;
@@ -124,7 +127,7 @@ public class PlayerV2_Head : NetworkBehaviour
     public void SetTargetPitch(float targetPitch)
     {
         if (NeckJoints == null || NeckJoints.Length == 0) return;
-        
+
         float newPitch = targetPitch * PitchMultiplier;
 
         if (isOwned)
@@ -153,7 +156,7 @@ public class PlayerV2_Head : NetworkBehaviour
     private void ApplyPitchToJoints(float pitch)
     {
         if (NeckJoints == null || NeckJoints.Length == 0) return;
-        
+
         // Diviser l'angle par le nombre d'articulations pour une courbe fluide
         float pitchPerJoint = pitch / NeckJoints.Length;
 
@@ -206,12 +209,12 @@ public class PlayerV2_Head : NetworkBehaviour
         if (!float.IsNaN(axis.x) && !float.IsNaN(axis.y) && !float.IsNaN(axis.z) && axis.sqrMagnitude > 0.001f)
         {
             if (angle > 180f) angle -= 360f;
-            
+
             // Application de la force (torque)
             Vector3 alignmentTorque = axis * (angle * HeadAlignmentTorque * Mathf.Deg2Rad);
             Vector3 rotationalDamping = -_headRb.angularVelocity * HeadAlignmentDamping;
             Vector3 netTorque = (alignmentTorque + rotationalDamping) * _headRb.mass;
-            
+
             _headRb.AddTorque(netTorque, ForceMode.Force);
         }
     }

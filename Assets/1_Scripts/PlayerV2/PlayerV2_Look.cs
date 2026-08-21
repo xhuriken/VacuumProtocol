@@ -28,6 +28,8 @@ public class PlayerV2_Look : NetworkBehaviour
     private float _cameraPitch;
     private float _torsoYaw;
 
+    public float CurrentYaw => _torsoYaw;
+
     private void Awake()
     {
         _controller = GetComponent<PlayerV2_Controller>();

@@ -196,13 +196,14 @@ public class PlayerV2_Movement : NetworkBehaviour
 
         Vector2 moveInput = _input.MoveInput;
 
-        // Calcul de la direction désirée par rapport au Torso (évite le zigzag si la tête balance)
-        Vector3 forward = _controller.TorsoRigidbody.transform.forward;
-        Vector3 right = _controller.TorsoRigidbody.transform.right;
-        forward.y = 0f; right.y = 0f;
+        // FIX: Ne SURTOUT PAS utiliser _controller.TorsoRigidbody.transform.forward, 
+        // car la physique des bras tire sur le Torso et le fait vriller, ce qui dévie le mouvement !
+        // On récupère le yaw purement mathématique du composant Look pour une trajectoire parfaite, comme dans la V1.
+        PlayerV2_Look look = GetComponent<PlayerV2_Look>();
+        float yaw = look != null ? look.CurrentYaw : _controller.TorsoRigidbody.transform.eulerAngles.y;
         
-        if (forward.sqrMagnitude > 0.01f) forward.Normalize();
-        if (right.sqrMagnitude > 0.01f) right.Normalize();
+        Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+        Vector3 right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
 
         Vector3 moveDirection = (forward * moveInput.y + right * moveInput.x).normalized;
         Vector3 currentVelocity = _controller.HipsRigidbody.linearVelocity;

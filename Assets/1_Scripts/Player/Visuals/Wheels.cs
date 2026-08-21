@@ -61,9 +61,13 @@ public class WheelSteering : NetworkBehaviour
             }
         }
 
-        // We lerp a single internal float, NOT the wheel's physics-affected rotation.
-        // This completely overrides the ConfigurableJoint's Free AngularY motion.
-        _currentSteeringAngle = Mathf.LerpAngle(_currentSteeringAngle, _targetSteeringAngle, _steeringSpeed * Time.deltaTime);
+        // On calcule la distance parcourue à cette frame sur le plan XZ
+        float distanceMoved = movement.magnitude;
+
+        // L'interpolation se fait en fonction de la distance, PAS du temps !
+        // Comme les vraies roulettes de bureau, si on ne bouge pas, la roulette ne pivote pas.
+        // (On multiplie la speed pour qu'elle réagisse bien sur de courtes distances)
+        _currentSteeringAngle = Mathf.LerpAngle(_currentSteeringAngle, _targetSteeringAngle, _steeringSpeed * distanceMoved * 2f);
 
         for (int i = 0; i < _wheels.Count; i++)
         {

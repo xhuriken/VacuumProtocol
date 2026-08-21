@@ -57,7 +57,7 @@ public class PlayerV2_Gizmos : MonoBehaviour
     private void DrawArmsGizmos()
     {
         var arms = _controller.ArmsController;
-        
+
         // Left Arm
         if (_controller.LeftArmRoot != null && arms.LeftHand != null)
         {
@@ -65,7 +65,7 @@ public class PlayerV2_Gizmos : MonoBehaviour
             Gizmos.DrawWireSphere(_controller.LeftArmRoot.position, 0.1f);
             Gizmos.DrawWireSphere(arms.LeftHand.position, 0.1f);
             Gizmos.DrawLine(_controller.LeftArmRoot.position, arms.LeftHand.position);
-            
+
             if (arms.IsLeftArmExtended)
             {
                 Transform head = _controller.CameraTransform != null ? _controller.CameraTransform : transform;
@@ -123,7 +123,7 @@ public class PlayerV2_Gizmos : MonoBehaviour
                 Vector3 targetForward = targetRot * Vector3.forward;
                 Gizmos.color = Color.yellow;
                 Gizmos.DrawRay(headRb.position, targetForward * 1.5f);
-                
+
                 // 2. Tête Actuelle Physique - ROUGE
                 Gizmos.color = Color.red;
                 Gizmos.DrawRay(headRb.position, headRb.transform.forward * 1.5f);
@@ -148,7 +148,7 @@ public class PlayerV2_Gizmos : MonoBehaviour
             {
                 Gizmos.color = Color.magenta;
                 Gizmos.DrawRay(eye.transform.position, eye.transform.forward * 2.5f);
-                
+
                 Transform pupil = eye.GetPupilBone();
                 if (pupil != null)
                 {
@@ -171,7 +171,7 @@ public class PlayerV2_Gizmos : MonoBehaviour
                     // Affiche la position de la roue
                     Gizmos.color = Color.green;
                     Gizmos.DrawWireSphere(joint.transform.position, 0.2f);
-                    
+
                     // Si le joint a un parent (le chassis), on dessine une ligne
                     if (joint.transform.parent != null)
                     {
