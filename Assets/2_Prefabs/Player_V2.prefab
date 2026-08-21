@@ -447,6 +447,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2044302067384928448}
+  - component: {fileID: 5642906533026322759}
   m_Layer: 7
   m_Name: Neck_Base
   m_TagString: Untagged
@@ -470,6 +471,29 @@ Transform:
   - {fileID: 6350476654365029310}
   m_Father: {fileID: 8947995227809742863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &5642906533026322759
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 670828124658582139}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3
+  m_Height: 0
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.11, z: 0}
 --- !u!1 &683004251274296707
 GameObject:
   m_ObjectHideFlags: 0
@@ -5950,7 +5974,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.PlayerV2.PlayerV2_CollisionManager
   _torsoColliderA: {fileID: 5090447920876513866}
-  _torsoColliderB: {fileID: 0}
+  _torsoColliderB: {fileID: 5642906533026322759}
   _wheelsRoot: {fileID: 2792166194028952634}
   _leftArmRoot: {fileID: 8608306197321010887}
   _rightArmRoot: {fileID: 8134154194129082311}
@@ -5962,17 +5986,19 @@ MonoBehaviour:
   - {fileID: 4539278660189860590}
   _ignoreRules:
   - GroupA: 3
-    GroupB: 5
+    GroupB: 6
   - GroupA: 1
     GroupB: 4
   - GroupA: 2
     GroupB: 4
   - GroupA: 5
     GroupB: 4
-  - GroupA: 5
+  - GroupA: 6
     GroupB: 1
-  - GroupA: 5
+  - GroupA: 6
     GroupB: 2
+  - GroupA: 5
+    GroupB: 6
   _enableDebugLogs: 0
 --- !u!114 &7863588130516080460
 MonoBehaviour:
@@ -6658,10 +6684,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 1
+  m_Radius: 0.24
+  m_Height: 0.66
   m_Direction: 1
-  m_Center: {x: 0, y: 0.26, z: 0}
+  m_Center: {x: 0, y: 0.12, z: 0}
 --- !u!153 &2459666677272217753
 ConfigurableJoint:
   m_ObjectHideFlags: 0
