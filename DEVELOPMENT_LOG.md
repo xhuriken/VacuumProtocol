@@ -1,3 +1,43 @@
+## [2026-08-22] Ajustement GroundCheck (SphereCast)
+**Goal:** Corriger le bug du Raycast qui ratait le sol et faisait sautiller le joueur en boucle.
+**Changes:**
+- **`PlayerV2_Movement.cs` [MODIFIED]**: Remplacement du Physics.Raycast par un Physics.SphereCast.
+**Justification:** Le Raycast (épaisseur 0) était trop précis. Si la roue reposait sur le sol mais que le contact physique repoussait très légèrement le centre (ou sur une micro-pente), le rayon vertical ratait le sol d'un millimètre. Résultat : le script croyait que le joueur était en l'air, puis au sol, déclenchant le OnHardLanding en boucle (sautillement). Le SphereCast possède une épaisseur (rayon réduit à 50% de la roue). Il est assez fin pour ne jamais toucher les murs sur les côtés (évite le Wall Jump), mais assez épais pour garantir de toujours détecter le sol sous la roue.
+
+## [2026-08-21] Rollback Bras & Fix GroundCheck
+**Goal:** Revenir à la version précédente de la physique des bras (sans le blocage Kinematic des épaules) et empêcher le 'Wall Jump'.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression complète de la logique KinematicRootSegments, ApplyKinematicRoots() et EnforceKinematicRoots(). Les bras redeviennent 100% dynamiques et tirés par l'épaule.
+- **`PlayerV2_Movement.cs` [MODIFIED]**: Remplacement de Physics.CheckSphere (qui détectait les collisions sur les côtés, permettant de wall jump) par un Physics.Raycast strict orienté vers le bas (Vector3.down). Mise à jour des Gizmos pour afficher une ligne avec un petit cercle au bout.
+**Justification:** Le fix des bras Kinematic causait des détachements indésirables en mouvement qui nécessiteraient une refonte de la hiérarchie. On annule l'expérience sur demande. Le Ground Check via Raycast garantit quant à lui que seules les surfaces sous le joueur (sol) autorisent le saut.
+
+## [2026-08-21] Fix Détachement Bras (4 mètres) en Multi
+**Goal:** Corriger le bug où les bras se détachent du corps et volent à 4 mètres lorsqu'ils sont utilisés en mouvement.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Les joints (ConfigurableJoints) de la base Kinematic ne sont plus détruits.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout de EnforceKinematicRoots() appelé dans FixedUpdate pour imposer isKinematic = true chaque frame, et forçage de weight = 0f pour interdire toute force AddForce sur ces os.
+**Justification:** Le précédent fix détruisait les joints de la racine pour plus de pureté Kinematic. Le problème, c'est que sur un jeu multi, des composants comme NetworkRigidbody ou le moteur physique peuvent accidentellement repasser le Rigidbody en dynamique (isKinematic = false) l'espace d'une frame. Sans joint pour les retenir, et recevant soudainement la force d'attraction du clic, les segments s'envolaient librement à plusieurs mètres ! En gardant les joints (comme filet de sécurité) et en forçant le blocage de la force et de l'état Kinematic *à chaque frame*, le bug est définitivement éradiqué.
+
+## [2026-08-21] Immobilisation de la Base des Bras (Tube)
+**Goal:** Empêcher le décalage (drift) de la base du bras lors des déplacements du joueur, tout en permettant au reste du bras de rester physique.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout d'une variable KinematicRootSegments (par défaut à 2). Au Start(), le script rend les N premiers segments du bras (ex: Arm.Base.L et Arm.L) isKinematic = true et supprime leur ConfigurableJoint.
+**Justification:** Un Rigidbody dynamique attaché par un joint physique a une inertie. Lors des déplacements du robot, l'inertie fait dévier la base de l'épaule ('décalage du tube'). En rendant la base *Kinematic*, elle s'accroche indéfectiblement à l'animation de l'épaule parente. Les joints suivants (Arm.L.001, etc.) utilisent alors ce segment Kinematic comme point d'ancrage physique parfait, gardant la fluidité de la tentacule sans jamais décoller de l'épaule.
+
+## [2026-08-21] Fix Vibration (Jitter) de l'extension des bras
+**Goal:** Éliminer la vibration chaotique de tous les segments lorsque le bras se tend.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Calcul d'un segmentTargetPos unique par segment via Vector3.Lerp(armRootPos, finalTargetPosition, weight).
+**Justification:** Précédemment, **tous** les segments du bras (poignet, coude, épaule) étaient attirés vers le **même point final** (inalTargetPosition). Le moteur physique (PhysX) essayait de fusionner les os en un seul point (singularité), ce qui violait violemment les contraintes de distance des ConfigurableJoints. Les ressorts des articulations repoussaient les os tandis que le script les ramenait au même endroit, créant une boucle de vibration (jitter) incontrôlable. En attirant chaque segment vers sa place ''naturelle'' sur la ligne (ex: coude à 50% de la distance), la force d'attraction tombe parfaitement à 0 une fois le bras tendu, rendant la courbe solide comme un roc.
+
+## [2026-08-21] Refonte Physique Courbe & Saccades Bras
+**Goal:** Rendre l'extension des bras plus fluide (PAF) et courber naturellement le bras pour éviter les angles droits à l'épaule.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: La force d'attraction n'est plus appliquée uniquement sur la main (handRb), mais répartie sur **tous** les Rigidbody du bras (de l'épaule jusqu'à la main).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Implémentation d'un système de poids linéaire (weight) : 100% sur la main, décroissant jusqu'à l'épaule.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Intégration de la rétractation (Crouch) dans le calcul du poids. Les segments rétractés ont un poids de 0%, et la courbe se redistribue doucement sur les segments restants.
+**Justification:** Avant, appliquer la force uniquement sur la main créait un effet de fouet (whip effect) responsable de la 'saccade en 2 temps' : la main partait vite, l'épaule/coude restait derrière jusqu'à ce que les limites du joint soient percutées. En appliquant la force proportionnellement sur chaque segment, l'ensemble du bras se déplace instantanément et simultanément (PAF). De plus, en tirant le coude vers la cible finale, on le force à s'élever au lieu de pendre horizontalement, transformant l'angle droit hachuré en une courbe physique fluide et naturelle (arc de caténaire).
+
 # Development Log
 
 ## [2026-08-20] Post-Deletion Codebase Adaptation (V1 -> V2)
@@ -1889,3 +1929,9 @@
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Added Slerp smoothing, Anticipation multipliers, and World Space rotation decoupling).
 - [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Expanded Gizmo toggles into highly granular inspector parameters and added Anticipation rendering).
+
+
+
+
+
+

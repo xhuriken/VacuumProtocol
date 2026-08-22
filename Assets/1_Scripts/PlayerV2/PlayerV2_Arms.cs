@@ -81,6 +81,9 @@ public class PlayerV2_Arms : NetworkBehaviour
     private Transform _rightHand;
     private Rigidbody _rightHandRb;
 
+    private List<Rigidbody> _leftArmRbs = new List<Rigidbody>();
+    private List<Rigidbody> _rightArmRbs = new List<Rigidbody>();
+
     // Lengths
     private float _leftArmLength = 1.5f;
     private float _rightArmLength = 1.5f;
@@ -152,6 +155,7 @@ public class PlayerV2_Arms : NetworkBehaviour
         // Initialisation Bras Gauche
         if (_controller.LeftArmRoot != null)
         {
+            _leftArmRbs.AddRange(_controller.LeftArmRoot.GetComponentsInChildren<Rigidbody>());
             _leftHand = FindLastChild(_controller.LeftArmRoot);
             if (_leftHand != null)
             {
@@ -163,6 +167,7 @@ public class PlayerV2_Arms : NetworkBehaviour
         // Initialisation Bras Droit
         if (_controller.RightArmRoot != null)
         {
+            _rightArmRbs.AddRange(_controller.RightArmRoot.GetComponentsInChildren<Rigidbody>());
             _rightHand = FindLastChild(_controller.RightArmRoot);
             if (_rightHand != null)
             {
@@ -225,29 +230,29 @@ public class PlayerV2_Arms : NetworkBehaviour
     private void FixedUpdate()
     {
         // Bras Gauche
-        if (_leftHandRb != null)
+        if (_leftArmRbs.Count > 0 && _leftHandRb != null)
         {
             if (_isLeftArmExtended != _lastLeftExtended)
             {
                 UpdateJointDrives(true, _isLeftArmExtended);
                 _lastLeftExtended = _isLeftArmExtended;
             }
-            ApplyArmPhysicsForces(_leftHandRb, _leftArmLength, true, _isLeftArmExtended);
+            ApplyArmPhysicsForces(_leftArmRbs, _leftHandRb, _leftArmLength, true, _isLeftArmExtended);
         }
 
         // Bras Droit
-        if (_rightHandRb != null)
+        if (_rightArmRbs.Count > 0 && _rightHandRb != null)
         {
             if (_isRightArmExtended != _lastRightExtended)
             {
                 UpdateJointDrives(false, _isRightArmExtended);
                 _lastRightExtended = _isRightArmExtended;
             }
-            ApplyArmPhysicsForces(_rightHandRb, _rightArmLength, false, _isRightArmExtended);
+            ApplyArmPhysicsForces(_rightArmRbs, _rightHandRb, _rightArmLength, false, _isRightArmExtended);
         }
     }
 
-    private void ApplyArmPhysicsForces(Rigidbody handRb, float armLength, bool isLeft, bool isExtended)
+    private void ApplyArmPhysicsForces(List<Rigidbody> armRbs, Rigidbody handRb, float armLength, bool isLeft, bool isExtended)
     {
         if (!isExtended && FreeHangAtRest)
         {
@@ -262,16 +267,48 @@ public class PlayerV2_Arms : NetworkBehaviour
             Vector3 forward = headTrans.forward;
             Vector3 up = headTrans.up;
 
-            Vector3 targetPosition = headTrans.position
+            Vector3 finalTargetPosition = headTrans.position
                 + forward * (armLength * ReachLengthFactor + ForwardOffset)
                 + up * VerticalOffset;
 
-            // Force d'attraction
-            Vector3 toTarget = targetPosition - handRb.position;
-            Vector3 extensionForce = toTarget * ExtendForce;
-            Vector3 dampingForce = -handRb.linearVelocity * ExtendDamping;
-            Vector3 netForce = (extensionForce + dampingForce) * handRb.mass;
-            handRb.AddForce(netForce, ForceMode.Force);
+            Vector3 armRootPos = armRbs[0].position; // La base de l'épaule
+
+            // Force d'attraction répartie sur chaque segment pour une belle courbe et aucun à-coup
+            for (int i = 0; i < armRbs.Count; i++)
+            {
+                Rigidbody rb = armRbs[i];
+                if (rb == null) continue;
+
+                float weight = (float)(i + 1) / armRbs.Count; // 0.x à 1.0 (main)
+
+                // Rétractation : On ignore les segments repliés
+                if (_isRetracted)
+                {
+                    int retractedEnd = Mathf.Min(RetractedSegmentsOffset + RetractedSegmentsCount, armRbs.Count);
+                    if (i < retractedEnd)
+                    {
+                        weight = 0f;
+                    }
+                    else
+                    {
+                        float range = armRbs.Count - retractedEnd;
+                        weight = range > 0 ? Mathf.Lerp(0.2f, 1f, (float)(i - retractedEnd + 1) / range) : 1f;
+                    }
+                }
+
+                if (weight > 0f)
+                {
+                    // FIX VIBRATION : Au lieu de tirer tous les segments vers le même point (ce qui les écrase les uns dans les autres),
+                    // on tire chaque segment vers sa place "naturelle" sur la ligne imaginaire du bras tendu.
+                    Vector3 segmentTargetPos = Vector3.Lerp(armRootPos, finalTargetPosition, weight);
+
+                    Vector3 toTarget = segmentTargetPos - rb.position;
+                    Vector3 extensionForce = toTarget * (ExtendForce * weight);
+                    Vector3 dampingForce = -rb.linearVelocity * (ExtendDamping * weight);
+                    Vector3 netForce = (extensionForce + dampingForce) * rb.mass;
+                    rb.AddForce(netForce, ForceMode.Force);
+                }
+            }
 
             // Alignement Rotation
             Quaternion targetRotation = Quaternion.LookRotation(forward, up) * Quaternion.Euler(HandRotationOffset);

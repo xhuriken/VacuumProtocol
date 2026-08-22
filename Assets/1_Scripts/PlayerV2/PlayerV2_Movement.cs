@@ -50,7 +50,7 @@ public class PlayerV2_Movement : NetworkBehaviour
     [Header("Jump Compression Scaling")]
     [Tooltip("Distance Y (Hips -> Roue) quand la suspension est au max de son extension (Ressort détendu = Saut Faible).")]
     public float JumpMaxExtensionDistance = 0.6f;
-    
+
     [Tooltip("Distance Y (Hips -> Roue) quand la suspension est écrasée (Ressort compressé = Saut Fort).")]
     public float JumpMinCompressionDistance = 0.2f;
 
@@ -60,7 +60,7 @@ public class PlayerV2_Movement : NetworkBehaviour
     private PlayerV2_Controller _controller;
     private PlayerInputHandler _input;
     private PlayerV2_Suspension _suspension;
-    
+
     private bool _isGrounded;
     private bool _wasGrounded;
     private float _lastVerticalVelocity;
@@ -111,12 +111,12 @@ public class PlayerV2_Movement : NetworkBehaviour
             if (_isGrounded)
             {
                 float finalJumpForce = JumpForce * _currentCompressionMultiplier;
-                
+
                 // Sécurité : Ne saute pas si la force est trop faible (roues pendouillantes)
                 if (finalJumpForce > 1f)
                 {
                     Vector3 currentVel = _controller.HipsRigidbody.linearVelocity;
-                    
+
                     // Calcul de la force à appliquer pour atteindre EXACTEMENT la vélocité désirée.
                     // Cela empêche le joueur de cumuler le rebond de la suspension et le saut pour s'envoler.
                     float forceToApply = finalJumpForce - currentVel.y;
@@ -125,7 +125,7 @@ public class PlayerV2_Movement : NetworkBehaviour
                     {
                         _controller.HipsRigidbody.AddForce(Vector3.up * forceToApply, ForceMode.VelocityChange);
                     }
-                    
+
                     if (_suspension != null)
                     {
                         _suspension.TriggerJumpRetraction();
@@ -147,14 +147,14 @@ public class PlayerV2_Movement : NetworkBehaviour
             foreach (var joint in _suspension.WheelJoints)
             {
                 if (joint == null) continue;
-                
+
                 Vector3 wheelPos = joint.transform.position;
                 // CheckSphere à la position exacte de la roue
                 if (Physics.CheckSphere(wheelPos, WheelRadius, GroundLayer))
                 {
                     _isGrounded = true;
                 }
-                
+
                 totalWheelY += wheelPos.y;
                 wheelCount++;
             }
@@ -165,7 +165,7 @@ public class PlayerV2_Movement : NetworkBehaviour
         {
             float avgWheelY = totalWheelY / wheelCount;
             float distanceToWheels = _controller.HipsRigidbody.position.y - avgWheelY;
-            
+
             // InverseLerp : si distance = MaxExtension, multiplier = 0. Si distance = MinCompression, multiplier = 1.
             _currentCompressionMultiplier = Mathf.InverseLerp(JumpMaxExtensionDistance, JumpMinCompressionDistance, distanceToWheels);
         }
@@ -201,7 +201,7 @@ public class PlayerV2_Movement : NetworkBehaviour
         // On récupère le yaw purement mathématique du composant Look pour une trajectoire parfaite, comme dans la V1.
         PlayerV2_Look look = GetComponent<PlayerV2_Look>();
         float yaw = look != null ? look.CurrentYaw : _controller.TorsoRigidbody.transform.eulerAngles.y;
-        
+
         Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
         Vector3 right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
 
@@ -261,22 +261,24 @@ public class PlayerV2_Movement : NetworkBehaviour
 
         _lastVerticalVelocity = currentVelocity.y;
     }
-    
+
     private void OnDrawGizmosSelected()
     {
         if (!Application.isPlaying) return;
         if (_controller == null || _controller.HipsRigidbody == null) return;
         if (_suspension == null || _suspension.WheelJoints == null) return;
 
-        // Gizmos Ground Check des roues
+        // Gizmos Ground Check des roues (Raycast vers le bas)
         foreach (var joint in _suspension.WheelJoints)
         {
             if (joint == null) continue;
             Vector3 wheelPos = joint.transform.position;
-            
-            bool isWheelGrounded = Physics.CheckSphere(wheelPos, WheelRadius, GroundLayer);
+
+            bool isWheelGrounded = Physics.Raycast(wheelPos, Vector3.down, WheelRadius + 0.05f, GroundLayer);
             Gizmos.color = isWheelGrounded ? new Color(0, 1, 0, 0.4f) : new Color(1, 0, 0, 0.4f);
-            Gizmos.DrawSphere(wheelPos, WheelRadius);
+
+            Gizmos.DrawLine(wheelPos, wheelPos + Vector3.down * (WheelRadius + 0.05f));
+            Gizmos.DrawWireSphere(wheelPos + Vector3.down * WheelRadius, 0.05f);
         }
 
         // Gizmo pour afficher le multiplicateur de compression (Jump)

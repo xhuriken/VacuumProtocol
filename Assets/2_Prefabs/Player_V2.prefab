@@ -81,8 +81,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13868114
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.06934057, y: -0.00000005670342, z: -0.00000009230819}
 --- !u!153 &3105700532475062781
@@ -332,8 +332,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.14292227
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.07146113, y: -0.00000020306422, z: -0.00000008781334}
 --- !u!153 &5462530879514723464
@@ -606,8 +606,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13868114
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.06934057, y: -0.00000005670342, z: -0.00000009230819}
 --- !u!153 &7701644509083024322
@@ -1048,8 +1048,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.016212283
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.008066163, y: 0.00080407306, z: 0.00000006531258}
 --- !u!153 &2785918567500878399
@@ -1298,8 +1298,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.016212283
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.008066163, y: 0.00080407306, z: 0.00000006531258}
 --- !u!153 &8456275129571517038
@@ -1548,8 +1548,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.14292227
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.07146113, y: -0.00000020306422, z: -0.00000008781334}
 --- !u!153 &1880678482393350633
@@ -1830,8 +1830,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.14434159
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.072170794, y: -0.0000000080976434, z: -0.0000000886854}
 --- !u!153 &4059056826309297263
@@ -2930,8 +2930,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13962457
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.06981228, y: -0.000000058312878, z: -0.00000009293614}
 --- !u!153 &5022873679416453419
@@ -3117,8 +3117,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.14434159
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.072170794, y: -0.0000000080976434, z: -0.0000000886854}
 --- !u!153 &5949515329003193633
@@ -3904,8 +3904,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13490753
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: -0.067453764, y: -0.00000002189514, z: -0.00000008288898}
 --- !u!153 &7632830642271233196
@@ -4091,8 +4091,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13962457
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.06981228, y: -0.000000058312878, z: -0.00000009293614}
 --- !u!153 &585726307689391377
@@ -4839,8 +4839,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.05
-  m_Height: 0.13490753
+  m_Radius: 0.08
+  m_Height: 0.28
   m_Direction: 0
   m_Center: {x: 0.067453764, y: -0.00000002189514, z: -0.00000008288898}
 --- !u!153 &3947565541660503160
@@ -5820,7 +5820,7 @@ MonoBehaviour:
   CrouchHeadOffset: 0.15
   JumpForce: 9
   FallGravityMultiplier: 5
-  WheelRadius: 0.15
+  WheelRadius: 0.07
   GroundLayer:
     serializedVersion: 2
     m_Bits: 8
@@ -6019,7 +6019,7 @@ MonoBehaviour:
   ExtendDamping: 12
   AlignmentTorque: 20
   AlignmentDamping: 3
-  ReachLengthFactor: 3
+  ReachLengthFactor: 2.5
   ForwardOffset: 0
   VerticalOffset: -0.2
   HandRotationOffset: {x: 0, y: 0, z: 0}
@@ -6055,10 +6055,10 @@ MonoBehaviour:
   ShowViewRangeGizmos: 0
   ShowVacuumArmGizmos: 0
   ShowShooterArmGizmos: 0
-  ShowHeadAnglesGizmos: 1
-  ShowEyesGizmos: 1
-  ShowCameraGizmos: 1
-  ShowSuspensionGizmos: 0
+  ShowHeadAnglesGizmos: 0
+  ShowEyesGizmos: 0
+  ShowCameraGizmos: 0
+  ShowSuspensionGizmos: 1
 --- !u!114 &8116493350128248048
 MonoBehaviour:
   m_ObjectHideFlags: 0
