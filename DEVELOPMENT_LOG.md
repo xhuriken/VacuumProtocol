@@ -1,3 +1,42 @@
+## [2026-08-23] Fix Calcul Longueur Bras (Bezier Explosion)
+**Goal:** Corriger le bug où la courbe de Bézier explosait quand le bras droit visait vers le haut ou le bas après avoir ajouté des particules.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Mise à jour de CalculateHierarchyLength() pour s'arrêter explicitement à l'os de la main (le dernier Rigidbody) au lieu de parcourir bêtement tous les enfants jusqu'à la fin.
+**Justification:** La méthode CalculateHierarchyLength parcourait récursivement le premier enfant de chaque objet pour additionner la longueur de l'os. Comme le joueur a rajouté le Particle System Force Field en enfant de la main droite (avec son offset positionnel long pour simuler l'aspirateur), le script comptait cet offset comme faisant partie de la longueur physique du bras ! Le bras droit devenait virtuellement gigantesque. Lors de la visée extrême (haut/bas), la courbe de Bézier multipliait la courbure par cette longueur gigantesque, provoquant une explosion. La fonction est désormais sécurisée pour ne compter que les vrais os de la hiérarchie physique.
+
+## [2026-08-23] Fix Explosion Physique du Bras Droit
+**Goal:** Corriger le bug où le bras droit partait dans tous les sens et faisait bugger le torse.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression du bloc d'initialisation dupliqué pour le bras droit dans la méthode Start().
+**Justification:** Le bloc de recherche des joints était présent deux fois pour le bras droit. Le second bloc (incorrect) utilisait GetComponent au lieu de GetComponentInChildren pour trouver l'épaule, ce qui écrasait la variable _rightShoulderJoint avec une valeur 
+ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'était jamais appliquée sur l'épaule droite. Dès que le bras droit forçait pour viser, il repoussait le torse entier, provoquant un glitch physique incontrôlable. En supprimant le bloc en trop, la bonne référence est conservée et la masse est correctement ignorée.
+
+## [2026-08-23] Simplification HUD Crosshair
+**Goal:** Supprimer le second crosshair (bras) qui est trop instable visuellement.
+**Changes:**
+- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: Suppression totale de la logique de suivi de la main réelle (HandActualCrosshair).
+**Justification:** Le tracking du bras physique avec un crosshair flottant ajoute beaucoup de bruit visuel à cause des ressorts physiques et de l'offset de rotation (qui peut toujours légèrement fluctuer selon la position du torse et la limite des joints). Comme le joueur ne regarde que le centre de l'écran pour viser (comme dans 99% des jeux de tir/interaction), le second crosshair n'est pas nécessaire en terme de gameplay et pollue l'écran.
+
+## [2026-08-23] Fix Dérive du HUD Crosshair (Bras)
+**Goal:** Corriger le fait que le disque du bras dérive sur le côté (droite) au lieu de rester aligné devant la buse.
+**Changes:**
+- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: La direction visée par le bras (	rueAimDir) est désormais calculée en inversant l'offset de rotation local de la main (HandRotationOffset).
+**Justification:** Le modèle 3D du tentacule a ses axes locaux tournés de 90 degrés (paramétré via HandRotationOffset). De ce fait, faire simplement leftHand.forward renvoyait la direction brute de l'os (le côté de la buse), d'où la fuite du crosshair sur la droite ! En annulant mathématiquement cette rotation via Quaternion.Inverse, on obtient la véritable trajectoire du bout du bras.
+
+## [2026-08-23] Correction des erreurs (Crosshair / Hand)
+**Goal:** Fixer les erreurs de compilation liées à LeftHand et améliorer le support de Shapes 3D.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout des méthodes utilitaires GetLeftHand() et GetRightHand() et suppression de la référence directe dans le check IsHand.
+- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: Utilisation de Transform standard au lieu de RectTransform. Ajout du toggle UseScreenSpace pour autoriser le positionnement en 3D World (pour un rendu avec des Shapes sans Canvas).
+**Justification:** L'accès à LeftHand n'était pas exposé publiquement dans le controlleur, entraînant des erreurs de compilation. L'implémentation a été revue pour s'adapter à la volonté d'utiliser des composants vectoriels (Shapes) plutôt que des images Canvas standard, en supportant le positionnement 3D direct face à la caméra.
+
+## [2026-08-23] Précision Visée Bras et Crosshair HUD
+**Goal:** Permettre à la main de s'aligner parfaitement avec la cible même avec des angles extrêmes (haut/bas) et ajouter un HUD in-game pour visualiser la différence entre la cible (caméra) et la buse (bras).
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Désactivation forcée du LockAngularX de l'articulation (ConfigurableJoint) **uniquement** pour la main (le dernier segment du bras).
+- **`PlayerV2_DynamicCrosshair.cs` [ADDED]**: Création d'un script HUD qui projette en temps réel la position ciblée par la caméra et la position réellement visée par la buse sur l'écran.
+**Justification:** Le manque de précision de la main sur l'axe vertical (Pitch) venait du fait que le paramètre LockAngularX verrouillait physiquement l'articulation de la main sur cet axe. La physique l'empêchait donc de s'orienter parfaitement vers le haut ou le bas. En déverrouillant spécifiquement ce segment, la main peut se tordre librement pour épouser l'axe de la cible. Le nouveau script HUD permet au joueur d'avoir un retour visuel précis de cette physique en jeu (à lier dans un Canvas avec des images).
+
 ## [2026-08-23] Synchronisation des Saccades des Yeux
 **Goal:** Empêcher l'effet 'caméléon' (les deux yeux qui bougent indépendamment dans des directions différentes) lors des saccades.
 **Changes:**
@@ -1953,6 +1992,12 @@
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Added Slerp smoothing, Anticipation multipliers, and World Space rotation decoupling).
 - [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Expanded Gizmo toggles into highly granular inspector parameters and added Anticipation rendering).
+
+
+
+
+
+
 
 
 

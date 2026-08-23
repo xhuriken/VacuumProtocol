@@ -43,7 +43,7 @@ public class PlayerV2_Arms : NetworkBehaviour
     public float RetractionDuration = 0.25f;
 
     [Header("Joint Tuning (Auto-Configured)")]
-    public bool LockAngularX = true;
+    public bool LockAngularX = false;
     public bool EnableJointProjection = true;
 
     public float ShoulderExtendSpringForce = 1500f;
@@ -162,7 +162,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             if (_leftHand != null)
             {
                 _leftHandRb = _leftHand.GetComponent<Rigidbody>();
-                _leftArmLength = CalculateHierarchyLength(_controller.LeftArmRoot);
+                _leftArmLength = CalculateHierarchyLength(_controller.LeftArmRoot, _leftHand);
             }
         }
 
@@ -174,13 +174,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             if (_rightHand != null)
             {
                 _rightHandRb = _rightHand.GetComponent<Rigidbody>();
-                _rightArmLength = CalculateHierarchyLength(_controller.RightArmRoot);
-
-                _rightShoulderJoint = _controller.RightArmRoot.GetComponent<ConfigurableJoint>();
-                foreach (var joint in _controller.RightArmRoot.GetComponentsInChildren<ConfigurableJoint>(true))
-                {
-                    if (joint != _rightShoulderJoint) _rightElbowWristJoints.Add(joint);
-                }
+                _rightArmLength = CalculateHierarchyLength(_controller.RightArmRoot, _rightHand);
             }
         }
 
@@ -227,6 +221,24 @@ public class PlayerV2_Arms : NetworkBehaviour
             _isRightArmExtended = rightInput;
             CmdSetRightArmExtended(rightInput);
         }
+    }
+
+    public Transform GetLeftHand()
+    {
+        if (_leftElbowWristJoints.Count > 0)
+        {
+            return _leftElbowWristJoints[_leftElbowWristJoints.Count - 1].transform;
+        }
+        return null;
+    }
+
+    public Transform GetRightHand()
+    {
+        if (_rightElbowWristJoints.Count > 0)
+        {
+            return _rightElbowWristJoints[_rightElbowWristJoints.Count - 1].transform;
+        }
+        return null;
     }
 
     private void FixedUpdate()
@@ -359,18 +371,40 @@ public class PlayerV2_Arms : NetworkBehaviour
         return lastWithRb != null ? lastWithRb : current;
     }
 
-    private float CalculateHierarchyLength(Transform root)
+    private float CalculateHierarchyLength(Transform root, Transform lastBone)
     {
         float totalLength = 0f;
         Transform current = root;
 
-        while (current.childCount > 0)
+        while (current != null && current != lastBone && current.childCount > 0)
         {
+            // Trouver l'enfant qui mène au lastBone (ou prendre le premier si on ne trouve pas)
             Transform next = current.GetChild(0);
+            foreach (Transform child in current)
+            {
+                if (IsParentOf(child, lastBone) || child == lastBone)
+                {
+                    next = child;
+                    break;
+                }
+            }
+
             totalLength += Vector3.Distance(current.position, next.position);
             current = next;
         }
         return totalLength > 0.05f ? totalLength : 1.5f;
+    }
+
+    private bool IsParentOf(Transform parent, Transform child)
+    {
+        if (child == null) return false;
+        Transform current = child.parent;
+        while (current != null)
+        {
+            if (current == parent) return true;
+            current = current.parent;
+        }
+        return false;
     }
 
     #region Mirror Commands & Hooks
@@ -446,7 +480,15 @@ public class PlayerV2_Arms : NetworkBehaviour
                 joint.connectedMassScale = 0.00001f;
             }
 
-            if (LockAngularX) joint.angularXMotion = ConfigurableJointMotion.Locked;
+            if (LockAngularX) 
+            {
+                bool isHand = false;
+                if (_leftElbowWristJoints.Count > 0 && joint == _leftElbowWristJoints[_leftElbowWristJoints.Count - 1]) isHand = true;
+                if (_rightElbowWristJoints.Count > 0 && joint == _rightElbowWristJoints[_rightElbowWristJoints.Count - 1]) isHand = true;
+
+                if (!isHand) joint.angularXMotion = ConfigurableJointMotion.Locked;
+                else joint.angularXMotion = ConfigurableJointMotion.Free;
+            }
 
             if (EnableJointProjection)
             {
