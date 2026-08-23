@@ -1,3 +1,21 @@
+## [2026-08-23] Correction Direction Courbe Bras (Pitch vs Yaw)
+**Goal:** Empêcher les bras de faire un arc de cercle sur les côtés (effet crabe) et forcer la courbe sur l'axe vertical (Pitch) quand le joueur vise en haut ou en bas.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: La tangente de départ (p1) de la courbe de Bézier utilise désormais _controller.TorsoRigidbody.transform.forward au lieu du orward de l'épaule.
+**Justification:** Le modèle 3D du joueur a des épaules qui s'orientent physiquement à 90 degrés vers l'extérieur (gauche/droite) quand le bras est sorti. En utilisant le vecteur *forward* de l'épaule pour initier la courbe, le bras partait vers l'extérieur avant de revenir vers le centre, créant une courbe horizontale très étrange. En utilisant le vecteur *forward* du Torse (qui est toujours parfaitement horizontal et pointe devant le joueur), on force la courbe à démarrer tout droit, puis à s'arrondir doucement vers le haut ou vers le bas (sur l'axe du Pitch) pour rejoindre la cible visée par la caméra.
+
+## [2026-08-22] Refonte de l'Arc en Courbe de Bézier
+**Goal:** Éviter que le premier segment du bras (à la base) ne prenne toute la rotation et forme un angle dur à 90 degrés.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Remplacement de l'offset sinus sur un Lerp par une vraie courbe de Bézier Cubique (Cubic Bezier).
+**Justification:** L'ancienne méthode tirait le bras vers une ligne droite, ce qui forçait la racine (connectée à l'épaule horizontale) à se tordre brutalement à 90° si le joueur visait vers le haut ou le bas. En utilisant une courbe de Bézier, on définit deux points de contrôle (tangentes). Le premier force le début de la courbe à pointer dans la continuité de l'épaule (horizontal), et le second force la fin à pointer vers la cible (dans l'axe du regard). Le bras s'enroule désormais parfaitement sans aucune cassure à la base, et le paramètre ArcHeight agit comme la puissance de cette tangente (le 'mou' de la tentacule).
+
+## [2026-08-22] Ajout Courbe Bras (Arc)
+**Goal:** Rendre le bras plus arrondi et organique lorsqu'il est tendu, au lieu d'une ligne parfaitement droite.
+**Changes:**
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout du paramètre ArcHeight dans l'inspecteur. Modification de ApplyArmPhysicsForces pour ajouter un offset basé sur Mathf.Sin sur la cible physique de chaque segment.
+**Justification:** Au lieu d'interpoler linéairement (Vector3.Lerp) les cibles physiques sur une ligne droite parfaite entre l'épaule et la main, on applique une sinusoïde (Mathf.Sin). Le sinus fait 0 à l'épaule, monte à 1 au milieu du bras, et redescend à 0 à la main. En multipliant ça par le vecteur *Up* (le haut de la caméra) et par ArcHeight, on force la physique à courber le bras vers le haut, créant un arc parabolique naturel de type 'tentacule'.
+
 ## [2026-08-22] Ajustement GroundCheck (SphereCast)
 **Goal:** Corriger le bug du Raycast qui ratait le sol et faisait sautiller le joueur en boucle.
 **Changes:**
@@ -1929,6 +1947,9 @@
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Added Slerp smoothing, Anticipation multipliers, and World Space rotation decoupling).
 - [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Expanded Gizmo toggles into highly granular inspector parameters and added Anticipation rendering).
+
+
+
 
 
 

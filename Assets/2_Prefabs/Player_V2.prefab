@@ -6015,6 +6015,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  ArcHeight: 5
   ExtendForce: 350
   ExtendDamping: 12
   AlignmentTorque: 20

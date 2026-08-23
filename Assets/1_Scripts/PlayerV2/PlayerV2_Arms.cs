@@ -15,6 +15,8 @@ using UnityEngine;
 public class PlayerV2_Arms : NetworkBehaviour
 {
     [Header("Physics Tuning Parameters")]
+    [Tooltip("Hauteur de l'arc (courbe) formé par le bras en extension pour un rendu plus organique.")]
+    public float ArcHeight = 1f;
     public float ExtendForce = 350f;
     public float ExtendDamping = 12f;
     public float AlignmentTorque = 20f;
@@ -298,9 +300,27 @@ public class PlayerV2_Arms : NetworkBehaviour
 
                 if (weight > 0f)
                 {
-                    // FIX VIBRATION : Au lieu de tirer tous les segments vers le même point (ce qui les écrase les uns dans les autres),
-                    // on tire chaque segment vers sa place "naturelle" sur la ligne imaginaire du bras tendu.
-                    Vector3 segmentTargetPos = Vector3.Lerp(armRootPos, finalTargetPosition, weight);
+                    // FIX COURBE NATURELLE SUR LE PITCH (Bézier Cubique) : 
+                    // Pour éviter que la base ne prenne toute la rotation (angle droit) quand on regarde en haut/bas,
+                    // le début de la courbe part Droit Devant le torse (horizontal), et la fin s'aligne sur la caméra.
+                    
+                    Vector3 torsoForward = _controller.TorsoRigidbody.transform.forward;
+
+                    Vector3 p0 = armRootPos;
+                    // Le point de contrôle 1 pousse dans l'axe du torse (génère la courbe verticale / pitch)
+                    Vector3 p1 = p0 + torsoForward * (armLength * ArcHeight);
+                    // Le point de contrôle 2 pousse en arrière depuis la cible dans l'axe du regard
+                    Vector3 p2 = finalTargetPosition - forward * (armLength * ArcHeight);
+                    Vector3 p3 = finalTargetPosition;
+
+                    float t = weight;
+                    float u = 1f - t;
+                    float tt = t * t;
+                    float uu = u * u;
+                    float uuu = uu * u;
+                    float ttt = tt * t;
+
+                    Vector3 segmentTargetPos = uuu * p0 + 3f * uu * t * p1 + 3f * u * tt * p2 + ttt * p3;
 
                     Vector3 toTarget = segmentTargetPos - rb.position;
                     Vector3 extensionForce = toTarget * (ExtendForce * weight);
