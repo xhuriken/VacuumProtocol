@@ -1,3 +1,9 @@
+## [2026-08-23] Synchronisation des Saccades des Yeux
+**Goal:** Empêcher l'effet 'caméléon' (les deux yeux qui bougent indépendamment dans des directions différentes) lors des saccades.
+**Changes:**
+- **`Eye.cs` [MODIFIED]**: Mise en place d'un système Maitre/Esclave au démarrage (Start). Le premier oeil trouvé sur le joueur devient le maitre et calcule les saccades aléatoires. L'autre oeil devient l'esclave et copie l'offset _currentSaccadeOffset du maitre au lieu de générer le sien.
+**Justification:** Comme chaque script Eye.cs est indépendant et calcule ses propres valeurs aléatoires Random.insideUnitCircle, les deux yeux pointaient inévitablement dans des directions différentes, donnant au robot un regard très étrange. Le design Maitre/Esclave permet aux deux composants de rester parfaitement parallèles et synchronisés sans nécessiter la création d'un script gestionnaire centralisé lourd.
+
 ## [2026-08-23] Correction Direction Courbe Bras (Pitch vs Yaw)
 **Goal:** Empêcher les bras de faire un arc de cercle sur les côtés (effet crabe) et forcer la courbe sur l'axe vertical (Pitch) quand le joueur vise en haut ou en bas.
 **Changes:**
@@ -1947,6 +1953,7 @@
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Added Slerp smoothing, Anticipation multipliers, and World Space rotation decoupling).
 - [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs) (Expanded Gizmo toggles into highly granular inspector parameters and added Anticipation rendering).
+
 
 
 

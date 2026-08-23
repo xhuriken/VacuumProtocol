@@ -6054,12 +6054,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VacuumProtocol.PlayerV2.PlayerV2_Gizmos
   ShowViewRangeGizmos: 0
-  ShowVacuumArmGizmos: 0
-  ShowShooterArmGizmos: 0
+  ShowVacuumArmGizmos: 1
+  ShowShooterArmGizmos: 1
   ShowHeadAnglesGizmos: 0
   ShowEyesGizmos: 0
   ShowCameraGizmos: 0
-  ShowSuspensionGizmos: 1
+  ShowSuspensionGizmos: 0
 --- !u!114 &8116493350128248048
 MonoBehaviour:
   m_ObjectHideFlags: 0
