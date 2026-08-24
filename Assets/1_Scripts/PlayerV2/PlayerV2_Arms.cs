@@ -63,6 +63,7 @@ public class PlayerV2_Arms : NetworkBehaviour
     public bool FreeHangAtRest = true;
 
     // Synchronized Variables
+    [Header("Network Sync")]
     [SyncVar(hook = nameof(OnLeftArmStateChanged))]
     private bool _isLeftArmExtended = false;
 
@@ -208,7 +209,6 @@ public class PlayerV2_Arms : NetworkBehaviour
 
         if (leftInput != _isLeftArmExtended)
         {
-            // Prédiction locale pour supprimer la saccade réseau !
             OnLeftArmStateChanged(_isLeftArmExtended, leftInput);
             _isLeftArmExtended = leftInput;
             CmdSetLeftArmExtended(leftInput);
@@ -216,7 +216,6 @@ public class PlayerV2_Arms : NetworkBehaviour
 
         if (rightInput != _isRightArmExtended)
         {
-            // Prédiction locale pour supprimer la saccade réseau !
             OnRightArmStateChanged(_isRightArmExtended, rightInput);
             _isRightArmExtended = rightInput;
             CmdSetRightArmExtended(rightInput);

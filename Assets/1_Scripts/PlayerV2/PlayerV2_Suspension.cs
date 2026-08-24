@@ -109,6 +109,13 @@ public class PlayerV2_Suspension : MonoBehaviour
             joint.angularYMotion = ConfigurableJointMotion.Locked;
             joint.angularZMotion = ConfigurableJointMotion.Locked;
 
+            // FIX: Projection for multiplayer
+            // Forcer le moteur physique à "téléporter" la roue sous le robot si elle commence à traîner (décalage horizontal)
+            // à cause du NetworkTransform qui déplace le parent de manière non-physique (téléportation/interpolation).
+            joint.projectionMode = JointProjectionMode.PositionAndRotation;
+            joint.projectionDistance = 0.02f; // Tolérance de 2cm avant le snap
+            joint.projectionAngle = 180f;
+
             // IMPORTANT : Pour éviter les explosions physiques (le robot expulsé en l'air) et les vrilles,
             // il FAUT que les roues glissent parfaitement, sinon la friction fait levier et détruit le joint.
             Collider wheelCollider = joint.GetComponent<Collider>();

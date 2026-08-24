@@ -91,18 +91,9 @@ public class PlayerV2_Movement : NetworkBehaviour
         UpdateGroundCheckAndCompression();
 
         // --- Crouch (Head & Arms Retraction) ---
-        if (_controller.HeadController != null && _controller.ArmsController != null)
+        if (_input.IsCrouching != _controller.IsCrouching)
         {
-            if (_input.IsCrouching)
-            {
-                _controller.HeadController.SetHeadHeightOffset(CrouchHeadOffset);
-                _controller.ArmsController.SetArmRetraction(true);
-            }
-            else
-            {
-                _controller.HeadController.SetHeadHeightOffset(0f);
-                _controller.ArmsController.SetArmRetraction(false);
-            }
+            _controller.CmdSetCrouching(_input.IsCrouching);
         }
 
         // --- Jump ---

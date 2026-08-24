@@ -81,6 +81,16 @@ public class MouthAnimator : NetworkBehaviour
     private float[] _sampleBuffer = new float[256];
     private int _peerId = -1;
 
+    [SyncVar]
+    private float _syncTargetVolume = 0f;
+    private float _lastSyncTime = 0f;
+
+    [Command(requiresAuthority = false)]
+    private void CmdSyncVolume(float vol)
+    {
+        _syncTargetVolume = vol;
+    }
+
     /// <summary>
     /// Description: Auto-assigns references on startup.
     /// Context: Awake lifecycle event.
@@ -192,6 +202,12 @@ public class MouthAnimator : NetworkBehaviour
         if (isLocalPlayer || IsLobbyPreviewDummy)
         {
             targetVolume = Mathf.Clamp01(_lastPeak * _sensitivity);
+
+            if (isLocalPlayer && Time.time - _lastSyncTime > 0.1f)
+            {
+                CmdSyncVolume(targetVolume);
+                _lastSyncTime = Time.time;
+            }
         }
         else
         {
@@ -237,6 +253,12 @@ public class MouthAnimator : NetworkBehaviour
                 {
                     Debug.Log($"[MouthAnimator] Peer {_peerId} speaking. Peak: {peak:F4} -> Target Vol: {targetVolume:F2}");
                 }
+            }
+
+            // Fallback réseau direct si UniVoice ne retourne rien
+            if (targetVolume <= 0.01f)
+            {
+                targetVolume = _syncTargetVolume;
             }
         }
 

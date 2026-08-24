@@ -1,3 +1,12 @@
+## [2026-08-23] Système de Taches de Saleté (Dirt Stains)
+**Goal:** Implémenter des taches de saleté statiques que les joueurs peuvent aspirer pour collecter de la donnée, avec dégradation visuelle et statistiques réseau.
+**Changes:**
+- **`DirtStain.cs` [NEW]**: Objet réseau représentant la tache. Gère la quantité de saleté (MaxDirtAmount), le drainage côté serveur et met à jour son sprite en fonction du ratio d'usure via SyncVar.
+- **`DirtMetricsManager.cs` [NEW]**: Manager centralisé gardant la trace du total de poussière de l'équipe et communiquant avec les clients (TargetRpc) pour sauvegarder leurs métriques personnelles dans les PlayerPrefs.
+- **`PlayerVacuumController.cs` [MODIFIED]**: Ajout des fonctions DrainDirt() et de la commande CmdDrainDirt() pour extraire les données d'une tache au lieu de la ramasser physiquement.
+- **`VacuumSuctionZone.cs` [MODIFIED]**: Détecte désormais les objets DirtStain dans le cône de vision et appelle la méthode de drainage continu (DirtDrainRatePerSecond) au lieu d'appliquer des forces de Vortex/Attraction.
+**Justification:** Séparation propre de la logique physique (cubes qui volent) et logique de donnée (taches qui se vident). L'aspirateur sert de routeur qui s'adapte au composant trouvé (Collectible ou DirtStain) et laisse le serveur centraliser les scores pour éviter la triche et gérer la coopération sur la même tache.
+
 ## [2026-08-23] Fix Calcul Longueur Bras (Bezier Explosion)
 **Goal:** Corriger le bug où la courbe de Bézier explosait quand le bras droit visait vers le haut ou le bas après avoir ajouté des particules.
 **Changes:**
@@ -2008,3 +2017,33 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 
 
+
+# #   2 4   A o u t   2 0 2 6   -   M u l t i j o u e u r   &   S y n c h r o n i s a t i o n 
+ -   F i x   [ P l a y e r V 2 _ D y n a m i c C r o s s h a i r . c s ]   :   M a s q u a g e   d u   H U D   p o u r   l e s   c l i e n t s   d i s t a n t s . 
+ -   F i x   [ P l a y e r V 2 _ C o n t r o l l e r . c s   /   P l a y e r V 2 _ M o v e m e n t . c s ]   :   A j o u t   d ' u n e   S y n c V a r   I s C r o u c h i n g   p o u r   d i f f u s e r   l ' e t a t   d ' a c c r o u p i s s e m e n t   a u x   a u t r e s   c l i e n t s ,   d e c l e n c h a n t   l a   p h y s i q u e   d e   l a   t e t e . 
+ -   F i x   [ P l a y e r V 2 _ A r m s . c s   /   P l a y e r V 2 _ L o o k . c s ]   :   A j o u t   S y n c V a r   p o u r   l e   P i t c h   d e   l a   c a m e r a   e t   l ' e x t e n s i o n   d e s   b r a s ,   p e r m e t t a n t   a   l ' I K   B e z i e r   d e   t o u r n e r   l o c a l e m e n t   c h e z   t o u t   l e   m o n d e . 
+ -   F i x   [ M o u t h A n i m a t o r . c s ]   :   F a l l b a c k   r e s e a u   a v e c   u n   S y n c V a r   d e   v o l u m e ,   p o u r   f o r c e r   l ' a n i m a t i o n   d e   l a   b o u c h e   d u   h o s t   m e m e   s i   l ' i d   U n i V o i c e   b u g .  
+ 
+## [2026-08-24] - Multiplayer Arm Curvature Fix (PlayerV2_Look)
+
+### Technical Justification & Details
+- **Arm Curve Exaggeration Bug (Remote Clients)**:
+  - In multiplayer, the arm curvature (Bezier physics in PlayerV2_Arms.cs) was heavily exaggerated for remote clients (looking like an elephant scratching).
+  - **Root Cause**: PlayerV2_Arms.cs uses the Camera's orward vector to aim the arms. On remote clients, PlayerV2_Look.cs was applying SyncPitch as a localRotation directly to the Camera. However, since the Camera is parented to the physically-simulated Head (which already bends by 70% pitch due to PlayerV2_Head.cs), the localRotation stacked on top of the physical rotation, resulting in a **170% total pitch angle**.
+  - This caused the Camera's forward vector to point wildly up or down, sending the arms' control points into extreme trajectories.
+- **Fix**: Removed the localRotation override in OnSyncPitchChanged. LateUpdate() now evaluates the **World Rotation** of the camera for ALL clients, correctly combining the physical head's orientation and the remaining mathematical pitch based on SyncPitch and _controller.IsCrouching for remote players. The camera's forward vector is now perfectly identical on all clients, ensuring consistent arm physics.
+
+### Code Modified/Added
+- [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Enabled LateUpdate for remote clients, correctly Slerping World Rotation from synced variables).
+
+## [2026-08-24] - Multiplayer Wheel Suspension Lag Fix (PlayerV2_Suspension)
+
+### Technical Justification & Details
+- **Wheel Visual Lag (Remote Clients)**:
+  - In multiplayer, the remote player's Hips are translated via NetworkTransform (interpolation), which is non-physical. The wheel Rigidbodies, attached via ConfigurableJoints, relied on the physics solver to catch up to the moving anchor. Because the solver uses iterations to resolve the Locked X/Z axes, the wheels were visually left trailing behind the main body during movement.
+- **Fix**:
+  - Enabled JointProjectionMode.PositionAndRotation with a projectionDistance of  .02f (2cm) on the wheels' ConfigurableJoints.
+  - This forces the physics engine to instantly snap/teleport the wheels horizontally under the robot if they start drifting due to network interpolation, completely eliminating the visual disconnect while preserving the vertical (Y) limited suspension bounce.
+
+### Code Modified/Added
+- [MODIFY] [PlayerV2_Suspension.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Suspension.cs) (Added Joint Projection configuration in ApplySuspensionSettings).

@@ -74,6 +74,37 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     [Tooltip("Role: The network connection ID of this client.\nUse Case: Mirror syncing.\nJustification: Allows scripts like the voice chat system to map this specific avatar to a UniVoice network stream.")]
     [SyncVar] public int ConnectionId = -1;
 
+    [Header("Network States")]
+    [SyncVar(hook = nameof(OnCrouchStateChanged))] 
+    public bool IsCrouching;
+
+    [Command]
+    public void CmdSetCrouching(bool crouchState)
+    {
+        IsCrouching = crouchState;
+    }
+
+    private void OnCrouchStateChanged(bool oldVal, bool newVal)
+    {
+        if (HeadController != null && ArmsController != null)
+        {
+            if (newVal)
+            {
+                float crouchOffset = -0.5f;
+                var movement = GetComponent<PlayerV2_Movement>();
+                if (movement != null) crouchOffset = movement.CrouchHeadOffset;
+
+                HeadController.SetHeadHeightOffset(crouchOffset);
+                ArmsController.SetArmRetraction(true);
+            }
+            else
+            {
+                HeadController.SetHeadHeightOffset(0f);
+                ArmsController.SetArmRetraction(false);
+            }
+        }
+    }
+
     [Header("Physics Bodies")]
     [Tooltip("Role: Rigidbody de la base (mouvement).\nUse Case: Déplacement et attache des roues.")]
     public Rigidbody HipsRigidbody;

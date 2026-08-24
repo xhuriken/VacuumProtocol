@@ -22,6 +22,10 @@ public class PlayerV2_Look : NetworkBehaviour
     [Range(0f, 1f)]
     public float HeadMovementBlend = 0f;
 
+    [Header("Network Sync")]
+    [SyncVar(hook = nameof(OnSyncPitchChanged))]
+    public float SyncPitch;
+
     private PlayerV2_Controller _controller;
     private PlayerInputHandler _input; // On réutilise l'input handler existant
     
@@ -46,6 +50,18 @@ public class PlayerV2_Look : NetworkBehaviour
         }
     }
 
+    [Command]
+    public void CmdSetPitch(float pitch)
+    {
+        SyncPitch = pitch;
+    }
+
+    private void OnSyncPitchChanged(float oldVal, float newVal)
+    {
+        // La rotation de la caméra distante est désormais gérée dans le LateUpdate
+        // pour calculer correctement la rotation World sans empiler les angles locaux sur le ressort de la tête.
+    }
+
     private void Update()
     {
         if (!isOwned) return;
@@ -66,32 +82,43 @@ public class PlayerV2_Look : NetworkBehaviour
         _torsoYaw += clampedYawDelta;
         _cameraPitch -= clampedPitchDelta;
         _cameraPitch = Mathf.Clamp(_cameraPitch, MinPitch, MaxPitch);
+
+        // Synchroniser le Pitch sur le réseau si changement significatif (pour économiser de la BP)
+        if (Mathf.Abs(SyncPitch - _cameraPitch) > 1f)
+        {
+            CmdSetPitch(_cameraPitch);
+        }
     }
 
     private void LateUpdate()
     {
-        if (!isOwned) return;
-
         if (_controller.CameraTransform != null)
         {
+            float currentPitch = isOwned ? _cameraPitch : SyncPitch;
+            float currentYaw = isOwned ? _torsoYaw : (_controller.TorsoRigidbody != null ? _controller.TorsoRigidbody.rotation.eulerAngles.y : 0f);
+            bool isCrouching = isOwned ? (_input != null && _input.IsCrouching) : _controller.IsCrouching;
+
             Quaternion finalTargetRot;
 
-            // Cible 0: Totalement stable, pure input mathématique
-            Quaternion targetStable = Quaternion.Euler(_cameraPitch, _torsoYaw, 0f);
+            // Cible 0: Totalement stable, pure input mathématique ou variable réseau
+            Quaternion targetStable = Quaternion.Euler(currentPitch, currentYaw, 0f);
 
             if (_controller.HeadController != null && _controller.HeadController.NeckJoints.Length > 0)
             {
                 // Si accroupi, la tête physique reste à 0 (horizontale), sinon elle prend X% du pitch
-                float headPitch = _input.IsCrouching ? 0f : (_cameraPitch * _controller.HeadController.PitchMultiplier);
+                float headPitch = isCrouching ? 0f : (currentPitch * _controller.HeadController.PitchMultiplier);
                 
-                // On informe le contrôleur de tête de la cible désirée
-                _controller.HeadController.SetTargetPitch(_input.IsCrouching ? 0f : _cameraPitch);
+                if (isOwned)
+                {
+                    // On informe le contrôleur de tête de la cible désirée
+                    _controller.HeadController.SetTargetPitch(isCrouching ? 0f : currentPitch);
+                }
 
                 // Cible 1: Rebond physique de la tête
                 Rigidbody headRb = _controller.HeadController.NeckJoints[_controller.HeadController.NeckJoints.Length - 1].GetComponent<Rigidbody>();
                 
                 // La caméra compense le reste du pitch que la tête n'a pas fait
-                float remainingPitch = _cameraPitch - headPitch;
+                float remainingPitch = currentPitch - headPitch;
                 
                 // On compense les % restants sur le transform physique de la tête
                 Quaternion targetHead = headRb.rotation * Quaternion.Euler(remainingPitch, 0f, 0f);

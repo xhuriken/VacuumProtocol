@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using VacuumProtocol.Mechanics.Dirt;
 
 /// <summary>
 /// Description: Handles the vacuum aspiration logic, trigger zone activation, and spits/launches collected items using the player's arm components.
@@ -157,6 +158,26 @@ public class PlayerVacuumController : NetworkBehaviour
 
         // Notify the server to officially store it
         CmdAbsorbObject(target);
+    }
+
+    /// <summary>
+    /// Demande au serveur de drainer une quantité de saleté d'une tache.
+    /// </summary>
+    public void DrainDirt(DirtStain stain, float drainAmount)
+    {
+        if (stain == null || drainAmount <= 0) return;
+        CmdDrainDirt(stain.gameObject, drainAmount);
+    }
+
+    [Command]
+    private void CmdDrainDirt(GameObject stainObj, float drainAmount)
+    {
+        if (stainObj == null) return;
+        DirtStain stain = stainObj.GetComponent<DirtStain>();
+        if (stain != null)
+        {
+            stain.DrainDirt(drainAmount, connectionToClient);
+        }
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using VacuumProtocol.Mechanics.Dirt;
 
 /// <summary>
 /// Description: Defines the available local axes of a transform.
@@ -68,6 +69,10 @@ public class VacuumSuctionZone : MonoBehaviour
     [Tooltip("Role: Lateral force bringing the item toward the central suction axis.\nUse Case: Guiding target to nozzle center.\nJustification: Prevents objects from getting stuck on the outer colliders of the nozzle.")]
     [SerializeField]
     private float _centripetalForce = 15f;
+    
+    [Header("Dirt Stains Settings")]
+    [Tooltip("Vitesse de drainage d'une tache (en quantité par seconde).")]
+    public float DirtDrainRatePerSecond = 500f;
 
     [Header("Debug Settings")]
     [Tooltip("Role: Toggles editor wireframe drawing.\nUse Case: Tuning suction parameters.\nJustification: Visualizes the cone shape, shrink boundaries, and absorption radius in the Scene tab.")]
@@ -110,18 +115,12 @@ public class VacuumSuctionZone : MonoBehaviour
         if (IsActive)
         {
             // Search for all colliders inside the suction range sphere
-            Collider[] colliders = Physics.OverlapSphere(_nozzleTransform.position, _suctionRange, _collectibleLayer, QueryTriggerInteraction.Ignore);
+            Collider[] colliders = Physics.OverlapSphere(_nozzleTransform.position, _suctionRange, _collectibleLayer, QueryTriggerInteraction.Collide);
             Vector3 suctionDir = GetSuctionDirection();
 
             foreach (Collider col in colliders)
             {
-                Collectible collectible = col.GetComponent<Collectible>();
-                if (collectible == null || collectible.Rb == null)
-                {
-                    continue;
-                }
-
-                Vector3 toItem = collectible.transform.position - _nozzleTransform.position;
+                Vector3 toItem = col.transform.position - _nozzleTransform.position;
                 float distance = toItem.magnitude;
 
                 if (distance < 0.01f)
@@ -141,8 +140,27 @@ public class VacuumSuctionZone : MonoBehaviour
                 }
 
                 // Check occlusion/surface exposure via optimized multi-raycast
-                float visibilityFactor = CalculateVisibility(collectible, toItem);
+                float visibilityFactor = CalculateVisibility(col.transform, toItem);
                 if (visibilityFactor <= 0.01f)
+                {
+                    continue;
+                }
+
+                // Handle DirtStain (taches statiques sans physique)
+                DirtStain stain = col.GetComponent<DirtStain>();
+                if (stain != null)
+                {
+                    if (_playerVacuum != null && _playerVacuum.isLocalPlayer)
+                    {
+                        float amountToDrain = DirtDrainRatePerSecond * Time.fixedDeltaTime * visibilityFactor;
+                        _playerVacuum.DrainDirt(stain, amountToDrain);
+                    }
+                    continue; // On passe à l'objet suivant, pas de physique pour les taches
+                }
+
+                // Handle Physical Collectibles
+                Collectible collectible = col.GetComponent<Collectible>();
+                if (collectible == null || collectible.Rb == null)
                 {
                     continue;
                 }
@@ -256,7 +274,7 @@ public class VacuumSuctionZone : MonoBehaviour
     /// Context: Called by FixedUpdate.
     /// Justification: Simulates how much of the object's surface is exposed to the suction nozzle, reducing force if partially blocked.
     /// </summary>
-    private float CalculateVisibility(Collectible collectible, Vector3 toItem)
+    private float CalculateVisibility(Transform targetTransform, Vector3 toItem)
     {
         int raysPassed = 0;
         int totalRays = 3;
@@ -273,9 +291,9 @@ public class VacuumSuctionZone : MonoBehaviour
 
         Vector3[] targets = new Vector3[]
         {
-            collectible.transform.position,
-            collectible.transform.position + offset,
-            collectible.transform.position - offset
+            targetTransform.position,
+            targetTransform.position + offset,
+            targetTransform.position - offset
         };
 
         foreach (Vector3 target in targets)
@@ -283,9 +301,9 @@ public class VacuumSuctionZone : MonoBehaviour
             Vector3 rayDir = target - _nozzleTransform.position;
             float rayDist = rayDir.magnitude;
 
-            if (Physics.Raycast(_nozzleTransform.position, rayDir.normalized, out RaycastHit hit, rayDist, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(_nozzleTransform.position, rayDir.normalized, out RaycastHit hit, rayDist, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
             {
-                if (hit.transform == collectible.transform || hit.transform.IsChildOf(collectible.transform))
+                if (hit.transform == targetTransform || hit.transform.IsChildOf(targetTransform))
                 {
                     raysPassed++;
                 }

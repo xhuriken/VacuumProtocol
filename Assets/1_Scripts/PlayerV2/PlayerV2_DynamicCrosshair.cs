@@ -28,6 +28,11 @@ public class PlayerV2_DynamicCrosshair : MonoBehaviour
         if (MainCamera == null) MainCamera = Camera.main;
         if (Player == null) Player = FindFirstObjectByType<PlayerV2_Controller>();
         if (Player != null) _arms = Player.GetComponent<PlayerV2_Arms>();
+
+        if (Player != null && !Player.isOwned)
+        {
+            gameObject.SetActive(false);
+        }
     }
 
     private void Update()
