@@ -45,6 +45,10 @@ public class Eye : NetworkBehaviour
     [SyncVar]
     private Quaternion _syncedPupilTargetLocalRotation;
     
+    [SyncVar]
+    private float _syncedEyeScale = 1f;
+    private Vector3 _eyeInitialScale;
+    
     private Quaternion _pupilInitialWorldRotOffset;
 
     [Header("Saccades (Idle Movement)")]
@@ -89,6 +93,7 @@ public class Eye : NetworkBehaviour
         _syncedTargetLocalRotation = _initialLocalRotation;
 
         _pupilInitialLocalRot = _pupilBone.localRotation;
+        _eyeInitialScale = transform.localScale;
         _syncedPupilTargetLocalRotation = _pupilInitialLocalRot;
         
         // Cache the initial pupil offset relative to the eye transform
@@ -129,24 +134,27 @@ public class Eye : NetworkBehaviour
     }
 
     [Command]
-    private void CmdSetEyeTargets(Quaternion eyeRot, Quaternion pupilRot)
+    private void CmdSetEyeTargets(Quaternion eyeRot, Quaternion pupilRot, float eyeScale)
     {
         _syncedTargetLocalRotation = eyeRot;
         _syncedPupilTargetLocalRotation = pupilRot;
+        _syncedEyeScale = eyeScale;
     }
 
-    private void UpdateSyncedTargets(Quaternion newEyeRot, Quaternion newPupilRot)
+    private void UpdateSyncedTargets(Quaternion newEyeRot, Quaternion newPupilRot, float newEyeScale)
     {
         if (Quaternion.Angle(_syncedTargetLocalRotation, newEyeRot) > 1f ||
-            Quaternion.Angle(_syncedPupilTargetLocalRotation, newPupilRot) > 1f)
+            Quaternion.Angle(_syncedPupilTargetLocalRotation, newPupilRot) > 1f ||
+            Mathf.Abs(_syncedEyeScale - newEyeScale) > 0.05f)
         {
-            CmdSetEyeTargets(newEyeRot, newPupilRot);
+            CmdSetEyeTargets(newEyeRot, newPupilRot, newEyeScale);
             _syncedTargetLocalRotation = newEyeRot;
             _syncedPupilTargetLocalRotation = newPupilRot;
+            _syncedEyeScale = newEyeScale;
         }
     }
 
-    private void UpdateSaccades()
+    private void UpdateSaccades(int priority, bool hasEntityTarget, float distance)
     {
         // Synchronisation : Si je ne suis pas le maitre, je copie exactement sa saccade
         if (_masterEye != null && _masterEye != this)
@@ -162,8 +170,31 @@ public class Eye : NetworkBehaviour
             return;
         }
 
-        // Si on tourne la tête rapidement, on annule les saccades pour recentrer le regard (Focus)
-        if (_headAngularSpeed > _headMovementThreshold)
+        // Rayon de base pour l'idle
+        float radius = _saccadeRadius;
+        Vector2 interval = _saccadeInterval;
+
+        if (hasEntityTarget)
+        {
+            // Focus normal sur une entité (~2.5 degrés)
+            radius = distance * 0.04f;
+        }
+
+        if (priority >= 3)
+        {
+            // Peur (Fear) : Tremblement large proportionnel à la distance
+            radius = distance * 0.15f;
+            interval = new Vector2(0.02f, 0.08f);
+        }
+        else if (priority >= 2)
+        {
+            // Attention/Curiosité : Yeuter l'objet (Scanner ses contours, ~7 degrés)
+            radius = distance * 0.12f;
+            interval = new Vector2(0.15f, 0.5f);
+        }
+
+        // Si on tourne la tête rapidement, on annule les saccades pour recentrer le regard (Focus), sauf si on a peur
+        if (_headAngularSpeed > _headMovementThreshold && priority < 3)
         {
             _currentSaccadeOffset = Vector3.Lerp(_currentSaccadeOffset, Vector3.zero, Time.deltaTime * 10f);
             _nextSaccadeTime = Time.time + Random.Range(0.2f, 0.5f); // Pause avant de reprendre
@@ -173,9 +204,9 @@ public class Eye : NetworkBehaviour
         // Déclenchement d'un accoup sec aléatoire
         if (Time.time >= _nextSaccadeTime)
         {
-            Vector2 randomCircle = Random.insideUnitCircle * _saccadeRadius;
+            Vector2 randomCircle = Random.insideUnitCircle * radius;
             _currentSaccadeOffset = _cameraTransform.right * randomCircle.x + _cameraTransform.up * randomCircle.y;
-            _nextSaccadeTime = Time.time + Random.Range(_saccadeInterval.x, _saccadeInterval.y);
+            _nextSaccadeTime = Time.time + Random.Range(interval.x, interval.y);
         }
     }
 
@@ -190,9 +221,24 @@ public class Eye : NetworkBehaviour
         // Si on est accroupi, on ignore les entités pour forcer la vue vers la caméra
         bool isCrouching = _input != null && _input.IsCrouching;
 
-        if (_playerViewRange.HighestPriorityEntity != null && !isCrouching)
+        bool hasEntityTarget = _playerViewRange.HighestPriorityEntity != null && !isCrouching;
+        int priority = 0;
+        float distanceToTarget = 20f; // Distance virtuelle par défaut pour l'idle
+
+        if (hasEntityTarget)
         {
-            Vector3 targetPosition = _playerViewRange.HighestPriorityEntity.LookAtPoint.position;
+            priority = _playerViewRange.HighestPriorityEntity.PriorityLevel;
+            distanceToTarget = Vector3.Distance(transform.position, _playerViewRange.HighestPriorityEntity.LookAtPoint.position);
+        }
+
+        UpdateSaccades(priority, hasEntityTarget, distanceToTarget);
+        
+        float targetEyeScale = 1f;
+        if (priority >= 3) targetEyeScale = 1.3f; // L'oeil entier s'écarquille (grossit) par la peur
+
+        if (hasEntityTarget)
+        {
+            Vector3 targetPosition = _playerViewRange.HighestPriorityEntity.LookAtPoint.position + _currentSaccadeOffset;
             Vector3 directionToTarget = targetPosition - transform.position;
 
             if (directionToTarget.sqrMagnitude > 0.001f)
@@ -204,8 +250,6 @@ public class Eye : NetworkBehaviour
         }
         else if (_cameraTransform != null)
         {
-            UpdateSaccades();
-
             // Cible la direction exacte de ce que la caméra regarde (un point virtuel à distance)
             // + l'offset de saccade aléatoire
             Vector3 virtualTarget = _cameraTransform.position + _cameraTransform.forward * 20f + _currentSaccadeOffset;
@@ -231,7 +275,7 @@ public class Eye : NetworkBehaviour
             Quaternion pupilTargetWorld = Quaternion.Slerp(baseWorldRot, worldLookRot, _pupilTargetWeight);
             Quaternion newPupilTargetLocal = Quaternion.Inverse(_pupilBone.parent.rotation) * (pupilTargetWorld * _pupilInitialWorldRotOffset);
 
-            UpdateSyncedTargets(newTargetLocal, newPupilTargetLocal);
+            UpdateSyncedTargets(newTargetLocal, newPupilTargetLocal, targetEyeScale);
 
             if (_enableDebugLogs && _playerViewRange.HighestPriorityEntity != null)
             {
@@ -241,7 +285,7 @@ public class Eye : NetworkBehaviour
         else
         {
             // Reset both to forward-facing orientations if target is lost
-            UpdateSyncedTargets(_initialLocalRotation, _pupilInitialLocalRot);
+            UpdateSyncedTargets(_initialLocalRotation, _pupilInitialLocalRot, 1f);
         }
     }
 
@@ -264,6 +308,12 @@ public class Eye : NetworkBehaviour
             _pupilBone.localRotation,
             _syncedPupilTargetLocalRotation,
             Time.deltaTime * _pupilRotationSpeed
+        );
+
+        transform.localScale = Vector3.Lerp(
+            transform.localScale,
+            _eyeInitialScale * _syncedEyeScale,
+            Time.deltaTime * 15f
         );
     }
 }

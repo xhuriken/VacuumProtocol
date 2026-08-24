@@ -2047,3 +2047,39 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 ### Code Modified/Added
 - [MODIFY] [PlayerV2_Suspension.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Suspension.cs) (Added Joint Projection configuration in ApplySuspensionSettings).
+
+## [2026-08-24] - Entity-Aware Eye Saccades & Fear State (Eye.cs)
+
+### Technical Justification & Details
+- **Entity-Aware Saccades**: Saccades (eye micro-movements) were previously only applied when staring into the void (_cameraTransform tracking). They are now applied on top of the entity tracking target as well, making the eyes feel much more alive when locking onto objects.
+- **Priority-Based Emotions & Fear State**:
+  - The UpdateSaccades method now takes the PriorityLevel of the currently tracked entity.
+  - **Priority 2 (Curiosity/Attention)**: Increases saccade radius (1.5x) and frequency.
+  - **Priority 3+ (Fear)**: Greatly increases saccade radius (3x) and makes the frequency extremely high (shaking). Additionally, it scales down the pupil to 50% to simulate a contracted, scared pupil.
+- **Network Sync**: Added a new [SyncVar] _syncedPupilScale to ensure the pupil contraction (fear) is visible to all other players in multiplayer.
+
+### Code Modified/Added
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Refactored UpdateSaccades and CalculateTargetRotation to support priority-based scaling and shaking).
+
+## [2026-08-24] - Distance-Proportional Eye Saccades (Eye.cs)
+
+### Technical Justification & Details
+- **Proportional Saccade Radius**:
+  - Previously, saccades used an absolute world-space radius (e.g. 1.5m). When tracking nearby entities (e.g. 2m away), this caused the eyes to look completely away from the object (a 37-degree error).
+  - **Fix**: Saccade radius is now scaled dynamically based on the **distance to the target entity** using a multiplier. This guarantees a consistent angular scan regardless of distance.
+  - **Priority 1 (Focus)**: adius = distance * 0.04f (~2.5 degrees), keeping the gaze tight on the object's core.
+  - **Priority 2 (Curiosity)**: adius = distance * 0.12f (~7 degrees), causing the eye to intelligently scan the contours/bounds of the object.
+  - **Priority 3+ (Fear)**: adius = distance * 0.15f (~8.5 degrees) with extremely high frequency, simulating a wide shaking panic on the object.
+
+### Code Modified/Added
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Replaced hardcoded saccade radius with distance-proportional scaling when an entity is targeted).
+
+## [2026-08-24] - Eye Fear Scale Correction (Eye.cs)
+
+### Technical Justification & Details
+- **Scale Target Fix**: Based on feedback, the fear animation was mistakenly shrinking the pupil bone instead of scaling the entire eye.
+- **Fix**: Replaced the pupil scaling logic with a full eye scaling logic. The 	ransform (the whole eye) now scales up to 1.3x when facing a Priority 3 entity to create a 'bulging eyes' fear effect, while preserving the shaking.
+- **Network Sync**: Renamed _syncedPupilScale to _syncedEyeScale to ensure the entire eye scale is properly synchronized across the network.
+
+### Code Modified/Added
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Re-targeted scaling from _pupilBone to 	ransform and renamed sync vars).

@@ -10068,9 +10068,9 @@ MonoBehaviour:
   geometry: 1
   colorMode: 0
   colorEnd: {r: 1, g: 1, b: 1, a: 1}
-  start: {x: -0.2, y: -0.2, z: 0}
-  end: {x: 0.2, y: 0.2, z: 0}
-  thickness: 0.057
+  start: {x: -0.05, y: -0.05, z: 0}
+  end: {x: 0.05, y: 0.05, z: 0}
+  thickness: 0.05
   thicknessSpace: 0
   endCaps: 0
   matchDashSpacingToSize: 1
@@ -11003,9 +11003,9 @@ MonoBehaviour:
   geometry: 1
   colorMode: 0
   colorEnd: {r: 1, g: 1, b: 1, a: 1}
-  start: {x: -0.2, y: 0.2, z: 0}
-  end: {x: 0.2, y: -0.2, z: 0}
-  thickness: 0.057
+  start: {x: -0.05, y: 0.05, z: 0}
+  end: {x: 0.05, y: -0.05, z: 0}
+  thickness: 0.05
   thicknessSpace: 0
   endCaps: 0
   matchDashSpacingToSize: 1
