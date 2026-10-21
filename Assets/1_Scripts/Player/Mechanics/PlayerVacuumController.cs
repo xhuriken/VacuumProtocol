@@ -25,6 +25,7 @@ public class PlayerVacuumController : NetworkBehaviour
     private PlayerV2_Arms _armsController;
     private PlayerInventory _inventory;
     private VacuumSuctionZone _suctionZone;
+    private MouthSuctionZone _mouthSuctionZone;
     private bool _wasLeftArmPressed = false;
     private float _leftArmPressTime = 0f;
     private bool _hasSpittedForCurrentClick = false;
@@ -46,6 +47,7 @@ public class PlayerVacuumController : NetworkBehaviour
         _input = GetComponent<PlayerInputHandler>();
         _armsController = GetComponent<PlayerV2_Arms>();
         _inventory = GetComponent<PlayerInventory>();
+        _mouthSuctionZone = GetComponentInChildren<MouthSuctionZone>(true);
     }
 
     /// <summary>
@@ -67,7 +69,7 @@ public class PlayerVacuumController : NetworkBehaviour
     private void Update()
     {
         // Keep checking for the suction zone in case of delayed initialization
-        if (_suctionZone == null)
+        if (_suctionZone == null || _mouthSuctionZone == null)
         {
             TryCacheSuctionZone();
         }
@@ -78,8 +80,14 @@ public class PlayerVacuumController : NetworkBehaviour
             _suctionZone.IsActive = _armsController.IsRightArmExtended;
         }
 
+        // Enable or disable the mouth suction zone based on the dual-click vacuum state
+        if (_mouthSuctionZone != null)
+        {
+            _mouthSuctionZone.IsActive = _isVacuuming;
+        }
+
         // Input and networking actions are only handled by the local player
-        if (!isLocalPlayer)
+        if (!isOwned)
         {
             return;
         }
@@ -181,6 +189,47 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
+    /// Description: Requests the server to drain health from a target Phantom during mouth suction.
+    /// Context: Called by MouthSuctionZone.
+    /// </summary>
+    /// <param name="phantom">The PhantomBase entity to drain.</param>
+    /// <param name="drainAmount">Amount of health to drain.</param>
+    public void DrainPhantom(PhantomBase phantom, float drainAmount)
+    {
+        if (phantom == null || drainAmount <= 0f)
+        {
+            return;
+        }
+
+        if (isServer)
+        {
+            phantom.DrainHealthServer(drainAmount, gameObject);
+        }
+        else
+        {
+            CmdDrainPhantom(phantom.gameObject, drainAmount);
+        }
+    }
+
+    /// <summary>
+    /// Description: Network command to drain phantom health on the server.
+    /// </summary>
+    [Command]
+    private void CmdDrainPhantom(GameObject phantomObj, float drainAmount)
+    {
+        if (phantomObj == null)
+        {
+            return;
+        }
+
+        PhantomBase phantom = phantomObj.GetComponent<PhantomBase>();
+        if (phantom != null)
+        {
+            phantom.DrainHealthServer(drainAmount, gameObject);
+        }
+    }
+
+    /// <summary>
     /// Description: Ensure the audio state is correct when a player joins or the object is spawned.
     /// Context: Mirror NetworkBehaviour lifecycle event.
     /// Justification: Late-joiners need to hear if a player is already vacuuming upon connection.
@@ -227,7 +276,7 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Attempts to cache the VacuumSuctionZone component by checking the Right Hand hierarchy.
+    /// Description: Attempts to cache the VacuumSuctionZone component by checking the Right Hand hierarchy and MouthSuctionZone.
     /// Context: Called during initialization and update loops.
     /// Justification: Since the arm hierarchy is procedural, we must search dynamically for the trigger zone once the arms are fully built.
     /// </summary>
@@ -236,6 +285,11 @@ public class PlayerVacuumController : NetworkBehaviour
         if (_armsController != null && _armsController.RightHand != null)
         {
             _suctionZone = _armsController.RightHand.GetComponentInChildren<VacuumSuctionZone>(true);
+        }
+
+        if (_mouthSuctionZone == null)
+        {
+            _mouthSuctionZone = GetComponentInChildren<MouthSuctionZone>(true);
         }
     }
 

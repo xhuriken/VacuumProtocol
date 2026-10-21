@@ -1,114 +1,114 @@
-## [2026-08-23] Système de Taches de Saleté (Dirt Stains)
-**Goal:** Implémenter des taches de saleté statiques que les joueurs peuvent aspirer pour collecter de la donnée, avec dégradation visuelle et statistiques réseau.
+## [2026-08-23] SystÃ¨me de Taches de SaletÃ© (Dirt Stains)
+**Goal:** ImplÃ©menter des taches de saletÃ© statiques que les joueurs peuvent aspirer pour collecter de la donnÃ©e, avec dÃ©gradation visuelle et statistiques rÃ©seau.
 **Changes:**
-- **`DirtStain.cs` [NEW]**: Objet réseau représentant la tache. Gère la quantité de saleté (MaxDirtAmount), le drainage côté serveur et met à jour son sprite en fonction du ratio d'usure via SyncVar.
-- **`DirtMetricsManager.cs` [NEW]**: Manager centralisé gardant la trace du total de poussière de l'équipe et communiquant avec les clients (TargetRpc) pour sauvegarder leurs métriques personnelles dans les PlayerPrefs.
-- **`PlayerVacuumController.cs` [MODIFIED]**: Ajout des fonctions DrainDirt() et de la commande CmdDrainDirt() pour extraire les données d'une tache au lieu de la ramasser physiquement.
-- **`VacuumSuctionZone.cs` [MODIFIED]**: Détecte désormais les objets DirtStain dans le cône de vision et appelle la méthode de drainage continu (DirtDrainRatePerSecond) au lieu d'appliquer des forces de Vortex/Attraction.
-**Justification:** Séparation propre de la logique physique (cubes qui volent) et logique de donnée (taches qui se vident). L'aspirateur sert de routeur qui s'adapte au composant trouvé (Collectible ou DirtStain) et laisse le serveur centraliser les scores pour éviter la triche et gérer la coopération sur la même tache.
+- **`DirtStain.cs` [NEW]**: Objet rÃ©seau reprÃ©sentant la tache. GÃ¨re la quantitÃ© de saletÃ© (MaxDirtAmount), le drainage cÃ´tÃ© serveur et met Ã  jour son sprite en fonction du ratio d'usure via SyncVar.
+- **`DirtMetricsManager.cs` [NEW]**: Manager centralisÃ© gardant la trace du total de poussiÃ¨re de l'Ã©quipe et communiquant avec les clients (TargetRpc) pour sauvegarder leurs mÃ©triques personnelles dans les PlayerPrefs.
+- **`PlayerVacuumController.cs` [MODIFIED]**: Ajout des fonctions DrainDirt() et de la commande CmdDrainDirt() pour extraire les donnÃ©es d'une tache au lieu de la ramasser physiquement.
+- **`VacuumSuctionZone.cs` [MODIFIED]**: DÃ©tecte dÃ©sormais les objets DirtStain dans le cÃ´ne de vision et appelle la mÃ©thode de drainage continu (DirtDrainRatePerSecond) au lieu d'appliquer des forces de Vortex/Attraction.
+**Justification:** SÃ©paration propre de la logique physique (cubes qui volent) et logique de donnÃ©e (taches qui se vident). L'aspirateur sert de routeur qui s'adapte au composant trouvÃ© (Collectible ou DirtStain) et laisse le serveur centraliser les scores pour Ã©viter la triche et gÃ©rer la coopÃ©ration sur la mÃªme tache.
 
 ## [2026-08-23] Fix Calcul Longueur Bras (Bezier Explosion)
-**Goal:** Corriger le bug où la courbe de Bézier explosait quand le bras droit visait vers le haut ou le bas après avoir ajouté des particules.
+**Goal:** Corriger le bug oÃ¹ la courbe de BÃ©zier explosait quand le bras droit visait vers le haut ou le bas aprÃ¨s avoir ajoutÃ© des particules.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Mise à jour de CalculateHierarchyLength() pour s'arrêter explicitement à l'os de la main (le dernier Rigidbody) au lieu de parcourir bêtement tous les enfants jusqu'à la fin.
-**Justification:** La méthode CalculateHierarchyLength parcourait récursivement le premier enfant de chaque objet pour additionner la longueur de l'os. Comme le joueur a rajouté le Particle System Force Field en enfant de la main droite (avec son offset positionnel long pour simuler l'aspirateur), le script comptait cet offset comme faisant partie de la longueur physique du bras ! Le bras droit devenait virtuellement gigantesque. Lors de la visée extrême (haut/bas), la courbe de Bézier multipliait la courbure par cette longueur gigantesque, provoquant une explosion. La fonction est désormais sécurisée pour ne compter que les vrais os de la hiérarchie physique.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Mise Ã  jour de CalculateHierarchyLength() pour s'arrÃªter explicitement Ã  l'os de la main (le dernier Rigidbody) au lieu de parcourir bÃªtement tous les enfants jusqu'Ã  la fin.
+**Justification:** La mÃ©thode CalculateHierarchyLength parcourait rÃ©cursivement le premier enfant de chaque objet pour additionner la longueur de l'os. Comme le joueur a rajoutÃ© le Particle System Force Field en enfant de la main droite (avec son offset positionnel long pour simuler l'aspirateur), le script comptait cet offset comme faisant partie de la longueur physique du bras ! Le bras droit devenait virtuellement gigantesque. Lors de la visÃ©e extrÃªme (haut/bas), la courbe de BÃ©zier multipliait la courbure par cette longueur gigantesque, provoquant une explosion. La fonction est dÃ©sormais sÃ©curisÃ©e pour ne compter que les vrais os de la hiÃ©rarchie physique.
 
 ## [2026-08-23] Fix Explosion Physique du Bras Droit
-**Goal:** Corriger le bug où le bras droit partait dans tous les sens et faisait bugger le torse.
+**Goal:** Corriger le bug oÃ¹ le bras droit partait dans tous les sens et faisait bugger le torse.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression du bloc d'initialisation dupliqué pour le bras droit dans la méthode Start().
-**Justification:** Le bloc de recherche des joints était présent deux fois pour le bras droit. Le second bloc (incorrect) utilisait GetComponent au lieu de GetComponentInChildren pour trouver l'épaule, ce qui écrasait la variable _rightShoulderJoint avec une valeur 
-ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'était jamais appliquée sur l'épaule droite. Dès que le bras droit forçait pour viser, il repoussait le torse entier, provoquant un glitch physique incontrôlable. En supprimant le bloc en trop, la bonne référence est conservée et la masse est correctement ignorée.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression du bloc d'initialisation dupliquÃ© pour le bras droit dans la mÃ©thode Start().
+**Justification:** Le bloc de recherche des joints Ã©tait prÃ©sent deux fois pour le bras droit. Le second bloc (incorrect) utilisait GetComponent au lieu de GetComponentInChildren pour trouver l'Ã©paule, ce qui Ã©crasait la variable _rightShoulderJoint avec une valeur 
+ull. ConsÃ©quence : la rustine critique joint.connectedMassScale = 0.00001f n'Ã©tait jamais appliquÃ©e sur l'Ã©paule droite. DÃ¨s que le bras droit forÃ§ait pour viser, il repoussait le torse entier, provoquant un glitch physique incontrÃ´lable. En supprimant le bloc en trop, la bonne rÃ©fÃ©rence est conservÃ©e et la masse est correctement ignorÃ©e.
 
 ## [2026-08-23] Simplification HUD Crosshair
 **Goal:** Supprimer le second crosshair (bras) qui est trop instable visuellement.
 **Changes:**
-- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: Suppression totale de la logique de suivi de la main réelle (HandActualCrosshair).
-**Justification:** Le tracking du bras physique avec un crosshair flottant ajoute beaucoup de bruit visuel à cause des ressorts physiques et de l'offset de rotation (qui peut toujours légèrement fluctuer selon la position du torse et la limite des joints). Comme le joueur ne regarde que le centre de l'écran pour viser (comme dans 99% des jeux de tir/interaction), le second crosshair n'est pas nécessaire en terme de gameplay et pollue l'écran.
+- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: Suppression totale de la logique de suivi de la main rÃ©elle (HandActualCrosshair).
+**Justification:** Le tracking du bras physique avec un crosshair flottant ajoute beaucoup de bruit visuel Ã  cause des ressorts physiques et de l'offset de rotation (qui peut toujours lÃ©gÃ¨rement fluctuer selon la position du torse et la limite des joints). Comme le joueur ne regarde que le centre de l'Ã©cran pour viser (comme dans 99% des jeux de tir/interaction), le second crosshair n'est pas nÃ©cessaire en terme de gameplay et pollue l'Ã©cran.
 
-## [2026-08-23] Fix Dérive du HUD Crosshair (Bras)
-**Goal:** Corriger le fait que le disque du bras dérive sur le côté (droite) au lieu de rester aligné devant la buse.
+## [2026-08-23] Fix DÃ©rive du HUD Crosshair (Bras)
+**Goal:** Corriger le fait que le disque du bras dÃ©rive sur le cÃ´tÃ© (droite) au lieu de rester alignÃ© devant la buse.
 **Changes:**
-- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: La direction visée par le bras (	rueAimDir) est désormais calculée en inversant l'offset de rotation local de la main (HandRotationOffset).
-**Justification:** Le modèle 3D du tentacule a ses axes locaux tournés de 90 degrés (paramétré via HandRotationOffset). De ce fait, faire simplement leftHand.forward renvoyait la direction brute de l'os (le côté de la buse), d'où la fuite du crosshair sur la droite ! En annulant mathématiquement cette rotation via Quaternion.Inverse, on obtient la véritable trajectoire du bout du bras.
+- **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: La direction visÃ©e par le bras (	rueAimDir) est dÃ©sormais calculÃ©e en inversant l'offset de rotation local de la main (HandRotationOffset).
+**Justification:** Le modÃ¨le 3D du tentacule a ses axes locaux tournÃ©s de 90 degrÃ©s (paramÃ©trÃ© via HandRotationOffset). De ce fait, faire simplement leftHand.forward renvoyait la direction brute de l'os (le cÃ´tÃ© de la buse), d'oÃ¹ la fuite du crosshair sur la droite ! En annulant mathÃ©matiquement cette rotation via Quaternion.Inverse, on obtient la vÃ©ritable trajectoire du bout du bras.
 
 ## [2026-08-23] Correction des erreurs (Crosshair / Hand)
-**Goal:** Fixer les erreurs de compilation liées à LeftHand et améliorer le support de Shapes 3D.
+**Goal:** Fixer les erreurs de compilation liÃ©es Ã  LeftHand et amÃ©liorer le support de Shapes 3D.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout des méthodes utilitaires GetLeftHand() et GetRightHand() et suppression de la référence directe dans le check IsHand.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout des mÃ©thodes utilitaires GetLeftHand() et GetRightHand() et suppression de la rÃ©fÃ©rence directe dans le check IsHand.
 - **`PlayerV2_DynamicCrosshair.cs` [MODIFIED]**: Utilisation de Transform standard au lieu de RectTransform. Ajout du toggle UseScreenSpace pour autoriser le positionnement en 3D World (pour un rendu avec des Shapes sans Canvas).
-**Justification:** L'accès à LeftHand n'était pas exposé publiquement dans le controlleur, entraînant des erreurs de compilation. L'implémentation a été revue pour s'adapter à la volonté d'utiliser des composants vectoriels (Shapes) plutôt que des images Canvas standard, en supportant le positionnement 3D direct face à la caméra.
+**Justification:** L'accÃ¨s Ã  LeftHand n'Ã©tait pas exposÃ© publiquement dans le controlleur, entraÃ®nant des erreurs de compilation. L'implÃ©mentation a Ã©tÃ© revue pour s'adapter Ã  la volontÃ© d'utiliser des composants vectoriels (Shapes) plutÃ´t que des images Canvas standard, en supportant le positionnement 3D direct face Ã  la camÃ©ra.
 
-## [2026-08-23] Précision Visée Bras et Crosshair HUD
-**Goal:** Permettre à la main de s'aligner parfaitement avec la cible même avec des angles extrêmes (haut/bas) et ajouter un HUD in-game pour visualiser la différence entre la cible (caméra) et la buse (bras).
+## [2026-08-23] PrÃ©cision VisÃ©e Bras et Crosshair HUD
+**Goal:** Permettre Ã  la main de s'aligner parfaitement avec la cible mÃªme avec des angles extrÃªmes (haut/bas) et ajouter un HUD in-game pour visualiser la diffÃ©rence entre la cible (camÃ©ra) et la buse (bras).
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Désactivation forcée du LockAngularX de l'articulation (ConfigurableJoint) **uniquement** pour la main (le dernier segment du bras).
-- **`PlayerV2_DynamicCrosshair.cs` [ADDED]**: Création d'un script HUD qui projette en temps réel la position ciblée par la caméra et la position réellement visée par la buse sur l'écran.
-**Justification:** Le manque de précision de la main sur l'axe vertical (Pitch) venait du fait que le paramètre LockAngularX verrouillait physiquement l'articulation de la main sur cet axe. La physique l'empêchait donc de s'orienter parfaitement vers le haut ou le bas. En déverrouillant spécifiquement ce segment, la main peut se tordre librement pour épouser l'axe de la cible. Le nouveau script HUD permet au joueur d'avoir un retour visuel précis de cette physique en jeu (à lier dans un Canvas avec des images).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: DÃ©sactivation forcÃ©e du LockAngularX de l'articulation (ConfigurableJoint) **uniquement** pour la main (le dernier segment du bras).
+- **`PlayerV2_DynamicCrosshair.cs` [ADDED]**: CrÃ©ation d'un script HUD qui projette en temps rÃ©el la position ciblÃ©e par la camÃ©ra et la position rÃ©ellement visÃ©e par la buse sur l'Ã©cran.
+**Justification:** Le manque de prÃ©cision de la main sur l'axe vertical (Pitch) venait du fait que le paramÃ¨tre LockAngularX verrouillait physiquement l'articulation de la main sur cet axe. La physique l'empÃªchait donc de s'orienter parfaitement vers le haut ou le bas. En dÃ©verrouillant spÃ©cifiquement ce segment, la main peut se tordre librement pour Ã©pouser l'axe de la cible. Le nouveau script HUD permet au joueur d'avoir un retour visuel prÃ©cis de cette physique en jeu (Ã  lier dans un Canvas avec des images).
 
 ## [2026-08-23] Synchronisation des Saccades des Yeux
-**Goal:** Empêcher l'effet 'caméléon' (les deux yeux qui bougent indépendamment dans des directions différentes) lors des saccades.
+**Goal:** EmpÃªcher l'effet 'camÃ©lÃ©on' (les deux yeux qui bougent indÃ©pendamment dans des directions diffÃ©rentes) lors des saccades.
 **Changes:**
-- **`Eye.cs` [MODIFIED]**: Mise en place d'un système Maitre/Esclave au démarrage (Start). Le premier oeil trouvé sur le joueur devient le maitre et calcule les saccades aléatoires. L'autre oeil devient l'esclave et copie l'offset _currentSaccadeOffset du maitre au lieu de générer le sien.
-**Justification:** Comme chaque script Eye.cs est indépendant et calcule ses propres valeurs aléatoires Random.insideUnitCircle, les deux yeux pointaient inévitablement dans des directions différentes, donnant au robot un regard très étrange. Le design Maitre/Esclave permet aux deux composants de rester parfaitement parallèles et synchronisés sans nécessiter la création d'un script gestionnaire centralisé lourd.
+- **`Eye.cs` [MODIFIED]**: Mise en place d'un systÃ¨me Maitre/Esclave au dÃ©marrage (Start). Le premier oeil trouvÃ© sur le joueur devient le maitre et calcule les saccades alÃ©atoires. L'autre oeil devient l'esclave et copie l'offset _currentSaccadeOffset du maitre au lieu de gÃ©nÃ©rer le sien.
+**Justification:** Comme chaque script Eye.cs est indÃ©pendant et calcule ses propres valeurs alÃ©atoires Random.insideUnitCircle, les deux yeux pointaient inÃ©vitablement dans des directions diffÃ©rentes, donnant au robot un regard trÃ¨s Ã©trange. Le design Maitre/Esclave permet aux deux composants de rester parfaitement parallÃ¨les et synchronisÃ©s sans nÃ©cessiter la crÃ©ation d'un script gestionnaire centralisÃ© lourd.
 
 ## [2026-08-23] Correction Direction Courbe Bras (Pitch vs Yaw)
-**Goal:** Empêcher les bras de faire un arc de cercle sur les côtés (effet crabe) et forcer la courbe sur l'axe vertical (Pitch) quand le joueur vise en haut ou en bas.
+**Goal:** EmpÃªcher les bras de faire un arc de cercle sur les cÃ´tÃ©s (effet crabe) et forcer la courbe sur l'axe vertical (Pitch) quand le joueur vise en haut ou en bas.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: La tangente de départ (p1) de la courbe de Bézier utilise désormais _controller.TorsoRigidbody.transform.forward au lieu du orward de l'épaule.
-**Justification:** Le modèle 3D du joueur a des épaules qui s'orientent physiquement à 90 degrés vers l'extérieur (gauche/droite) quand le bras est sorti. En utilisant le vecteur *forward* de l'épaule pour initier la courbe, le bras partait vers l'extérieur avant de revenir vers le centre, créant une courbe horizontale très étrange. En utilisant le vecteur *forward* du Torse (qui est toujours parfaitement horizontal et pointe devant le joueur), on force la courbe à démarrer tout droit, puis à s'arrondir doucement vers le haut ou vers le bas (sur l'axe du Pitch) pour rejoindre la cible visée par la caméra.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: La tangente de dÃ©part (p1) de la courbe de BÃ©zier utilise dÃ©sormais _controller.TorsoRigidbody.transform.forward au lieu du orward de l'Ã©paule.
+**Justification:** Le modÃ¨le 3D du joueur a des Ã©paules qui s'orientent physiquement Ã  90 degrÃ©s vers l'extÃ©rieur (gauche/droite) quand le bras est sorti. En utilisant le vecteur *forward* de l'Ã©paule pour initier la courbe, le bras partait vers l'extÃ©rieur avant de revenir vers le centre, crÃ©ant une courbe horizontale trÃ¨s Ã©trange. En utilisant le vecteur *forward* du Torse (qui est toujours parfaitement horizontal et pointe devant le joueur), on force la courbe Ã  dÃ©marrer tout droit, puis Ã  s'arrondir doucement vers le haut ou vers le bas (sur l'axe du Pitch) pour rejoindre la cible visÃ©e par la camÃ©ra.
 
-## [2026-08-22] Refonte de l'Arc en Courbe de Bézier
-**Goal:** Éviter que le premier segment du bras (à la base) ne prenne toute la rotation et forme un angle dur à 90 degrés.
+## [2026-08-22] Refonte de l'Arc en Courbe de BÃ©zier
+**Goal:** Ã‰viter que le premier segment du bras (Ã  la base) ne prenne toute la rotation et forme un angle dur Ã  90 degrÃ©s.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Remplacement de l'offset sinus sur un Lerp par une vraie courbe de Bézier Cubique (Cubic Bezier).
-**Justification:** L'ancienne méthode tirait le bras vers une ligne droite, ce qui forçait la racine (connectée à l'épaule horizontale) à se tordre brutalement à 90° si le joueur visait vers le haut ou le bas. En utilisant une courbe de Bézier, on définit deux points de contrôle (tangentes). Le premier force le début de la courbe à pointer dans la continuité de l'épaule (horizontal), et le second force la fin à pointer vers la cible (dans l'axe du regard). Le bras s'enroule désormais parfaitement sans aucune cassure à la base, et le paramètre ArcHeight agit comme la puissance de cette tangente (le 'mou' de la tentacule).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Remplacement de l'offset sinus sur un Lerp par une vraie courbe de BÃ©zier Cubique (Cubic Bezier).
+**Justification:** L'ancienne mÃ©thode tirait le bras vers une ligne droite, ce qui forÃ§ait la racine (connectÃ©e Ã  l'Ã©paule horizontale) Ã  se tordre brutalement Ã  90Â° si le joueur visait vers le haut ou le bas. En utilisant une courbe de BÃ©zier, on dÃ©finit deux points de contrÃ´le (tangentes). Le premier force le dÃ©but de la courbe Ã  pointer dans la continuitÃ© de l'Ã©paule (horizontal), et le second force la fin Ã  pointer vers la cible (dans l'axe du regard). Le bras s'enroule dÃ©sormais parfaitement sans aucune cassure Ã  la base, et le paramÃ¨tre ArcHeight agit comme la puissance de cette tangente (le 'mou' de la tentacule).
 
 ## [2026-08-22] Ajout Courbe Bras (Arc)
 **Goal:** Rendre le bras plus arrondi et organique lorsqu'il est tendu, au lieu d'une ligne parfaitement droite.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout du paramètre ArcHeight dans l'inspecteur. Modification de ApplyArmPhysicsForces pour ajouter un offset basé sur Mathf.Sin sur la cible physique de chaque segment.
-**Justification:** Au lieu d'interpoler linéairement (Vector3.Lerp) les cibles physiques sur une ligne droite parfaite entre l'épaule et la main, on applique une sinusoïde (Mathf.Sin). Le sinus fait 0 à l'épaule, monte à 1 au milieu du bras, et redescend à 0 à la main. En multipliant ça par le vecteur *Up* (le haut de la caméra) et par ArcHeight, on force la physique à courber le bras vers le haut, créant un arc parabolique naturel de type 'tentacule'.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout du paramÃ¨tre ArcHeight dans l'inspecteur. Modification de ApplyArmPhysicsForces pour ajouter un offset basÃ© sur Mathf.Sin sur la cible physique de chaque segment.
+**Justification:** Au lieu d'interpoler linÃ©airement (Vector3.Lerp) les cibles physiques sur une ligne droite parfaite entre l'Ã©paule et la main, on applique une sinusoÃ¯de (Mathf.Sin). Le sinus fait 0 Ã  l'Ã©paule, monte Ã  1 au milieu du bras, et redescend Ã  0 Ã  la main. En multipliant Ã§a par le vecteur *Up* (le haut de la camÃ©ra) et par ArcHeight, on force la physique Ã  courber le bras vers le haut, crÃ©ant un arc parabolique naturel de type 'tentacule'.
 
 ## [2026-08-22] Ajustement GroundCheck (SphereCast)
 **Goal:** Corriger le bug du Raycast qui ratait le sol et faisait sautiller le joueur en boucle.
 **Changes:**
 - **`PlayerV2_Movement.cs` [MODIFIED]**: Remplacement du Physics.Raycast par un Physics.SphereCast.
-**Justification:** Le Raycast (épaisseur 0) était trop précis. Si la roue reposait sur le sol mais que le contact physique repoussait très légèrement le centre (ou sur une micro-pente), le rayon vertical ratait le sol d'un millimètre. Résultat : le script croyait que le joueur était en l'air, puis au sol, déclenchant le OnHardLanding en boucle (sautillement). Le SphereCast possède une épaisseur (rayon réduit à 50% de la roue). Il est assez fin pour ne jamais toucher les murs sur les côtés (évite le Wall Jump), mais assez épais pour garantir de toujours détecter le sol sous la roue.
+**Justification:** Le Raycast (Ã©paisseur 0) Ã©tait trop prÃ©cis. Si la roue reposait sur le sol mais que le contact physique repoussait trÃ¨s lÃ©gÃ¨rement le centre (ou sur une micro-pente), le rayon vertical ratait le sol d'un millimÃ¨tre. RÃ©sultat : le script croyait que le joueur Ã©tait en l'air, puis au sol, dÃ©clenchant le OnHardLanding en boucle (sautillement). Le SphereCast possÃ¨de une Ã©paisseur (rayon rÃ©duit Ã  50% de la roue). Il est assez fin pour ne jamais toucher les murs sur les cÃ´tÃ©s (Ã©vite le Wall Jump), mais assez Ã©pais pour garantir de toujours dÃ©tecter le sol sous la roue.
 
 ## [2026-08-21] Rollback Bras & Fix GroundCheck
-**Goal:** Revenir à la version précédente de la physique des bras (sans le blocage Kinematic des épaules) et empêcher le 'Wall Jump'.
+**Goal:** Revenir Ã  la version prÃ©cÃ©dente de la physique des bras (sans le blocage Kinematic des Ã©paules) et empÃªcher le 'Wall Jump'.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression complète de la logique KinematicRootSegments, ApplyKinematicRoots() et EnforceKinematicRoots(). Les bras redeviennent 100% dynamiques et tirés par l'épaule.
-- **`PlayerV2_Movement.cs` [MODIFIED]**: Remplacement de Physics.CheckSphere (qui détectait les collisions sur les côtés, permettant de wall jump) par un Physics.Raycast strict orienté vers le bas (Vector3.down). Mise à jour des Gizmos pour afficher une ligne avec un petit cercle au bout.
-**Justification:** Le fix des bras Kinematic causait des détachements indésirables en mouvement qui nécessiteraient une refonte de la hiérarchie. On annule l'expérience sur demande. Le Ground Check via Raycast garantit quant à lui que seules les surfaces sous le joueur (sol) autorisent le saut.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Suppression complÃ¨te de la logique KinematicRootSegments, ApplyKinematicRoots() et EnforceKinematicRoots(). Les bras redeviennent 100% dynamiques et tirÃ©s par l'Ã©paule.
+- **`PlayerV2_Movement.cs` [MODIFIED]**: Remplacement de Physics.CheckSphere (qui dÃ©tectait les collisions sur les cÃ´tÃ©s, permettant de wall jump) par un Physics.Raycast strict orientÃ© vers le bas (Vector3.down). Mise Ã  jour des Gizmos pour afficher une ligne avec un petit cercle au bout.
+**Justification:** Le fix des bras Kinematic causait des dÃ©tachements indÃ©sirables en mouvement qui nÃ©cessiteraient une refonte de la hiÃ©rarchie. On annule l'expÃ©rience sur demande. Le Ground Check via Raycast garantit quant Ã  lui que seules les surfaces sous le joueur (sol) autorisent le saut.
 
-## [2026-08-21] Fix Détachement Bras (4 mètres) en Multi
-**Goal:** Corriger le bug où les bras se détachent du corps et volent à 4 mètres lorsqu'ils sont utilisés en mouvement.
+## [2026-08-21] Fix DÃ©tachement Bras (4 mÃ¨tres) en Multi
+**Goal:** Corriger le bug oÃ¹ les bras se dÃ©tachent du corps et volent Ã  4 mÃ¨tres lorsqu'ils sont utilisÃ©s en mouvement.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Les joints (ConfigurableJoints) de la base Kinematic ne sont plus détruits.
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout de EnforceKinematicRoots() appelé dans FixedUpdate pour imposer isKinematic = true chaque frame, et forçage de weight = 0f pour interdire toute force AddForce sur ces os.
-**Justification:** Le précédent fix détruisait les joints de la racine pour plus de pureté Kinematic. Le problème, c'est que sur un jeu multi, des composants comme NetworkRigidbody ou le moteur physique peuvent accidentellement repasser le Rigidbody en dynamique (isKinematic = false) l'espace d'une frame. Sans joint pour les retenir, et recevant soudainement la force d'attraction du clic, les segments s'envolaient librement à plusieurs mètres ! En gardant les joints (comme filet de sécurité) et en forçant le blocage de la force et de l'état Kinematic *à chaque frame*, le bug est définitivement éradiqué.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Les joints (ConfigurableJoints) de la base Kinematic ne sont plus dÃ©truits.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout de EnforceKinematicRoots() appelÃ© dans FixedUpdate pour imposer isKinematic = true chaque frame, et forÃ§age de weight = 0f pour interdire toute force AddForce sur ces os.
+**Justification:** Le prÃ©cÃ©dent fix dÃ©truisait les joints de la racine pour plus de puretÃ© Kinematic. Le problÃ¨me, c'est que sur un jeu multi, des composants comme NetworkRigidbody ou le moteur physique peuvent accidentellement repasser le Rigidbody en dynamique (isKinematic = false) l'espace d'une frame. Sans joint pour les retenir, et recevant soudainement la force d'attraction du clic, les segments s'envolaient librement Ã  plusieurs mÃ¨tres ! En gardant les joints (comme filet de sÃ©curitÃ©) et en forÃ§ant le blocage de la force et de l'Ã©tat Kinematic *Ã  chaque frame*, le bug est dÃ©finitivement Ã©radiquÃ©.
 
 ## [2026-08-21] Immobilisation de la Base des Bras (Tube)
-**Goal:** Empêcher le décalage (drift) de la base du bras lors des déplacements du joueur, tout en permettant au reste du bras de rester physique.
+**Goal:** EmpÃªcher le dÃ©calage (drift) de la base du bras lors des dÃ©placements du joueur, tout en permettant au reste du bras de rester physique.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout d'une variable KinematicRootSegments (par défaut à 2). Au Start(), le script rend les N premiers segments du bras (ex: Arm.Base.L et Arm.L) isKinematic = true et supprime leur ConfigurableJoint.
-**Justification:** Un Rigidbody dynamique attaché par un joint physique a une inertie. Lors des déplacements du robot, l'inertie fait dévier la base de l'épaule ('décalage du tube'). En rendant la base *Kinematic*, elle s'accroche indéfectiblement à l'animation de l'épaule parente. Les joints suivants (Arm.L.001, etc.) utilisent alors ce segment Kinematic comme point d'ancrage physique parfait, gardant la fluidité de la tentacule sans jamais décoller de l'épaule.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: Ajout d'une variable KinematicRootSegments (par dÃ©faut Ã  2). Au Start(), le script rend les N premiers segments du bras (ex: Arm.Base.L et Arm.L) isKinematic = true et supprime leur ConfigurableJoint.
+**Justification:** Un Rigidbody dynamique attachÃ© par un joint physique a une inertie. Lors des dÃ©placements du robot, l'inertie fait dÃ©vier la base de l'Ã©paule ('dÃ©calage du tube'). En rendant la base *Kinematic*, elle s'accroche indÃ©fectiblement Ã  l'animation de l'Ã©paule parente. Les joints suivants (Arm.L.001, etc.) utilisent alors ce segment Kinematic comme point d'ancrage physique parfait, gardant la fluiditÃ© de la tentacule sans jamais dÃ©coller de l'Ã©paule.
 
 ## [2026-08-21] Fix Vibration (Jitter) de l'extension des bras
-**Goal:** Éliminer la vibration chaotique de tous les segments lorsque le bras se tend.
+**Goal:** Ã‰liminer la vibration chaotique de tous les segments lorsque le bras se tend.
 **Changes:**
 - **`PlayerV2_Arms.cs` [MODIFIED]**: Calcul d'un segmentTargetPos unique par segment via Vector3.Lerp(armRootPos, finalTargetPosition, weight).
-**Justification:** Précédemment, **tous** les segments du bras (poignet, coude, épaule) étaient attirés vers le **même point final** (inalTargetPosition). Le moteur physique (PhysX) essayait de fusionner les os en un seul point (singularité), ce qui violait violemment les contraintes de distance des ConfigurableJoints. Les ressorts des articulations repoussaient les os tandis que le script les ramenait au même endroit, créant une boucle de vibration (jitter) incontrôlable. En attirant chaque segment vers sa place ''naturelle'' sur la ligne (ex: coude à 50% de la distance), la force d'attraction tombe parfaitement à 0 une fois le bras tendu, rendant la courbe solide comme un roc.
+**Justification:** PrÃ©cÃ©demment, **tous** les segments du bras (poignet, coude, Ã©paule) Ã©taient attirÃ©s vers le **mÃªme point final** (inalTargetPosition). Le moteur physique (PhysX) essayait de fusionner les os en un seul point (singularitÃ©), ce qui violait violemment les contraintes de distance des ConfigurableJoints. Les ressorts des articulations repoussaient les os tandis que le script les ramenait au mÃªme endroit, crÃ©ant une boucle de vibration (jitter) incontrÃ´lable. En attirant chaque segment vers sa place ''naturelle'' sur la ligne (ex: coude Ã  50% de la distance), la force d'attraction tombe parfaitement Ã  0 une fois le bras tendu, rendant la courbe solide comme un roc.
 
 ## [2026-08-21] Refonte Physique Courbe & Saccades Bras
-**Goal:** Rendre l'extension des bras plus fluide (PAF) et courber naturellement le bras pour éviter les angles droits à l'épaule.
+**Goal:** Rendre l'extension des bras plus fluide (PAF) et courber naturellement le bras pour Ã©viter les angles droits Ã  l'Ã©paule.
 **Changes:**
-- **`PlayerV2_Arms.cs` [MODIFIED]**: La force d'attraction n'est plus appliquée uniquement sur la main (handRb), mais répartie sur **tous** les Rigidbody du bras (de l'épaule jusqu'à la main).
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Implémentation d'un système de poids linéaire (weight) : 100% sur la main, décroissant jusqu'à l'épaule.
-- **`PlayerV2_Arms.cs` [MODIFIED]**: Intégration de la rétractation (Crouch) dans le calcul du poids. Les segments rétractés ont un poids de 0%, et la courbe se redistribue doucement sur les segments restants.
-**Justification:** Avant, appliquer la force uniquement sur la main créait un effet de fouet (whip effect) responsable de la 'saccade en 2 temps' : la main partait vite, l'épaule/coude restait derrière jusqu'à ce que les limites du joint soient percutées. En appliquant la force proportionnellement sur chaque segment, l'ensemble du bras se déplace instantanément et simultanément (PAF). De plus, en tirant le coude vers la cible finale, on le force à s'élever au lieu de pendre horizontalement, transformant l'angle droit hachuré en une courbe physique fluide et naturelle (arc de caténaire).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: La force d'attraction n'est plus appliquÃ©e uniquement sur la main (handRb), mais rÃ©partie sur **tous** les Rigidbody du bras (de l'Ã©paule jusqu'Ã  la main).
+- **`PlayerV2_Arms.cs` [MODIFIED]**: ImplÃ©mentation d'un systÃ¨me de poids linÃ©aire (weight) : 100% sur la main, dÃ©croissant jusqu'Ã  l'Ã©paule.
+- **`PlayerV2_Arms.cs` [MODIFIED]**: IntÃ©gration de la rÃ©tractation (Crouch) dans le calcul du poids. Les segments rÃ©tractÃ©s ont un poids de 0%, et la courbe se redistribue doucement sur les segments restants.
+**Justification:** Avant, appliquer la force uniquement sur la main crÃ©ait un effet de fouet (whip effect) responsable de la 'saccade en 2 temps' : la main partait vite, l'Ã©paule/coude restait derriÃ¨re jusqu'Ã  ce que les limites du joint soient percutÃ©es. En appliquant la force proportionnellement sur chaque segment, l'ensemble du bras se dÃ©place instantanÃ©ment et simultanÃ©ment (PAF). De plus, en tirant le coude vers la cible finale, on le force Ã  s'Ã©lever au lieu de pendre horizontalement, transformant l'angle droit hachurÃ© en une courbe physique fluide et naturelle (arc de catÃ©naire).
 
 # Development Log
 
@@ -317,7 +317,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 - **`PlayerV2_CollisionManager.cs` [NEW]**: Duplicated and adapted the old `PlayerCollisionManager.cs` to the V2 namespace. Added explicit support to ignore self-collisions within the `_neckColliders` group to completely prevent physics-induced stretching caused by neck bones repelling each other.
 - **`PlayerV2_Head.cs` [NEW/MODIFIED]**: Created a script to handle an array of `ConfigurableJoint`s (`NeckJoints`). It automatically configures `slerpDrive` settings (spring, damper) on `Start()` to avoid manual setup. It exposes `SetTargetPitch(float)` to divide the target pitch evenly across all physical joints.
   - *Update:* Inverted pitch orientation for correct mouse Y-axis handling.
-  - *Update:* Forced linear motions to `Locked`, enabled angular `Limited` motions with a configurable `JointAngleLimit` (default 30Â°), and set `enableCollision = false` on joints. Increased default `SpringForce` (5000) and `SpringDamper` (500) for a more "muscular" and less wobbly feel.
+  - *Update:* Forced linear motions to `Locked`, enabled angular `Limited` motions with a configurable `JointAngleLimit` (default 30Ã‚Â°), and set `enableCollision = false` on joints. Increased default `SpringForce` (5000) and `SpringDamper` (500) for a more "muscular" and less wobbly feel.
 - **`PlayerV2_Look.cs` [MODIFIED]**: Altered the `LateUpdate()` method to transmit the `_cameraPitch` to `HeadController.SetTargetPitch()`.
   - *Update:* Added `MaxTurnSpeed` to clamp the maximum degrees per second the torso (Yaw) and camera (Pitch) can turn. This prevents violent physics snaps when the mouse is flicked extremely fast, ensuring the physical head can smoothly keep up with the Torso's rotation.
 - **`PlayerV2_Controller.cs` [MODIFIED]**: Added `HeadController` reference to centralize references.
@@ -489,12 +489,12 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
   - Decoupled Visuals and Interactions: Standard `Button` components require a single `Image` as `targetGraphic` for transitions. By setting the `Button` transition to `None` and placing an invisible `Image` (alpha = 0) with `raycastTarget = true` on the parent, we decouple the collision/interaction area from the complex visual shapes underneath.
   - Custom Event Handlers: Implementing standard Unity UGUI event interfaces on custom scripts allows driving complex multi-child animations (scale, sub-positions, colors of nested custom shapes) using DOTween directly from pointer lifecycle callbacks.
 
-## [2026-05-26] - Custom Vector Shape UI Toolkit (Freya HolmÃ©r Shapes)
+## [2026-05-26] - Custom Vector Shape UI Toolkit (Freya HolmÃƒÂ©r Shapes)
 
 ### Feature Added
 - **Base UI Pointer Toolkit (`UICustomButtonBase`)**: Extends standard MonoBehaviour and UGUI pointer interfaces (`IPointerEnterHandler`, `IPointerExitHandler`, `IPointerDownHandler`, `IPointerUpHandler`, `IPointerClickHandler`) to expose lifecycle hooks and Unity Events.
 - **Global Magnetic Mouse Proximity Solver (`MouseManager`)**: A Canvas-level singleton helper script that computes screen-space distance from interactive UI elements to the mouse pointer, providing Snappy Quadratic Attenuation for magnetic attraction.
-- **Lobby Color Button Custom Vector Controller (`ColorButtonUI`)**: Exposes dual `Shapes.Rectangle` properties (`Outline`, `Plain`) for Freya HolmÃ©r vector components.
+- **Lobby Color Button Custom Vector Controller (`ColorButtonUI`)**: Exposes dual `Shapes.Rectangle` properties (`Outline`, `Plain`) for Freya HolmÃƒÂ©r vector components.
 - **Responsive Width/Height Morph Animations**: Performs dynamic DOTween property tweens (`DOTween.To`) targeting `Rectangle.Width` and `Rectangle.Height` on pointer enter, exit, down, and up states.
 - **Dynamic Magnetic Attraction Offset**: Interpolates the local position of the inner plain shape relative to its cached original coordinate based on real-time mouse direction and proximity.
 
@@ -505,7 +505,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 - **Modified `Assets/1_Scripts/UI/UIColorsPalettes.cs`**: Swapped deprecated `UICustomShapeButton` arrays for unified `ColorButtonUI` references.
 
 ### Technical Justification & Details
-- **Non-UGUI Graphic Compatibilities**: Custom Vector Shape tools like Freya HolmÃ©r's Shapes asset render via custom MeshRenderers and do not inherit from standard UGUI `Graphic`. This prevents standard UGUI buttons from controlling their properties directly. Custom scripts driving these properties are mandatory.
+- **Non-UGUI Graphic Compatibilities**: Custom Vector Shape tools like Freya HolmÃƒÂ©r's Shapes asset render via custom MeshRenderers and do not inherit from standard UGUI `Graphic`. This prevents standard UGUI buttons from controlling their properties directly. Custom scripts driving these properties are mandatory.
 - **Property Tweening (`DOTween.To`)**: Because standard extension methods like `DOScale` target Transform parameters, custom vector properties like `Rectangle.Width` and `Rectangle.Height` must be tweened using explicit property setters to avoid stretching or pixelating shape bounds.
 - **Magnetic Proximity Attenuation**: Calculated in screen space using `RectTransformUtility.WorldToScreenPoint` to ensure responsiveness across different canvas resolutions, aspect ratios, and scaling modes.
 - **Spring Damped Interpolation**: Employs `Vector3.Lerp` with `Time.unscaledDeltaTime` to achieve visual spring dampening that works flawlessly during active pauses.
@@ -557,8 +557,8 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
   - **Spam Click Scale Stabilization**: Replaced `DOPunchScale` entirely with an explicit `DOScale` sequence integrated inside `_clickFlashSequence`. `DOPunchScale` has internal caching bugs in DOTween when interrupted/killed repeatedly, which caused compounding scaling bugs. Using explicit `DOScale` targets (`_originalRectLocalScale * 1.08f` then returning to `_originalRectLocalScale`) completely resolves any potential scale aggregation and guarantees the rectangle returns to its exact scale even under extreme click spam.
 - **Dynamic Dots & Shockwave Animation (Discs)**:
   - **Dynamic Setup**: Automatically queries the main `Disc` on the `Dots` GameObject, and any child `Disc` components under it. Caches their default sizes, colors, and positions.
-  - **Hover Enter (Playful Spin & Breathing)**: The parent `Dots` transform immediately starts a **continuous 360Â° rotation loop** (incremental Linear orbit) while the two child discs expand and start a **playful continuous breathing yoyo scale pulse (radii breathing between 1.35x and 1.6x)**. This creates a lively, high-tech orbital loader feel.
-  - **Hover Exit**: Smoothly interpolates radii, positions, and colors back to their exact cached default states, while gently rotating the parent `Dots` transform back to 0Â° alignment.
+  - **Hover Enter (Playful Spin & Breathing)**: The parent `Dots` transform immediately starts a **continuous 360Ã‚Â° rotation loop** (incremental Linear orbit) while the two child discs expand and start a **playful continuous breathing yoyo scale pulse (radii breathing between 1.35x and 1.6x)**. This creates a lively, high-tech orbital loader feel.
+  - **Hover Exit**: Smoothly interpolates radii, positions, and colors back to their exact cached default states, while gently rotating the parent `Dots` transform back to 0Ã‚Â° alignment.
   - **PointerDown Press (Snappy Shockwave Scintillation)**: Overhauled all durations for an ultra-fast, snappy impact:
     - **Rectangle scale explosion** spikes to **1.15x** in just **0.03s**, snapping back in **0.12s**.
     - **Color flash/bloom peak** triggers in **0.02s**, followed by a **0.04s** blackout and high-speed **0.015s** holographic flickers.
@@ -719,25 +719,25 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 - **Fields**: Removed `_horizontalSpread` and `_angleSpread`.
 - **`ApplyArmReachingForces`**: Simplified the target position and target rotation calculations to pull the hand directly to the center line of vision.
 
-## [2026-06-11] - SpÃ©cifications Techniques de la TÃªte et de la Vision du Robot Vacuum
+## [2026-06-11] - SpÃƒÂ©cifications Techniques de la TÃƒÂªte et de la Vision du Robot Vacuum
 
-### Justification Technique & DÃ©tails
-- **Analyse du SchÃ©ma de Fonctionnement** : Traduction et enrichissement des spÃ©cifications de mouvement et de vision du Robot Vacuum depuis les schÃ©mas manuscrits.
-- **IntÃ©gration Physique via ConfigurableJoint d'Unity** :
-  - Utilisation d'un **Rigidbody** (tÃªte) reliÃ© au buste par un **ConfigurableJoint** pour gÃ©rer nativement les collisions, chocs et forces d'inertie.
-  - Configuration du `Slerp Drive` (ressorts de rotation) avec un faible amortissement (`Position Damper`) pour gÃ©nÃ©rer le balancement Ã©lastique ("boing boing") naturel lors des mouvements ou impacts physiques.
-  - Configuration du `Y Drive` pour le dÃ©placement vertical (Crouch) gÃ©rant l'affaissement Ã©lastique.
-- **Formulation MathÃ©matique de Guidage (targetRotation / targetPosition)** :
-  - La souris pilote directement la **CamÃ©ra Verte** (100% de la direction visÃ©e).
-  - La rotation de la tÃªte suit Ã  amplitude rÃ©duite (70%) via l'assignation de la `targetRotation` du Joint.
-  - La position de la tÃªte suit un arc de cercle et un affaissement via l'assignation de la `targetPosition` du Joint (ajoutant l'offset d'accroupissement).
-- **Vision HiÃ©rarchique CiblÃ©e (Å’il, Pupille)** :
-  - L'Å’il Bleu s'aligne Ã  **75%** vers la cible et la Pupille Mauve s'aligne Ã  **100%**, produisant un effet visuel de regard en coin trÃ¨s expressif.
+### Justification Technique & DÃƒÂ©tails
+- **Analyse du SchÃƒÂ©ma de Fonctionnement** : Traduction et enrichissement des spÃƒÂ©cifications de mouvement et de vision du Robot Vacuum depuis les schÃƒÂ©mas manuscrits.
+- **IntÃƒÂ©gration Physique via ConfigurableJoint d'Unity** :
+  - Utilisation d'un **Rigidbody** (tÃƒÂªte) reliÃƒÂ© au buste par un **ConfigurableJoint** pour gÃƒÂ©rer nativement les collisions, chocs et forces d'inertie.
+  - Configuration du `Slerp Drive` (ressorts de rotation) avec un faible amortissement (`Position Damper`) pour gÃƒÂ©nÃƒÂ©rer le balancement ÃƒÂ©lastique ("boing boing") naturel lors des mouvements ou impacts physiques.
+  - Configuration du `Y Drive` pour le dÃƒÂ©placement vertical (Crouch) gÃƒÂ©rant l'affaissement ÃƒÂ©lastique.
+- **Formulation MathÃƒÂ©matique de Guidage (targetRotation / targetPosition)** :
+  - La souris pilote directement la **CamÃƒÂ©ra Verte** (100% de la direction visÃƒÂ©e).
+  - La rotation de la tÃƒÂªte suit ÃƒÂ  amplitude rÃƒÂ©duite (70%) via l'assignation de la `targetRotation` du Joint.
+  - La position de la tÃƒÂªte suit un arc de cercle et un affaissement via l'assignation de la `targetPosition` du Joint (ajoutant l'offset d'accroupissement).
+- **Vision HiÃƒÂ©rarchique CiblÃƒÂ©e (Ã…Â’il, Pupille)** :
+  - L'Ã…Â’il Bleu s'aligne ÃƒÂ  **75%** vers la cible et la Pupille Mauve s'aligne ÃƒÂ  **100%**, produisant un effet visuel de regard en coin trÃƒÂ¨s expressif.
 
-### Code ModifiÃ©/Added
-- CrÃ©ation du fichier de spÃ©cifications : `documentation/Player/Head_and_Vision_Mechanics.md` avec description dÃ©taillÃ©e de la configuration du Joint et script C# d'implÃ©mentation.
-- CrÃ©ation de `Assets/1_Scripts/Player/Controller/PhysicalHeadController.cs` : classe de gestion physique de la tÃªte avec calcul d'arc de cercle, crouch, et liaison ConfigurableJoint.
-- Mise Ã  jour de `PhysicalHeadController.cs` : implÃ©mentation du dÃ©tachement hiÃ©rarchique au `Start()` via `transform.SetParent(null)` pour Ã©liminer les conflits de double contrainte avec les animations de l'armature parent, calcul de la rotation relative par rapport au parent d'origine, et destruction automatique lors de la destruction du joueur. Ajustement avec inversion (`Quaternion.Inverse` et `-desiredOffset`) pour `targetRotation` et `targetPosition` du ConfigurableJoint suite aux spÃ©cifications internes d'Unity. Ajout de l'ignorance dynamique des collisions via `Physics.IgnoreCollision` au `Start()` entre le collider de la tÃªte et tous les colliders du corps/bras du joueur pour Ã©viter tout blocage physique. Correction des signes de `targetPosition` (+arcY et -arcZ) pour appliquer la translation de l'arc de cercle dans le bon sens physique.
+### Code ModifiÃƒÂ©/Added
+- CrÃƒÂ©ation du fichier de spÃƒÂ©cifications : `documentation/Player/Head_and_Vision_Mechanics.md` avec description dÃƒÂ©taillÃƒÂ©e de la configuration du Joint et script C# d'implÃƒÂ©mentation.
+- CrÃƒÂ©ation de `Assets/1_Scripts/Player/Controller/PhysicalHeadController.cs` : classe de gestion physique de la tÃƒÂªte avec calcul d'arc de cercle, crouch, et liaison ConfigurableJoint.
+- Mise ÃƒÂ  jour de `PhysicalHeadController.cs` : implÃƒÂ©mentation du dÃƒÂ©tachement hiÃƒÂ©rarchique au `Start()` via `transform.SetParent(null)` pour ÃƒÂ©liminer les conflits de double contrainte avec les animations de l'armature parent, calcul de la rotation relative par rapport au parent d'origine, et destruction automatique lors de la destruction du joueur. Ajustement avec inversion (`Quaternion.Inverse` et `-desiredOffset`) pour `targetRotation` et `targetPosition` du ConfigurableJoint suite aux spÃƒÂ©cifications internes d'Unity. Ajout de l'ignorance dynamique des collisions via `Physics.IgnoreCollision` au `Start()` entre le collider de la tÃƒÂªte et tous les colliders du corps/bras du joueur pour ÃƒÂ©viter tout blocage physique. Correction des signes de `targetPosition` (+arcY et -arcZ) pour appliquer la translation de l'arc de cercle dans le bon sens physique.
 
 ## [2026-07-01] - Local VAD Filter for Mouth Animator
 
@@ -902,7 +902,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 - **Feature Request**: Each player in the lobby should be able to independently adjust the volume of each other player's voice (from 0% to 200%).
 - **Architecture**: `SettingsData` already held a `Dictionary<int, float> PeerVolumeMultipliers` (key = Mirror `ConnectionId`) that was already serialized and already read by `VoiceSettingsConsumer.ApplyVoiceVolumes()`. However, no UI script existed to write into this dictionary.
 - **Slider Range**: The slider uses `[0, 2]` (not `[0, 1]`). The float value is used directly as a multiplier in `baseVolume * peerMultiplier`. `1.0 = 100%`, `2.0 = 200%`, `0 = muted`.
-- **Immediate Application**: Instead of waiting for the `SettingsManager` â†’ `ISettingsConsumer` propagation loop (which only fires when MasterVolume or VoiceVolume changes), a new static method `VoiceSettingsConsumer.ApplyPeerVolume(int peerId, float multiplier)` directly touches the target peer's `UnityAudioSource.volume` for zero-latency feedback while the user is dragging the slider.
+- **Immediate Application**: Instead of waiting for the `SettingsManager` Ã¢Â†Â’ `ISettingsConsumer` propagation loop (which only fires when MasterVolume or VoiceVolume changes), a new static method `VoiceSettingsConsumer.ApplyPeerVolume(int peerId, float multiplier)` directly touches the target peer's `UnityAudioSource.volume` for zero-latency feedback while the user is dragging the slider.
 - **Local Player Card Handling**: When `LobbyController` instantiates a `PlayerListItem`, it checks if the card belongs to the local player and if so, disables and hides the volume slider (`volumeSlider.SetConnectionId(id, isLocalPlayer: true)`). Adjusting your own outgoing voice for yourself is meaningless.
 - **Persistence**: On slider change, `SettingsManager.UpdateSettings()` writes to `PeerVolumeMultipliers[connectionId]`. On startup/reconnect, `PlayerVolumeSlider.RefreshFromSettings()` restores the slider position from saved data.
 
@@ -915,7 +915,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 - Hides the slider entirely when `isLocalPlayer = true`.
 
 #### [MODIFY] `Assets/1_Scripts/Audio/VoiceSettingsConsumer.cs`
-- Added `public static void ApplyPeerVolume(int peerId, float multiplier)` â€” directly applies `baseVolume * multiplier` to the peer's `UnityAudioSource` for immediate feedback without waiting for `OnSettingsUpdated`.
+- Added `public static void ApplyPeerVolume(int peerId, float multiplier)` Ã¢Â€Â” directly applies `baseVolume * multiplier` to the peer's `UnityAudioSource` for immediate feedback without waiting for `OnSettingsUpdated`.
 
 #### [MODIFY] `Assets/1_Scripts/Networking/Lobby/LobbyController.cs`
 - Both `CreateHostPlayerItem()` and `CreateClientPlayerItem()` now call `volumeSlider.SetConnectionId(player.ConnectionId, isLocal)` after each `PlayerListItem` instantiation.
@@ -1097,7 +1097,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 ## [2026-07-07] - Custom Shapes-Based Toggle Component & Settings UI Integration
 
 ### Technical Justification & Details
-- **Feature Request**: Remplacer les boutons bascule (Toggle) d'Unity classiques par des composants de type Shapes (mÃ©thode hybride) dans le menu Audio.
+- **Feature Request**: Remplacer les boutons bascule (Toggle) d'Unity classiques par des composants de type Shapes (mÃƒÂ©thode hybride) dans le menu Audio.
 - **UICustomToggle implementation**:
   - Created `UICustomToggle.cs` which inherits from `MonoBehaviour` and implements pointer interaction interfaces (`IPointerClickHandler`, `IPointerEnterHandler`, `IPointerExitHandler`).
   - Utilizes `Shapes.Rectangle` for the track background and `Shapes.Disc` for the slider knob/handle.
@@ -1218,7 +1218,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 ### Technical Justification & Details
 - **Slider Typo Fix**:
-  - Removed the compile-breaking typo `"e sois grisÃ©."` that was accidentally appended to the end of `UICustomSlider.cs`.
+  - Removed the compile-breaking typo `"e sois grisÃƒÂ©."` that was accidentally appended to the end of `UICustomSlider.cs`.
 - **Disabled State Visual Transition**:
   - Added visual configuration fields `_disabledTrackColor`, `_disabledFillColor`, and `_disabledHandleColor` in `UICustomSlider.cs` to allow full inspector styling for non-interactable states.
   - Caches the initial/active track and fill colors (`_originalTrackColor`, `_originalFillColor`) on `Start()`.
@@ -1232,7 +1232,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 ### Technical Justification & Details
 - **ScrollRect & Shapes Integration (KISS)**:
-  - Created a hybrid UI architecture leveraging Unity's native `ScrollRect` for stable physics (inertia, masking, touch dragging) alongside Freya HolmÃ©r's Shapes library for premium vector visuals.
+  - Created a hybrid UI architecture leveraging Unity's native `ScrollRect` for stable physics (inertia, masking, touch dragging) alongside Freya HolmÃƒÂ©r's Shapes library for premium vector visuals.
 - **Custom Scrollbar Component (`UICustomScrollbar.cs`)**:
   - Independent vector graphic scrollbar supporting horizontal and vertical directions.
   - Dynamically calculates the handle size relative to the scrollable content proportion (`size` property).
@@ -1344,7 +1344,7 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 ### Technical Justification & Details
 - **Vector Shapes Dropdown Integration**:
-  - Created `UICustomDropdown.cs` and `UICustomDropdownItem.cs` utilizing the Freya HolmÃ©r Shapes library to render premium vector outlines, backgrounds, and drop-down containers.
+  - Created `UICustomDropdown.cs` and `UICustomDropdownItem.cs` utilizing the Freya HolmÃƒÂ©r Shapes library to render premium vector outlines, backgrounds, and drop-down containers.
 - **Header Button Visual Mirroring**:
   - Implemented border outline hover animations on the header `Rectangle` to match `UICustomSimpleButton.cs` exactly (outward thickness growth, dash spacing scaling, and infinite dash rotation).
   - Maintained a static, non-animated background shape for the header area.
@@ -2083,3 +2083,148 @@ ull. Conséquence : la rustine critique joint.connectedMassScale = 0.00001f n'éta
 
 ### Code Modified/Added
 - [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Re-targeted scaling from _pupilBone to 	ransform and renamed sync vars).
+
+## [2026-08-24] - Gameplay Settings Implementation (FOV & Motion Blur)
+
+### Technical Justification & Details
+- **Settings Extension**: Added FieldOfView and MotionBlurIntensity to the Single Source of Truth (SettingsData.cs).
+- **UI Integration**: Extended SettingsUIPresenter to listen to new UICustomSlider elements for FOV and Motion Blur, pushing updates safely through the SettingsManager.
+- **Clean Consumer Pattern (No Performance Hit)**:
+  - Created GameplaySettingsConsumer.cs (implements ISettingsConsumer).
+  - Instead of running a costly FindObjectOfType<Volume>() in Update(), it runs exactly **once** in Start() to cache the PostProcessing Volume and the MotionBlur override.
+  - Only when a slider is moved does it update _motionBlur.intensity.value and Camera.main.fieldOfView, resulting in a 0% performance overhead during normal gameplay.
+- **Local Player Initialization**: Modified PlayerV2_Look.OnStartLocalPlayer to immediately pull the saved FOV and apply it to the instantiated camera, ensuring the setting applies correctly across scenes or deaths.
+
+### Code Modified/Added
+- [MODIFY] [SettingsData.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/SettingsData.cs) (Added fields/properties).
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs) (Added UI slider listeners).
+- [NEW] [GameplaySettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/GameplaySettingsConsumer.cs) (Event-based graphics settings applier).
+- [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) (Applies FOV on spawn).
+
+## [2026-08-24] - Fear Vignette PostProcessing (PlayerV2)
+
+### Technical Justification & Details
+- **Visual Feedback for Fear**: To enhance the terrifying nature of Priority 3 entities, the vignette effect tightens (shrinks the vision cone) and turns reddish.
+- **Implementation**: Created a new decoupled script PlayerV2_FearEffects.cs that requires PlayerViewRange.
+- **Volume Instance Protection**: It fetches the global Volume and uses .profile instead of .sharedProfile to create a runtime clone. This prevents accidentally saving the fear vignette permanently into the URP Profile asset in the editor.
+- **Interpolation**: Smoothly lerps both the intensity and the color using Time.deltaTime. Reset to default gracefully in OnDisable.
+
+### Code Modified/Added
+- [NEW] [PlayerV2_FearEffects.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_FearEffects.cs) (Fear VFX driver).
+
+## [2026-08-24] - Vacuum Particles & Force Fields Fix
+
+### Technical Justification & Details
+- **FluiditÃ© Visuelle**: Previously, the Vacuum particle system and force fields were potentially being disabled abruptly. Now, the IsActive property in VacuumSuctionZone.cs acts as a true setter.
+- **Play/Stop**: The ParticleSystem now uses .Play() and .Stop() instead of SetActive(false). This allows particles currently alive to finish their life cycle naturally, resulting in a much smoother visual fade-out.
+- **Force Fields**: The Force Fields (up to 2 as requested) are toggled dynamically using SetActive when the vacuum state changes.
+
+### Code Modified/Added
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Added properties for _vacuumParticles and _vacuumForceFields, updated IsActive logic).
+
+## [2026-08-24] - Conditional Vacuum Particles (Dirt Only)
+
+### Technical Justification & Details
+- **Context**: The user requested that the vacuum's particle system only plays when actively sucking up dirt from the floor, rather than constantly playing whenever the vacuum is on.
+- **Fix**: Modified VacuumSuctionZone.cs. In FixedUpdate, we now track isDrainingDirtThisFrame by checking if any DirtStain was detected and processed. The ParticleSystem's Play() and Stop() methods are now bound to this conditional flag (SetDrainingDirt()) instead of the raw IsActive state.
+- **Force Fields**: The Force Fields remain tied to the IsActive state so that physical items (Collectibles) can still be vacuumed regardless of whether dirt is present.
+
+### Code Modified/Added
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Added dirt tracking logic for particles).
+## [2026-08-25] - Wingardium Leviosa Suction Effect (VacuumSuctionZone.cs)
+
+### Technical Justification & Details
+- **Anti-Gravity**: Added a new parameter _cancelGravity that applies an upward force exactly equal to the object's gravity pull based on its mass while it is in the suction cone. This forces objects to immediately levitate off the ground (Wingardium Leviosa style) instead of dragging along the floor.
+- **Anti-Momentum (Damping)**: Added _suctionDamping parameter. To prevent objects from building up horizontal momentum and passing underneath the player (overshooting), we apply a strong Drag force strictly proportional to _suctionDamping and inversely proportional to the object's PullResistance.
+- **Phantom Compatibility**: Because the damping effect is divided by PullResistance, normal items (low resistance) are strictly controlled and float gracefully into the nozzle. Phantoms (which have huge PullResistance) are largely unaffected by this damping, allowing their custom scripts to retain control over their movement.
+- **Centripetal Correction**: The centripetal forces and suction forces now cleanly overpower any lateral momentum thanks to the damping, resulting in items inevitably arriving at the center of the nozzle.
+
+### Code Modified/Added
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Added Wingardium Leviosa anti-gravity and dynamic damping logic in FixedUpdate).
+## [2026-08-25] - Networking Authority Fix (VacuumSuctionZone.cs)
+
+### Technical Justification & Details
+- **Authority Check**: Replaced isLocalPlayer with IsOwner. This ensures the script properly interfaces with the network framework's ownership logic when triggering the absorption of an object or draining dirt, rather than relying on legacy or incorrect local player flags.
+
+### Code Modified/Added
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs) (Replaced isLocalPlayer with IsOwner).
+
+## [2026-08-26] - Phantom Base Architecture & Mouth Suction System
+
+### Technical Justification & Details
+- **Mouth Suction Exclusivity**: Implemented `MouthSuctionZone.cs` attached to the player head/mouth. Activated exclusively by dual-click input (`PlayerInputHandler.IsVacuuming` -> `PlayerVacuumController.IsVacuuming`). Right-arm suction (`VacuumSuctionZone.cs`) explicitly rejects `PhantomBase` objects.
+- **Player Health System**: Created `PlayerHealth.cs` on the player prefab with network-synchronized health (`SyncVar`), authoritative damage / drain methods, revival, and death events with strict 'Fail Loudly' assertions.
+- **Extensible Phantom Base**: Created `PhantomBase.cs` inheriting from `NetworkBehaviour` and implementing `IEntity` (`Name`, `PriorityLevel`, `LookAtPoint`).
+  - Phantoms retain physics simulation via `Rigidbody`.
+  - Phantoms are aware of being vacuumed (`IsBeingVacuumed`), with slowdown damping applied.
+  - Visual scale dynamically shrinks based on remaining health (`CurrentHealth / MaxHealth`).
+  - Sucking a phantom drains its health over time. Once health reaches 0, it is absorbed in one shot and cannot deal damage.
+  - Phantoms drain nearby players' health within a proximity radius.
+- **Organic Floating & Alive Oscillation**:
+  - Implemented anti-gravity hovering with sinusoidal bobbing and Perlin noise wobble in [`BasicPhantom.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/BasicPhantom.cs).
+  - Applied `RigidbodyConstraints.FreezeRotationX | FreezeRotationZ` in [`PhantomBase.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/PhantomBase.cs) so phantoms always remain perfectly upright.
+  - Added pass-through trigger colliders (`_isPassThrough`) allowing players to traverse ethereal phantoms.
+- **Distance Gradient Proximity Drain**:
+  - Replaced flat drain with a distance gradient between `_minProximityDrainRate` (outer boundary) and `_maxProximityDrainRate` (core center).
+  - Explicitly targets only entities possessing `PlayerHealth`, completely ignoring inanimate objects and collectibles on the same entity layer.
+- **Trigger Collider Suction Fix**:
+  - Replaced `QueryTriggerInteraction.Ignore` with `QueryTriggerInteraction.Collide` in [`MouthSuctionZone.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/MouthSuctionZone.cs). This allows the mouth vacuum to detect and pull phantoms whose colliders are configured as triggers (`isTrigger`).
+  - Added fallback LayerMask handling (`_phantomLayer.value != 0 ? _phantomLayer : ~0`) so phantoms are detected regardless of custom layer setups.
+- **Absorption Rush Animation**:
+  - Implemented `AbsorptionRushCoroutine` in [`PhantomBase.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/PhantomBase.cs). When absorbed at 0 HP, the phantom rushes directly at high speed into the player's mouth nozzle while scaling down to zero with cubic ease-in before disappearing.
+- **Physical Struggle Jitter & Faster Shrinking**:
+  - Increased `_scaleLerpSpeed` to 15 and updated `_minScaleRatio` to 0.15 in [`PhantomBase.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/PhantomBase.cs).
+  - Added real-time Perlin vibration/jitter to the visual model while actively being vacuumed, providing tactile physical feedback of struggle.
+- **Visual Suction Tether Line**:
+  - Added dynamic `LineRenderer` (`_suctionTetherLine`) to [`MouthSuctionZone.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/MouthSuctionZone.cs) that renders a glowing energy/air beam between the mouth nozzle and the targeted phantom during active suction.
+- **Torso Collision Rotation Lock & Alignment Fix**:
+  - Locked physical rotation constraints (`RigidbodyConstraints.FreezeRotation`) on `TorsoRigidbody` in [`PlayerV2_Look.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) so wall or prop collisions cannot impart torque or deflect the torso off-axis.
+  - Zeroed out `angularVelocity` in `FixedUpdate()` and enforced `_torsoYaw` transform rotation in `LateUpdate()`.
+  - Prevents the mouth suction nozzle, gizmo, and arms from tilting or skewing to the right when rubbing against walls or colliding with objects.
+
+- **Streamlined Arm Suction & Funnel Trajectory**:
+  - Replaced linear pull with a streamlined funnel airflow force in [`VacuumSuctionZone.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs). Objects curve smoothly along the airflow into the nozzle mouth (matching design Screen 1).
+  - Added anti-overshoot transverse velocity damping near the nozzle to prevent items from shooting past or behind the arm nozzle.
+- **Bounds Multi-Point Occlusion Check (Shelf / Commode Edge Support)**:
+  - Replaced single-point pivot raycasting with 5-point bounds sampling (Center, Top, Bottom, Left, Right) using `QueryTriggerInteraction.Ignore`.
+  - Items on commodes or shelves are now properly detected via their upper exposed surfaces, lifted up, and pulled cleanly over furniture edges.
+- **Delayed & Non-Linear Shrink Curve**:
+  - Changed shrink curve to non-linear power scale `Mathf.Pow(targetT, 0.45f)` and reduced `_shrinkStartDistance` to 0.8m and `_absorbDistance` to 0.12m.
+  - Items stay full/recognizable size until the entrance of the nozzle, compressing directly into the bore before absorption.
+
+- **Right Arm Collision Filtering & Natural Physics Drop**:
+  - Implemented `SetIgnoreCollisionsWithArm(collectible, bool)` and `CacheArmColliders()` in [`VacuumSuctionZone.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs).
+  - During suction, tracked items automatically ignore physical collisions with the player's right arm, hand, and nozzle colliders so they are sucked smoothly straight into the nozzle without bumping into the arm.
+  - Upon suction release or when an item leaves the suction stream, arm collisions are immediately restored (`Physics.IgnoreCollision = false`), anti-gravity stops, and the item's original scale and normal falling physics resume naturally.
+
+- **Arm Jitter Elimination & Aim Centering Fix**:
+  - Removed multi-segment torque on intermediate rigidbodies in [`PlayerV2_Arms.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Arms.cs), isolating rotational torque strictly to `handRb` to eliminate torque fighting and high-frequency jitter/trembling at the hand.
+  - Adjusted control point `p1` in the BÃ©zier arc calculation to slerp from the shoulder toward the aim target direction (`Vector3.Slerp(torsoForward, directToTarget, 0.45f)`). This eliminates the outward lateral bulge (right arm bending to the right, left arm to the left) and keeps the arm naturally reaching directly toward the crosshair.
+  - Restored stable angularX and angularYZ joint drives for smooth physics integration.
+- **In-Game Pause Menu, Pupil Shrink Visual Feedback & Screen-Space Camera Canvas**:
+  - Implemented network-synced pupil scaling in [`Eye.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) that shrinks pupil bones down to `0.2` scale when the player enters the pause menu, and smoothly restores them to `1.0` upon unpausing.
+  - Added `SetPaused(bool isPaused)` and `LocalInstance` to [`PlayerV2_Controller.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Controller.cs).
+  - Configured [`InGameMenuController.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/InGameMenuController.cs) to keep the OS hardware cursor invisible so the custom virtual cursor ([`CustomCursorFollower.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/CustomCursorFollower.cs)) renders seamlessly on the pause menu canvas.
+  - Added automatic dynamic binding of `Canvas.worldCamera` to the local player camera across all Screen Space - Camera canvases upon spawning in multiplayer in [`PlayerV2_Look.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs) and [`InGameMenuController.cs`](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/InGameMenuController.cs).
+
+### Code Modified/Added
+- [NEW] [PlayerHealth.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/PlayerHealth.cs)
+- [NEW] [PhantomBase.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/PhantomBase.cs)
+- [NEW] [BasicPhantom.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Gameplay/Phantoms/BasicPhantom.cs)
+- [NEW] [MouthSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/MouthSuctionZone.cs)
+- [NEW] [RuntimeGizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Utils/RuntimeGizmos.cs)
+- [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs)
+- [MODIFY] [PlayerV2_Controller.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Controller.cs)
+- [MODIFY] [SettingsData.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/SettingsData.cs)
+- [MODIFY] [SettingsUIPresenter.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/SettingsUIPresenter.cs)
+- [MODIFY] [GameplaySettingsConsumer.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Core/Settings/GameplaySettingsConsumer.cs)
+- [MODIFY] [InGameMenuController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/InGameMenuController.cs)
+- [MODIFY] [CustomCursorFollower.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Core/CustomCursorFollower.cs)
+- [MODIFY] [PlayerInputHandler.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Input/PlayerInputHandler.cs)
+- [MODIFY] [UINavigationGroup.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/UI/Menus/UINavigationGroup.cs)
+- [MODIFY] [PlayerV2_DynamicCrosshair.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_DynamicCrosshair.cs)
+- [MODIFY] [PlayerV2_Gizmos.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Gizmos.cs)
+- [MODIFY] [PlayerV2_Arms.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Arms.cs)
+- [MODIFY] [PlayerV2_Look.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/PlayerV2/PlayerV2_Look.cs)
+- [MODIFY] [PlayerVacuumController.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Mechanics/PlayerVacuumController.cs)
+- [MODIFY] [VacuumSuctionZone.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Physics/VacuumSuctionZone.cs)

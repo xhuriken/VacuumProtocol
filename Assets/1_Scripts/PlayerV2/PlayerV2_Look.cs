@@ -31,6 +31,7 @@ public class PlayerV2_Look : NetworkBehaviour
     
     private float _cameraPitch;
     private float _torsoYaw;
+    private Camera _playerCamera;
 
     public float CurrentYaw => _torsoYaw;
 
@@ -47,6 +48,93 @@ public class PlayerV2_Look : NetworkBehaviour
         if (_controller.TorsoRigidbody != null)
         {
             _torsoYaw = _controller.TorsoRigidbody.rotation.eulerAngles.y;
+        }
+        
+        // Appliquer le FOV des paramètres et lier la caméra aux Canvas
+        Debug.Log($"[CanvasBinding] PlayerV2_Look.OnStartLocalPlayer exécuté. Controller={_controller?.name}, CameraTransform={_controller?.CameraTransform?.name}");
+
+        Camera cam = null;
+        if (_controller != null && _controller.CameraTransform != null)
+        {
+            cam = _controller.CameraTransform.GetComponentInChildren<Camera>(true);
+        }
+        if (cam == null && _controller != null)
+        {
+            cam = _controller.GetComponentInChildren<Camera>(true);
+        }
+        if (cam == null)
+        {
+            cam = Camera.main;
+        }
+
+        _playerCamera = cam;
+        Debug.Log($"[CanvasBinding] Caméra trouvée pour le joueur : {(_playerCamera != null ? _playerCamera.name : "AUCUNE (NULL)")}");
+
+        if (_playerCamera != null)
+        {
+            if (SettingsManager.Instance != null && SettingsManager.Instance.CurrentSettings != null)
+            {
+                _playerCamera.fieldOfView = SettingsManager.Instance.CurrentSettings.FieldOfView;
+                SettingsManager.Instance.OnSettingsChanged += HandleSettingsChanged;
+                Debug.Log($"[PlayerV2_Look] FOV initial appliqué sur '{_playerCamera.name}': {SettingsManager.Instance.CurrentSettings.FieldOfView}° et écoute OnSettingsChanged activée.");
+            }
+
+            // Liaison automatique de tous les Canvas en Screen Space - Camera de la scène (actifs ou inactifs)
+            Canvas[] sceneCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+            Debug.Log($"[CanvasBinding] Scan de {sceneCanvases.Length} Canvas trouvés dans les ressources...");
+
+            int boundCount = 0;
+            foreach (Canvas canvas in sceneCanvases)
+            {
+                if (canvas != null && canvas.gameObject.scene.isLoaded)
+                {
+                    Debug.Log($"[CanvasBinding] Canvas '{canvas.name}' détecté | Mode={canvas.renderMode} | WorldCam={canvas.worldCamera?.name ?? "null"}");
+                    if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
+                    {
+                        canvas.worldCamera = _playerCamera;
+                        canvas.planeDistance = 0.5f;
+                        boundCount++;
+                        Debug.Log($"[CanvasBinding] -> SUCCÈS : Caméra '{_playerCamera.name}' assignée à '{canvas.name}'");
+                    }
+                }
+            }
+            Debug.Log($"[CanvasBinding] Total Canvas ScreenSpaceCamera liés : {boundCount}");
+        }
+    }
+
+    private void HandleSettingsChanged(SettingsData settings)
+    {
+        if (settings != null)
+        {
+            if (_playerCamera == null)
+            {
+                if (_controller != null && _controller.CameraTransform != null)
+                {
+                    _playerCamera = _controller.CameraTransform.GetComponentInChildren<Camera>(true);
+                }
+                if (_playerCamera == null)
+                {
+                    _playerCamera = Camera.main;
+                }
+            }
+
+            if (_playerCamera != null)
+            {
+                _playerCamera.fieldOfView = settings.FieldOfView;
+                Debug.Log($"[PlayerV2_Look] HandleSettingsChanged -> FOV de '{_playerCamera.name}' mis à jour à {settings.FieldOfView}°");
+            }
+            else
+            {
+                Debug.LogError("[PlayerV2_Look] HandleSettingsChanged ERREUR : _playerCamera est introuvable !");
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (SettingsManager.HasInstance && SettingsManager.Instance != null)
+        {
+            SettingsManager.Instance.OnSettingsChanged -= HandleSettingsChanged;
         }
     }
 

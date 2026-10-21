@@ -48,6 +48,11 @@ public class Eye : NetworkBehaviour
     [SyncVar]
     private float _syncedEyeScale = 1f;
     private Vector3 _eyeInitialScale;
+
+    [SyncVar]
+    private float _syncedPupilScale = 1f;
+    private Vector3 _pupilInitialScale;
+    private bool _isPaused = false;
     
     private Quaternion _pupilInitialWorldRotOffset;
 
@@ -94,6 +99,7 @@ public class Eye : NetworkBehaviour
 
         _pupilInitialLocalRot = _pupilBone.localRotation;
         _eyeInitialScale = transform.localScale;
+        _pupilInitialScale = _pupilBone != null ? _pupilBone.localScale : Vector3.one;
         _syncedPupilTargetLocalRotation = _pupilInitialLocalRot;
         
         // Cache the initial pupil offset relative to the eye transform
@@ -111,6 +117,14 @@ public class Eye : NetworkBehaviour
                 _masterEye = allEyes[0];
             }
         }
+    }
+
+    /// <summary>
+    /// Description: Met en pause ou réactive l'oeil du joueur (rétrécit les pupilles à 0.2).
+    /// </summary>
+    public void SetPaused(bool isPaused)
+    {
+        _isPaused = isPaused;
     }
 
     /// <summary>
@@ -134,23 +148,28 @@ public class Eye : NetworkBehaviour
     }
 
     [Command]
-    private void CmdSetEyeTargets(Quaternion eyeRot, Quaternion pupilRot, float eyeScale)
+    private void CmdSetEyeTargets(Quaternion eyeRot, Quaternion pupilRot, float eyeScale, float pupilScale)
     {
         _syncedTargetLocalRotation = eyeRot;
         _syncedPupilTargetLocalRotation = pupilRot;
         _syncedEyeScale = eyeScale;
+        _syncedPupilScale = pupilScale;
     }
 
     private void UpdateSyncedTargets(Quaternion newEyeRot, Quaternion newPupilRot, float newEyeScale)
     {
+        float targetPupilScale = _isPaused ? 0.2f : 1f;
+
         if (Quaternion.Angle(_syncedTargetLocalRotation, newEyeRot) > 1f ||
             Quaternion.Angle(_syncedPupilTargetLocalRotation, newPupilRot) > 1f ||
-            Mathf.Abs(_syncedEyeScale - newEyeScale) > 0.05f)
+            Mathf.Abs(_syncedEyeScale - newEyeScale) > 0.05f ||
+            Mathf.Abs(_syncedPupilScale - targetPupilScale) > 0.05f)
         {
-            CmdSetEyeTargets(newEyeRot, newPupilRot, newEyeScale);
+            CmdSetEyeTargets(newEyeRot, newPupilRot, newEyeScale, targetPupilScale);
             _syncedTargetLocalRotation = newEyeRot;
             _syncedPupilTargetLocalRotation = newPupilRot;
             _syncedEyeScale = newEyeScale;
+            _syncedPupilScale = targetPupilScale;
         }
     }
 
@@ -315,6 +334,15 @@ public class Eye : NetworkBehaviour
             _eyeInitialScale * _syncedEyeScale,
             Time.deltaTime * 15f
         );
+
+        if (_pupilBone != null)
+        {
+            _pupilBone.localScale = Vector3.Lerp(
+                _pupilBone.localScale,
+                _pupilInitialScale * _syncedPupilScale,
+                Time.deltaTime * 15f
+            );
+        }
     }
 }
 

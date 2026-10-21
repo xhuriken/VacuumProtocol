@@ -39,6 +39,16 @@ public class PlayerV2_DynamicCrosshair : MonoBehaviour
     {
         if (Player == null || MainCamera == null) return;
 
+        // Masquer le réticule dynamique si le joueur est en pause (menu Échap)
+        if (Player.IsPaused)
+        {
+            if (CameraTargetCrosshair != null && CameraTargetCrosshair.gameObject.activeSelf)
+            {
+                CameraTargetCrosshair.gameObject.SetActive(false);
+            }
+            return;
+        }
+
         // 1. Position désirée (Caméra)
         if (CameraTargetCrosshair != null && Player.CameraTransform != null)
         {

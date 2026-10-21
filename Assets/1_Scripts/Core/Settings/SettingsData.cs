@@ -45,6 +45,18 @@ public class SettingsData : ISerializationCallbackReceiver
     [Tooltip("Role: Fullscreen toggle state.\nUse Case: Screen mode.\nJustification: Maps directly to Screen.fullScreen.")]
     private bool _isFullscreen = true;
 
+    [SerializeField]
+    [Tooltip("Role: Field of View for the main camera.\nUse Case: Gameplay visibility.")]
+    private float _fieldOfView = 65f;
+
+    [SerializeField]
+    [Tooltip("Role: Motion blur intensity for the post-processing volume.\nUse Case: Gameplay settings.")]
+    private float _motionBlurIntensity = 1f;
+
+    [SerializeField]
+    [Tooltip("Role: Enable runtime debug gizmos in game and standalone builds.\nUse Case: Debug visualizer.")]
+    private bool _showDebugGizmos = false;
+
     // --- Peer Volume Dictionary (Non-serialized directly) ---
     // Key: Steam64 ID (ulong) — persistent across sessions, unlike Mirror ConnectionId which is session-local.
     private Dictionary<ulong, float> _peerVolumeMultipliers = new Dictionary<ulong, float>();
@@ -145,6 +157,33 @@ public class SettingsData : ISerializationCallbackReceiver
     {
         get => _isFullscreen;
         set => _isFullscreen = value;
+    }
+
+    /// <summary>
+    /// Description: Gets or sets the field of view.
+    /// </summary>
+    public float FieldOfView
+    {
+        get => _fieldOfView;
+        set => _fieldOfView = Mathf.Clamp(value, 60f, 120f);
+    }
+
+    /// <summary>
+    /// Description: Gets or sets the motion blur intensity.
+    /// </summary>
+    public float MotionBlurIntensity
+    {
+        get => _motionBlurIntensity;
+        set => _motionBlurIntensity = Mathf.Clamp(value, 0f, 1f);
+    }
+
+    /// <summary>
+    /// Description: Gets or sets whether runtime debug gizmos are rendered in game and standalone builds.
+    /// </summary>
+    public bool ShowDebugGizmos
+    {
+        get => _showDebugGizmos;
+        set => _showDebugGizmos = value;
     }
 
     /// <summary>

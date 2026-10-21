@@ -43,11 +43,20 @@ public class VacuumSuctionZone : MonoBehaviour
     [Header("Suction Settings")]
     [Tooltip("Role: Base attraction force magnitude.\nUse Case: Physics pull strength.\nJustification: High values attract items instantly, low values require steady focus.")]
     [SerializeField]
-    private float _suctionForce = 25f;
+    private float _suctionForce = 35f;
 
     [Tooltip("Role: Distance threshold for absorption.\nUse Case: Absorption trigger.\nJustification: When the object is closer than this to the nozzle, it gets sucked into inventory.")]
     [SerializeField]
-    private float _absorbDistance = 0.25f;
+    private float _absorbDistance = 0.12f;
+
+    [Header("Wingardium Leviosa Settings")]
+    [Tooltip("Role: Cancels gravity on objects being vacuumed.\nUse Case: Lifts items off the ground immediately.\nJustification: Creates a magical, floating suction effect without ground friction.")]
+    [SerializeField]
+    private bool _cancelGravity = true;
+
+    [Tooltip("Role: Damping applied to neutralize unwanted momentum (pendulum effect or sliding under the nozzle).\nUse Case: Stabilizes objects during pull.\nJustification: High damping makes the item strictly follow the suction forces without overshooting. Scales inversely with pull resistance.")]
+    [SerializeField]
+    private float _suctionDamping = 12f;
 
     [Tooltip("Role: Transform representing the vacuum nozzle tip.\nUse Case: Calculation origin.\nJustification: Used to calculate the center of the suction cone and the target destination.")]
     [SerializeField]
@@ -56,11 +65,11 @@ public class VacuumSuctionZone : MonoBehaviour
     [Header("Animation & Physical Vortex Settings")]
     [Tooltip("Role: Distance from nozzle where items begin shrinking.\nUse Case: Scale transition start.\nJustification: Defines the boundaries of the visual vortex/suction tunnel.")]
     [SerializeField]
-    private float _shrinkStartDistance = 1.2f;
+    private float _shrinkStartDistance = 0.8f;
 
     [Tooltip("Role: Interpolation speed of the scale transitions (Lerp factor).\nUse Case: Visual smoothing.\nJustification: Prevents scaling jitter (yo-yo effect) when items collide or wobble.")]
     [SerializeField]
-    private float _shrinkLerpSpeed = 12f;
+    private float _shrinkLerpSpeed = 14f;
 
     [Tooltip("Role: Torque applied to spin the item around the suction axis.\nUse Case: Vortex effect.\nJustification: Creates the mechanical spinning look while letting it physically interact with objects.")]
     [SerializeField]
@@ -68,29 +77,110 @@ public class VacuumSuctionZone : MonoBehaviour
 
     [Tooltip("Role: Lateral force bringing the item toward the central suction axis.\nUse Case: Guiding target to nozzle center.\nJustification: Prevents objects from getting stuck on the outer colliders of the nozzle.")]
     [SerializeField]
-    private float _centripetalForce = 15f;
-    
+    private float _centripetalForce = 18f;
+
+
     [Header("Dirt Stains Settings")]
     [Tooltip("Vitesse de drainage d'une tache (en quantité par seconde).")]
     public float DirtDrainRatePerSecond = 500f;
 
-    [Header("Debug Settings")]
-    [Tooltip("Role: Toggles editor wireframe drawing.\nUse Case: Tuning suction parameters.\nJustification: Visualizes the cone shape, shrink boundaries, and absorption radius in the Scene tab.")]
-    [SerializeField]
-    private bool _drawGizmos = true;
+    [Header("Visuals & Effects")]
+    [Tooltip("Role: The particle system for the vacuum suction effect.\nUse Case: Plays when active, stops when inactive.")]
+    [SerializeField] private ParticleSystem _vacuumParticles;
+
+
+    [Tooltip("Role: The force field GameObjects for the particles.\nUse Case: Enabled when active, disabled when inactive.")]
+    [SerializeField] private GameObject[] _vacuumForceFields;
 
     private PlayerVacuumController _playerVacuum;
-    
+
+    /// <summary>
+    /// Description: Gets the suction range of the arm nozzle.
+    /// </summary>
+    public float SuctionRange => _suctionRange;
+
+    /// <summary>
+    /// Description: Gets the cone opening angle.
+    /// </summary>
+    public float ConeAngle => _coneAngle;
+
+    /// <summary>
+    /// Description: Gets the absorb distance threshold.
+    /// </summary>
+    public float AbsorbDistance => _absorbDistance;
+
+    /// <summary>
+    /// Description: Gets the shrink start distance threshold.
+    /// </summary>
+    public float ShrinkStartDistance => _shrinkStartDistance;
+
+    /// <summary>
+    /// Description: Gets the nozzle tip transform.
+    /// </summary>
+    public Transform NozzleTransform => _nozzleTransform != null ? _nozzleTransform : transform;
+
     // Set of collectibles currently being tracked for smooth scale changes (in-out)
+
     private readonly HashSet<Collectible> _trackedCollectibles = new HashSet<Collectible>();
-    
+
     // Temporarily stored list of items found in the current physics tick
+
     private readonly List<Collectible> _currentTickCollectibles = new List<Collectible>();
+
+    private bool _isActive = false;
+    private bool _isDrainingDirt = false;
+
 
     /// <summary>
     /// Gets or sets a value indicating whether the suction zone is actively polling and pulling items.
+    /// Handles enabling/disabling force fields, and safely stopping particles if deactivated.
     /// </summary>
-    public bool IsActive { get; set; } = false;
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            if (_isActive != value)
+            {
+                _isActive = value;
+                UpdateForceFields();
+
+                // If the vacuum stops, we are no longer draining dirt
+
+                if (!_isActive)
+                {
+                    SetDrainingDirt(false);
+                }
+            }
+        }
+    }
+
+    private void UpdateForceFields()
+    {
+        if (_vacuumForceFields != null)
+        {
+            foreach (var ff in _vacuumForceFields)
+            {
+                if (ff != null)
+                {
+                    ff.SetActive(_isActive);
+                }
+            }
+        }
+    }
+
+    private void SetDrainingDirt(bool draining)
+    {
+        if (_isDrainingDirt != draining)
+        {
+            _isDrainingDirt = draining;
+            if (_vacuumParticles != null)
+            {
+                if (_isDrainingDirt) _vacuumParticles.Play();
+                else _vacuumParticles.Stop();
+            }
+        }
+    }
 
     /// <summary>
     /// Description: Awake callback. Caches components and validates nozzle reference.
@@ -111,6 +201,7 @@ public class VacuumSuctionZone : MonoBehaviour
     private void FixedUpdate()
     {
         _currentTickCollectibles.Clear();
+        bool isDrainingDirtThisFrame = false;
 
         if (IsActive)
         {
@@ -139,9 +230,15 @@ public class VacuumSuctionZone : MonoBehaviour
                     continue;
                 }
 
-                // Check occlusion/surface exposure via optimized multi-raycast
-                float visibilityFactor = CalculateVisibility(col.transform, toItem);
+                // Check occlusion/surface exposure via bounds multi-point raycasts (supports items on shelves/commodes)
+                float visibilityFactor = CalculateVisibility(col, toItem);
                 if (visibilityFactor <= 0.01f)
+                {
+                    continue;
+                }
+
+                // Phantoms are immune to arm suction (only vacuumed via mouth dual-click)
+                if (col.GetComponentInParent<PhantomBase>() != null)
                 {
                     continue;
                 }
@@ -150,7 +247,8 @@ public class VacuumSuctionZone : MonoBehaviour
                 DirtStain stain = col.GetComponent<DirtStain>();
                 if (stain != null)
                 {
-                    if (_playerVacuum != null && _playerVacuum.isLocalPlayer)
+                    isDrainingDirtThisFrame = true;
+                    if (_playerVacuum != null && _playerVacuum.isOwned)
                     {
                         float amountToDrain = DirtDrainRatePerSecond * Time.fixedDeltaTime * visibilityFactor;
                         _playerVacuum.DrainDirt(stain, amountToDrain);
@@ -170,42 +268,72 @@ public class VacuumSuctionZone : MonoBehaviour
                 if (!_trackedCollectibles.Contains(collectible))
                 {
                     _trackedCollectibles.Add(collectible);
+                    SetIgnoreCollisionsWithArm(collectible, true);
                 }
 
-                // --- 1. Apply Suction Forces ---
+                // --- 1. Wingardium Leviosa (Anti-Gravity & Anti-Momentum) ---
                 float resistance = Mathf.Max(0.05f, collectible.PullResistance);
+
+                if (_cancelGravity)
+                {
+                    Vector3 antiGravity = -Physics.gravity * collectible.Rb.mass;
+                    collectible.Rb.AddForce(antiGravity, ForceMode.Force);
+                }
+
+                if (_suctionDamping > 0f)
+                {
+                    float dragStrength = _suctionDamping / resistance;
+                    Vector3 dragForce = -collectible.Rb.linearVelocity * (collectible.Rb.mass * dragStrength);
+                    collectible.Rb.AddForce(dragForce, ForceMode.Force);
+                }
+
+                // --- 2. Streamlined Funnel Suction Forces (Curving into Nozzle Mouth) ---
                 float forceAmount = (_suctionForce / resistance) * visibilityFactor;
+                float distanceScale = Mathf.Clamp(2.2f - (distance / _suctionRange), 0.8f, 2.5f);
 
-                // Scale force slightly based on proximity (pulls stronger when close)
-                float distanceScale = Mathf.Clamp(2.0f - (distance / _suctionRange), 0.5f, 2.0f);
-                Vector3 attractionForce = -direction * (forceAmount * distanceScale);
+                Vector3 toNozzle = _nozzleTransform.position - collectible.transform.position;
+                Vector3 pullDir = toNozzle.normalized;
 
+                // As distance decreases, blend pull direction with -suctionDir so objects enter straight into the nozzle throat
+                float entryT = Mathf.Clamp01(1f - (distance / 1.2f));
+                Vector3 streamFlowDir = Vector3.Slerp(pullDir, -suctionDir, entryT * 0.75f);
+                Vector3 attractionForce = streamFlowDir * (forceAmount * distanceScale);
                 collectible.Rb.AddForce(attractionForce, ForceMode.Force);
 
-                // --- 2. Apply Centripetal Alignment Forces ---
-                // Projects the collectible's position onto the nozzle suction axis line
+                // --- 3. Centripetal Funnel Confinement (Guides objects onto the central nozzle stream) ---
                 float dotForward = Vector3.Dot(toItem, suctionDir);
-                Vector3 projectionOnAxis = _nozzleTransform.position + suctionDir * dotForward;
-                
-                // Direction pushing the object directly to the center line of the nozzle
+                Vector3 projectionOnAxis = _nozzleTransform.position + suctionDir * Mathf.Max(0f, dotForward);
                 Vector3 toAxis = projectionOnAxis - collectible.transform.position;
-                Vector3 centripetalForce = toAxis * _centripetalForce * visibilityFactor;
-                
-                collectible.Rb.AddForce(centripetalForce, ForceMode.Force);
+                float lateralDist = toAxis.magnitude;
 
-                // --- 3. Apply Vortex Torque ---
-                // Spins the object physically around the nozzle axis
+                if (lateralDist > 0.01f)
+                {
+                    Vector3 centripetalDir = toAxis / lateralDist;
+                    float funnelMultiplier = Mathf.Lerp(1.0f, 2.5f, entryT);
+                    Vector3 centripetalForce = centripetalDir * (lateralDist * _centripetalForce * funnelMultiplier * visibilityFactor);
+                    collectible.Rb.AddForce(centripetalForce, ForceMode.Force);
+                }
+
+                // --- 4. Anti-Overshoot Transverse Velocity Damping (Prevents flying past the nozzle) ---
+                if (distance < 1.0f)
+                {
+                    Vector3 alongAxisVel = Vector3.Project(collectible.Rb.linearVelocity, suctionDir);
+                    Vector3 transverseVel = collectible.Rb.linearVelocity - alongAxisVel;
+                    collectible.Rb.AddForce(-transverseVel * (collectible.Rb.mass * 16f * entryT), ForceMode.Force);
+                }
+
+                // --- 5. Apply Vortex Torque ---
                 Vector3 vortexTorque = suctionDir * (_vortexTorque * visibilityFactor);
                 collectible.Rb.AddTorque(vortexTorque, ForceMode.Force);
 
-                // --- 4. Process Smooth Scale Shrinking ---
+                // --- 6. Non-linear Scale Shrinking (Preserves size until nozzle entry, then compresses into mouth) ---
                 if (distance < _shrinkStartDistance)
                 {
-                    // Compute target scale ratio based on proximity
                     float targetT = Mathf.Clamp01((distance - _absorbDistance) / (_shrinkStartDistance - _absorbDistance));
-                    Vector3 targetScale = collectible.OriginalScale * targetT;
+                    // Power curve: keeps object large (~75-80%) until entering the nozzle throat
+                    float scaleCurve = Mathf.Pow(targetT, 0.45f);
+                    Vector3 targetScale = collectible.OriginalScale * scaleCurve;
 
-                    // Smooth transition to target scale
                     collectible.transform.localScale = Vector3.Lerp(
                         collectible.transform.localScale,
                         targetScale,
@@ -222,17 +350,18 @@ public class VacuumSuctionZone : MonoBehaviour
                     );
                 }
 
-                // --- 5. Perform authoritative absorption ---
-                if (distance <= _absorbDistance && _playerVacuum != null && _playerVacuum.isLocalPlayer)
+                // --- 7. Perform authoritative absorption inside nozzle opening ---
+                if (distance <= _absorbDistance && _playerVacuum != null && _playerVacuum.isOwned)
                 {
+                    SetIgnoreCollisionsWithArm(collectible, false);
                     _trackedCollectibles.Remove(collectible);
                     _playerVacuum.AbsorbObject(collectible.gameObject);
                 }
             }
         }
 
-        // --- 6. Process Retraction / Reversion ---
-        // Restore scale of any collectibles that escaped or when suction deactivated
+        // --- 8. Process Retraction / Reversion ---
+        // Restore scale and re-enable collisions for any collectibles that escaped or when suction deactivated
         List<Collectible> toRemove = new List<Collectible>();
         foreach (Collectible collectible in _trackedCollectibles)
         {
@@ -241,6 +370,9 @@ public class VacuumSuctionZone : MonoBehaviour
             {
                 if (collectible != null)
                 {
+                    // Re-enable collisions immediately upon release so it falls and collides with arm/environment
+                    SetIgnoreCollisionsWithArm(collectible, false);
+
                     // Interpolate back to original scale smoothly
                     collectible.transform.localScale = Vector3.Lerp(
                         collectible.transform.localScale,
@@ -267,17 +399,22 @@ public class VacuumSuctionZone : MonoBehaviour
         {
             _trackedCollectibles.Remove(col);
         }
+
+        SetDrainingDirt(isDrainingDirtThisFrame);
     }
 
     /// <summary>
-    /// Description: Computes the visibility factor of a collectible from the nozzle using multiple raycasts.
+    /// Description: Computes the visibility factor of a collectible from the nozzle using multi-point bounds raycasts.
     /// Context: Called by FixedUpdate.
-    /// Justification: Simulates how much of the object's surface is exposed to the suction nozzle, reducing force if partially blocked.
+    /// Justification: Checks center, top, bottom, and lateral points to allow suction over obstacles (e.g. commodes, shelves).
     /// </summary>
-    private float CalculateVisibility(Transform targetTransform, Vector3 toItem)
+    private float CalculateVisibility(Collider col, Vector3 toItem)
     {
-        int raysPassed = 0;
-        int totalRays = 3;
+        if (col == null) return 0f;
+
+        Transform targetTransform = col.transform;
+        Bounds b = col.bounds;
+        Vector3 nozzlePos = _nozzleTransform.position;
 
         Vector3 toItemDirection = toItem.normalized;
         Vector3 orthoRight = Vector3.Cross(toItemDirection, Vector3.up).normalized;
@@ -286,42 +423,53 @@ public class VacuumSuctionZone : MonoBehaviour
             orthoRight = Vector3.Cross(toItemDirection, Vector3.forward).normalized;
         }
 
-        // 15cm offset to check lateral occlusion
-        Vector3 offset = orthoRight * 0.15f;
+        Vector3 center = b.center;
+        Vector3 extents = b.extents;
 
+        // Sample 5 key spatial points: Center, Top (crucial for furniture edges), Bottom, Left, Right
         Vector3[] targets = new Vector3[]
         {
-            targetTransform.position,
-            targetTransform.position + offset,
-            targetTransform.position - offset
+            center,
+            center + Vector3.up * (extents.y * 0.85f),
+            center - Vector3.up * (extents.y * 0.5f),
+            center + orthoRight * (extents.x * 0.7f),
+            center - orthoRight * (extents.x * 0.7f)
         };
 
-        foreach (Vector3 target in targets)
+        int raysPassed = 0;
+        int totalRays = targets.Length;
+
+        for (int i = 0; i < totalRays; i++)
         {
-            Vector3 rayDir = target - _nozzleTransform.position;
+            Vector3 rayDir = targets[i] - nozzlePos;
             float rayDist = rayDir.magnitude;
 
-            if (Physics.Raycast(_nozzleTransform.position, rayDir.normalized, out RaycastHit hit, rayDist, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
+            if (Physics.Raycast(nozzlePos, rayDir.normalized, out RaycastHit hit, rayDist, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             {
-                if (hit.transform == targetTransform || hit.transform.IsChildOf(targetTransform))
+                if (hit.transform == targetTransform || hit.transform.IsChildOf(targetTransform) || hit.collider == col)
                 {
                     raysPassed++;
                 }
             }
             else
             {
-                // No obstruction hit on this line
+                // No solid obstacle hit
                 raysPassed++;
             }
         }
 
-        return (float)raysPassed / totalRays;
+        if (raysPassed > 0)
+        {
+            return Mathf.Clamp01((float)raysPassed / totalRays + 0.25f);
+        }
+
+        return 0f;
     }
 
     /// <summary>
     /// Description: Resolves the world space direction vector of the selected local suction axis.
     /// </summary>
-    private Vector3 GetSuctionDirection()
+    public Vector3 GetSuctionDirection()
     {
         switch (_suctionAxis)
         {
@@ -335,64 +483,74 @@ public class VacuumSuctionZone : MonoBehaviour
         }
     }
 
+    #region Arm Collision Filtering
+
+    private Collider[] _cachedArmColliders;
+
     /// <summary>
-    /// Description: Resolves two orthogonal vectors in world space relative to the suction direction to draw the base circle.
+    /// Description: Caches all colliders of the player's right arm and nozzle hierarchy.
     /// </summary>
-    private void GetOrthogonalAxes(Vector3 suctionDir, out Vector3 right, out Vector3 up)
+    private void CacheArmColliders()
     {
-        right = Vector3.Cross(suctionDir, _nozzleTransform.up).normalized;
-        if (right.sqrMagnitude < 0.001f)
+        if (_cachedArmColliders == null || _cachedArmColliders.Length == 0)
         {
-            right = Vector3.Cross(suctionDir, _nozzleTransform.forward).normalized;
+            PlayerV2_Controller controller = GetComponentInParent<PlayerV2_Controller>();
+            if (controller != null && controller.RightArmRoot != null)
+            {
+                _cachedArmColliders = controller.RightArmRoot.GetComponentsInChildren<Collider>();
+            }
+            else if (_playerVacuum != null)
+            {
+                _cachedArmColliders = _playerVacuum.GetComponentsInChildren<Collider>();
+            }
+            else
+            {
+                _cachedArmColliders = GetComponentsInChildren<Collider>();
+            }
         }
-        up = Vector3.Cross(right, suctionDir).normalized;
     }
 
     /// <summary>
-    /// Description: OnDrawGizmos callback. Visualizes the precise suction cone, shrink boundary, and absorb sphere in the editor.
+    /// Description: Ignores or restores physics collisions between a collectible and the player's right arm.
     /// </summary>
-    private void OnDrawGizmos()
+    private void SetIgnoreCollisionsWithArm(Collectible collectible, bool ignore)
     {
-        if (!_drawGizmos || _nozzleTransform == null)
+        if (collectible == null) return;
+        CacheArmColliders();
+        if (_cachedArmColliders == null) return;
+
+        Collider[] itemColliders = collectible.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < itemColliders.Length; i++)
         {
-            return;
+            Collider itemCol = itemColliders[i];
+            if (itemCol == null) continue;
+
+            for (int j = 0; j < _cachedArmColliders.Length; j++)
+            {
+                Collider armCol = _cachedArmColliders[j];
+                if (armCol != null && armCol.enabled && itemCol.enabled)
+                {
+                    Physics.IgnoreCollision(itemCol, armCol, ignore);
+                }
+            }
         }
-
-        Vector3 pos = _nozzleTransform.position;
-        Vector3 forward = GetSuctionDirection();
-
-        // Draw absorption sphere (red)
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(pos, _absorbDistance);
-
-        // Draw shrink boundary sphere (orange)
-        Gizmos.color = new Color(1f, 0.5f, 0f);
-        Gizmos.DrawWireSphere(pos, _shrinkStartDistance);
-
-        // Draw suction cone boundaries (yellow)
-        Gizmos.color = Color.yellow;
-
-        float radAngle = _coneAngle * Mathf.Deg2Rad;
-        float baseRadius = _suctionRange * Mathf.Tan(radAngle);
-        Vector3 baseCenter = pos + forward * _suctionRange;
-
-        // Draw base circle using dynamically resolved orthogonal axes
-        int segments = 24;
-        GetOrthogonalAxes(forward, out Vector3 right, out Vector3 up);
-        Vector3 prevPoint = baseCenter + right * baseRadius;
-
-        for (int i = 1; i <= segments; i++)
-        {
-            float angle = (i * 360f / segments) * Mathf.Deg2Rad;
-            Vector3 nextPoint = baseCenter + (right * Mathf.Cos(angle) + up * Mathf.Sin(angle)) * baseRadius;
-            Gizmos.DrawLine(prevPoint, nextPoint);
-            prevPoint = nextPoint;
-        }
-
-        // Draw cone side lines
-        Gizmos.DrawLine(pos, baseCenter + right * baseRadius);
-        Gizmos.DrawLine(pos, baseCenter - right * baseRadius);
-        Gizmos.DrawLine(pos, baseCenter + up * baseRadius);
-        Gizmos.DrawLine(pos, baseCenter - up * baseRadius);
     }
+
+    /// <summary>
+    /// Description: OnDisable callback. Restores collisions and resets scales for all tracked items.
+    /// </summary>
+    private void OnDisable()
+    {
+        foreach (Collectible collectible in _trackedCollectibles)
+        {
+            if (collectible != null)
+            {
+                SetIgnoreCollisionsWithArm(collectible, false);
+                collectible.ResetScale();
+            }
+        }
+        _trackedCollectibles.Clear();
+    }
+
+    #endregion
 }

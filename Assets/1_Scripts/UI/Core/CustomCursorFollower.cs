@@ -1,5 +1,8 @@
 using UnityEngine;
 using Shapes;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Description: Placed on a local custom cursor UI element in any scene. Automatically tracks the global MouseManager's position and visibility state.
@@ -34,6 +37,8 @@ public class CustomCursorFollower : MonoBehaviour
     private Canvas _canvas;
     private bool _isInBrushMode;
 
+    private CanvasGroup _canvasGroup;
+
     /// <summary>
     /// Description: Unity Awake callback. Establishes singleton and caches necessary components.
     /// Context: Initialization.
@@ -50,6 +55,23 @@ public class CustomCursorFollower : MonoBehaviour
 
         _rectTransform = GetComponent<RectTransform>();
         _canvas = GetComponentInParent<Canvas>();
+        _canvasGroup = GetComponent<CanvasGroup>();
+        if (_canvasGroup == null)
+        {
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+        _canvasGroup.blocksRaycasts = false;
+        _canvasGroup.interactable = false;
+
+        // Désactiver le raycastTarget sur tous les graphismes du curseur pour qu'il ne bloque jamais les boutons en dessous
+        UnityEngine.UI.Graphic[] graphics = GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != null)
+            {
+                graphics[i].raycastTarget = false;
+            }
+        }
 
         ResetCursorMode();
     }
@@ -69,16 +91,36 @@ public class CustomCursorFollower : MonoBehaviour
     /// </summary>
     private void LateUpdate()
     {
-        if (MouseManager.Instance == null)
+        bool isCursorLocked = Cursor.lockState == CursorLockMode.Locked;
+        bool shouldBeVisible = !isCursorLocked;
+
+        if (MouseManager.Instance != null)
         {
-            return;
+            shouldBeVisible = MouseManager.Instance.ShouldShowCursor;
         }
 
-        // 1. Sync visibility with global MouseManager context state (locked/gameplay vs UI)
-        bool shouldBeVisible = MouseManager.Instance.ShouldShowCursor;
-        if (gameObject.activeSelf != shouldBeVisible)
+        // Contrôler la visibilité des visuels sans désactiver le GameObject racine pour que LateUpdate continue de tourner
+        if (_defaultCursorVisual != null)
         {
-            gameObject.SetActive(shouldBeVisible);
+            _defaultCursorVisual.SetActive(shouldBeVisible && !_isInBrushMode);
+        }
+        if (_brushCursorVisual != null)
+        {
+            _brushCursorVisual.SetActive(shouldBeVisible && _isInBrushMode);
+        }
+
+        if (_canvasGroup != null)
+        {
+            _canvasGroup.alpha = shouldBeVisible ? 1f : 0f;
+        }
+
+        // Pour les Shapes et enfants directs si les conteneurs visuels ne sont pas assignés
+        if (_defaultCursorVisual == null && _brushCursorVisual == null)
+        {
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                transform.GetChild(i).gameObject.SetActive(shouldBeVisible);
+            }
         }
 
         if (!shouldBeVisible)
@@ -121,25 +163,42 @@ public class CustomCursorFollower : MonoBehaviour
 
         if (_brushInnerDisc != null)
         {
-            _brushInnerDisc.Radius = radiusPixels;
-            _brushInnerDisc.Color = isEraser ? new Color(1f, 1f, 1f, 0.2f) : activeColor;
+            _brushInnerDisc.Color = activeColor;
+            _brushInnerDisc.Radius = Mathf.Max(2f, radiusPixels * 0.25f);
         }
 
         if (_brushOutlineRing != null)
         {
-            _brushOutlineRing.Radius = radiusPixels + 1.5f;
-            _brushOutlineRing.Color = isEraser ? Color.red : Color.white;
+            _brushOutlineRing.Radius = Mathf.Max(4f, radiusPixels);
+            _brushOutlineRing.Thickness = 2f;
+            _brushOutlineRing.Color = isEraser ? new Color(1f, 0.4f, 0.4f, 0.9f) : Color.white;
         }
     }
 
     /// <summary>
-    /// Description: Resets cursor visual state to standard default UI cursor.
-    /// Context: Called on Canvas exit or disable.
-    /// Justification: Restores default mouse cursor visual cleanly.
+    /// Description: Resets cursor mode back to the standard UI pointer.
+    /// Context: Called on Awake or canvas exit.
+    /// Justification: Cleans up brush ring states.
     /// </summary>
     public void ResetCursorMode()
     {
         SetBrushCursorMode(false);
+    }
+
+    private Vector2 GetMouseScreenPosition()
+    {
+        if (MouseManager.Instance != null)
+        {
+            return MouseManager.Instance.MousePosition;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (Mouse.current != null)
+        {
+            return Mouse.current.position.ReadValue();
+        }
+#endif
+        return Input.mousePosition;
     }
 
     /// <summary>
@@ -149,31 +208,33 @@ public class CustomCursorFollower : MonoBehaviour
     /// </summary>
     private void PositionCursor()
     {
+        Vector2 mousePos = GetMouseScreenPosition();
+
         if (_canvas == null)
         {
-            transform.position = MouseManager.Instance.MousePosition;
+            _canvas = GetComponentInParent<Canvas>();
+        }
+
+        if (_canvas == null)
+        {
+            transform.position = mousePos;
             return;
         }
 
-        if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        Camera cam = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : (_canvas.worldCamera != null ? _canvas.worldCamera : Camera.main);
+
+        RectTransform parentRect = transform.parent as RectTransform;
+        if (parentRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, mousePos, cam, out Vector2 localPoint))
         {
-            // In Overlay mode, screen coordinates map directly to world coordinates
-            transform.position = MouseManager.Instance.MousePosition;
+            _rectTransform.anchoredPosition = localPoint;
         }
-        else if (_canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        else if (RectTransformUtility.ScreenPointToWorldPointInRectangle(_rectTransform, mousePos, cam, out Vector3 worldPoint))
         {
-            Camera cam = _canvas.worldCamera != null ? _canvas.worldCamera : Camera.main;
-            if (cam != null)
-            {
-                // Position directly on the camera plane distance to avoid perspective offsets
-                Vector3 screenPos = new Vector3(MouseManager.Instance.MousePosition.x, MouseManager.Instance.MousePosition.y, _canvas.planeDistance);
-                transform.position = cam.ScreenToWorldPoint(screenPos);
-            }
-            else
-            {
-                transform.position = MouseManager.Instance.MousePosition;
-            }
+            transform.position = worldPoint;
+        }
+        else
+        {
+            transform.position = mousePos;
         }
     }
 }
-

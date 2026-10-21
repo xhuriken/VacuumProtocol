@@ -80,12 +80,12 @@ public class UICustomToggle : MonoBehaviour, IPointerClickHandler, IPointerEnter
     /// <summary>
     /// Description: Gets or sets the toggle state programmatically.
     /// Context: Read/write access.
-    /// Justification: Matches the standard uGUI Toggle property API. Updates visuals instantly on programmatic assignment.
+    /// Justification: Matches the standard uGUI Toggle property API. Updates visuals instantly on programmatic assignment without triggering events.
     /// </summary>
     public bool isOn
     {
         get => _isOn;
-        set => SetIsOn(value, notify: true, animate: false);
+        set => SetIsOn(value, notify: false, animate: false);
     }
 
     /// <summary>

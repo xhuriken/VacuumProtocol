@@ -32,8 +32,17 @@ public class SettingsUIPresenter : MonoBehaviour
     [SerializeField] private UICustomToggle _autoVadToggle;
     [SerializeField] private UICustomSlider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
+    [Header("Gameplay UI Elements")]
+    [SerializeField] private UICustomSlider _fovSlider;
+    [SerializeField] private UICustomToggle _debugGizmosToggle;
+
+    [Header("Graphics UI Elements")]
+    [SerializeField] private UICustomSlider _motionBlurSlider;
+    [SerializeField] private UICustomDropdown _qualityDropdown;
+    [SerializeField] private UICustomToggle _fullscreenToggle;
+
     [Header("Debug")]
-    [SerializeField] private bool _enableDebugLogs = false;
+    [SerializeField] private bool _enableDebugLogs = true;
 
     // Cached runtime variables
     private float _latestRms = 0f;
@@ -43,8 +52,14 @@ public class SettingsUIPresenter : MonoBehaviour
     private float _lastLoggedSnrDb = float.MinValue;
     private const float SnrLogThresholdDelta = 1.5f; // only log SNR if it changes by more than this amount
 
+    private void Awake()
+    {
+        AutoWireElements();
+    }
+
     private void OnEnable()
     {
+        AutoWireElements();
         InitializeUI();
         BindUIEvents();
         SubscribeToMicrophoneEvents();
@@ -54,6 +69,39 @@ public class SettingsUIPresenter : MonoBehaviour
 
         // Listen for microphone hot-swap changes to re-bind the RMS level listener
         VoiceSettingsConsumer.OnMicInputSwapped += HandleMicInputSwapped;
+    }
+
+    private void AutoWireElements()
+    {
+        UICustomSlider[] sliders = GetComponentsInChildren<UICustomSlider>(true);
+        UICustomToggle[] toggles = GetComponentsInChildren<UICustomToggle>(true);
+        UICustomDropdown[] dropdowns = GetComponentsInChildren<UICustomDropdown>(true);
+
+        for (int i = 0; i < sliders.Length; i++)
+        {
+            string lowerName = sliders[i].name.ToLower();
+            if (_fovSlider == null && (lowerName.Contains("fov") || lowerName.Contains("field"))) _fovSlider = sliders[i];
+            if (_motionBlurSlider == null && (lowerName.Contains("blur") || lowerName.Contains("motion"))) _motionBlurSlider = sliders[i];
+            if (_masterVolumeSlider == null && lowerName.Contains("master")) _masterVolumeSlider = sliders[i];
+            if (_voiceVolumeSlider == null && lowerName.Contains("voice")) _voiceVolumeSlider = sliders[i];
+            if (_micSensitivitySlider == null && (lowerName.Contains("sens") || lowerName.Contains("mic"))) _micSensitivitySlider = sliders[i];
+        }
+
+        for (int i = 0; i < toggles.Length; i++)
+        {
+            string lowerName = toggles[i].name.ToLower();
+            if (_debugGizmosToggle == null && (lowerName.Contains("gizmo") || lowerName.Contains("guizmo") || lowerName.Contains("debug"))) _debugGizmosToggle = toggles[i];
+            if (_fullscreenToggle == null && (lowerName.Contains("screen") || lowerName.Contains("full"))) _fullscreenToggle = toggles[i];
+            if (_autoVadToggle == null && lowerName.Contains("auto")) _autoVadToggle = toggles[i];
+            if (_micTestToggle == null && lowerName.Contains("test")) _micTestToggle = toggles[i];
+        }
+
+        for (int i = 0; i < dropdowns.Length; i++)
+        {
+            string lowerName = dropdowns[i].name.ToLower();
+            if (_qualityDropdown == null && lowerName.Contains("quality")) _qualityDropdown = dropdowns[i];
+            if (_microphoneDropdown == null && (lowerName.Contains("mic") || lowerName.Contains("device"))) _microphoneDropdown = dropdowns[i];
+        }
     }
 
     private void OnDisable()
@@ -67,9 +115,9 @@ public class SettingsUIPresenter : MonoBehaviour
         // Note: we do NOT reset AutoVad on panel close — user preference persists until toggled off
 
         // Flush settings to disk when settings panel is closed/disabled
-        if (SettingsManager.HasInstance)
+        if (SettingsManager.Instance != null)
         {
-            SettingsManager.Instance.SaveToDisk();
+            SettingsManager.Instance.SaveSettings();
         }
     }
 
@@ -91,6 +139,13 @@ public class SettingsUIPresenter : MonoBehaviour
         if (SettingsManager.Instance == null) return;
 
         var current = SettingsManager.Instance.CurrentSettings;
+        if (current == null)
+        {
+            Debug.LogWarning("[SettingsUIPresenter] InitializeUI -> CurrentSettings est encore null !");
+            return;
+        }
+
+        Debug.Log($"[SettingsUIPresenter] InitializeUI -> Données actuelles chargées: FOV={current.FieldOfView} | Gizmos={current.ShowDebugGizmos}");
 
         // Initialize sliders
         if (_masterVolumeSlider != null) _masterVolumeSlider.value = current.MasterVolume;
@@ -108,6 +163,40 @@ public class SettingsUIPresenter : MonoBehaviour
             _microphoneDropdown.value = Mathf.Max(0, selectedIndex);
         }
 
+        // Gameplay
+        if (_fovSlider != null)
+        {
+            _fovSlider.minValue = 60f;
+            _fovSlider.maxValue = 120f;
+            _fovSlider.value = current.FieldOfView;
+            Debug.Log($"[SettingsUIPresenter] _fovSlider ({_fovSlider.name}) configuré: Min=60, Max=120, Value={current.FieldOfView}");
+        }
+        else
+        {
+            Debug.LogWarning("[SettingsUIPresenter] Attention : _fovSlider n'est pas assigné !");
+        }
+
+        if (_debugGizmosToggle != null)
+        {
+            _debugGizmosToggle.isOn = current.ShowDebugGizmos;
+            Debug.Log($"[SettingsUIPresenter] _debugGizmosToggle ({_debugGizmosToggle.name}) configuré: IsOn={current.ShowDebugGizmos}");
+        }
+        else
+        {
+            Debug.LogWarning("[SettingsUIPresenter] Attention : _debugGizmosToggle n'est pas assigné !");
+        }
+
+        // Graphics
+        if (_motionBlurSlider != null) _motionBlurSlider.value = current.MotionBlurIntensity;
+        if (_qualityDropdown != null)
+        {
+            _qualityDropdown.ClearOptions();
+            var qualityNames = new List<string>(QualitySettings.names);
+            _qualityDropdown.AddOptions(qualityNames);
+            _qualityDropdown.value = Mathf.Clamp(current.QualityLevelIndex, 0, Mathf.Max(0, qualityNames.Count - 1));
+        }
+        if (_fullscreenToggle != null) _fullscreenToggle.isOn = current.IsFullscreen;
+
         // Always reset both toggles to off when opening the UI
         if (_micTestToggle != null) _micTestToggle.isOn = false;
         if (_autoVadToggle != null) _autoVadToggle.isOn = VoiceSettingsConsumer.IsAutoVad;
@@ -118,22 +207,81 @@ public class SettingsUIPresenter : MonoBehaviour
 
     private void BindUIEvents()
     {
-        if (_masterVolumeSlider != null) _masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
-        if (_voiceVolumeSlider != null) _voiceVolumeSlider.onValueChanged.AddListener(OnVoiceVolumeChanged);
-        if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.AddListener(OnSensitivityChanged);
+        if (_masterVolumeSlider != null)
+        {
+            _masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
+            _masterVolumeSlider.onPointerUp.AddListener(OnSliderReleased);
+        }
+        if (_voiceVolumeSlider != null)
+        {
+            _voiceVolumeSlider.onValueChanged.AddListener(OnVoiceVolumeChanged);
+            _voiceVolumeSlider.onPointerUp.AddListener(OnSliderReleased);
+        }
+        if (_micSensitivitySlider != null)
+        {
+            _micSensitivitySlider.onValueChanged.AddListener(OnSensitivityChanged);
+            _micSensitivitySlider.onPointerUp.AddListener(OnSliderReleased);
+        }
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.AddListener(OnMicrophoneSelected);
         if (_micTestToggle != null) _micTestToggle.onValueChanged.AddListener(OnMicTestToggleChanged);
         if (_autoVadToggle != null) _autoVadToggle.onValueChanged.AddListener(OnAutoVadToggleChanged);
+
+        // Gameplay
+
+        if (_fovSlider != null)
+        {
+            _fovSlider.onValueChanged.AddListener(OnFovChanged);
+            _fovSlider.onPointerUp.AddListener(OnSliderReleased);
+        }
+        if (_debugGizmosToggle != null) _debugGizmosToggle.onValueChanged.AddListener(OnDebugGizmosChanged);
+
+        // Graphics
+        if (_motionBlurSlider != null)
+        {
+            _motionBlurSlider.onValueChanged.AddListener(OnMotionBlurChanged);
+            _motionBlurSlider.onPointerUp.AddListener(OnSliderReleased);
+        }
+        if (_qualityDropdown != null) _qualityDropdown.onValueChanged.AddListener(OnQualityChanged);
+        if (_fullscreenToggle != null) _fullscreenToggle.onValueChanged.AddListener(OnFullscreenChanged);
     }
 
     private void UnbindUIEvents()
     {
-        if (_masterVolumeSlider != null) _masterVolumeSlider.onValueChanged.RemoveListener(OnMasterVolumeChanged);
-        if (_voiceVolumeSlider != null) _voiceVolumeSlider.onValueChanged.RemoveListener(OnVoiceVolumeChanged);
-        if (_micSensitivitySlider != null) _micSensitivitySlider.onValueChanged.RemoveListener(OnSensitivityChanged);
+        if (_masterVolumeSlider != null)
+        {
+            _masterVolumeSlider.onValueChanged.RemoveListener(OnMasterVolumeChanged);
+            _masterVolumeSlider.onPointerUp.RemoveListener(OnSliderReleased);
+        }
+        if (_voiceVolumeSlider != null)
+        {
+            _voiceVolumeSlider.onValueChanged.RemoveListener(OnVoiceVolumeChanged);
+            _voiceVolumeSlider.onPointerUp.RemoveListener(OnSliderReleased);
+        }
+        if (_micSensitivitySlider != null)
+        {
+            _micSensitivitySlider.onValueChanged.RemoveListener(OnSensitivityChanged);
+            _micSensitivitySlider.onPointerUp.RemoveListener(OnSliderReleased);
+        }
         if (_microphoneDropdown != null) _microphoneDropdown.onValueChanged.RemoveListener(OnMicrophoneSelected);
         if (_micTestToggle != null) _micTestToggle.onValueChanged.RemoveListener(OnMicTestToggleChanged);
         if (_autoVadToggle != null) _autoVadToggle.onValueChanged.RemoveListener(OnAutoVadToggleChanged);
+
+        // Gameplay
+        if (_fovSlider != null)
+        {
+            _fovSlider.onValueChanged.RemoveListener(OnFovChanged);
+            _fovSlider.onPointerUp.RemoveListener(OnSliderReleased);
+        }
+        if (_debugGizmosToggle != null) _debugGizmosToggle.onValueChanged.RemoveListener(OnDebugGizmosChanged);
+
+        // Graphics
+        if (_motionBlurSlider != null)
+        {
+            _motionBlurSlider.onValueChanged.RemoveListener(OnMotionBlurChanged);
+            _motionBlurSlider.onPointerUp.RemoveListener(OnSliderReleased);
+        }
+        if (_qualityDropdown != null) _qualityDropdown.onValueChanged.RemoveListener(OnQualityChanged);
+        if (_fullscreenToggle != null) _fullscreenToggle.onValueChanged.RemoveListener(OnFullscreenChanged);
     }
 
     private void SubscribeToMicrophoneEvents()
@@ -266,7 +414,7 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.MasterVolume = value;
-        });
+        }, saveToDisk: false);
     }
 
     private void OnVoiceVolumeChanged(float value)
@@ -274,7 +422,7 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.VoiceVolume = value;
-        });
+        }, saveToDisk: false);
     }
 
     private void OnSensitivityChanged(float value)
@@ -292,7 +440,7 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.MicSensitivityLimit = value;
-        });
+        }, saveToDisk: false);
     }
 
     private void OnMicrophoneSelected(int index)
@@ -304,6 +452,59 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.ActiveMicrophoneDevice = selectedDevice;
+        });
+    }
+
+    private void OnFovChanged(float value)
+    {
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.FieldOfView = value;
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] FOV modifié -> {data.FieldOfView}°");
+        }, saveToDisk: true);
+    }
+
+    private void OnMotionBlurChanged(float value)
+    {
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.MotionBlurIntensity = value;
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Motion Blur modifié -> {data.MotionBlurIntensity}");
+        }, saveToDisk: true);
+    }
+
+    /// <summary>
+    /// Description: Callback appelé quand un slider est relâché. Enregistre physiquement les données sur disque.
+    /// </summary>
+    private void OnSliderReleased()
+    {
+        SettingsManager.Instance.SaveSettings();
+        if (_enableDebugLogs) Debug.Log("[SettingsUIPresenter] Slider relâché -> Sauvegarde sur disque exécutée (PlayerPrefs.Save).");
+    }
+
+    private void OnQualityChanged(int index)
+    {
+        QualitySettings.SetQualityLevel(index, true);
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.QualityLevelIndex = index;
+        });
+    }
+
+    private void OnFullscreenChanged(bool value)
+    {
+        Screen.fullScreen = value;
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.IsFullscreen = value;
+        });
+    }
+
+    private void OnDebugGizmosChanged(bool value)
+    {
+        SettingsManager.Instance.UpdateSettings(data =>
+        {
+            data.ShowDebugGizmos = value;
         });
     }
 

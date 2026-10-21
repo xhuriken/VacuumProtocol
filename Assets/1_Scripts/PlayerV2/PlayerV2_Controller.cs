@@ -135,6 +135,53 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     [Tooltip("Role: Contrôleur physique des bras.\nUse Case: Référence centralisée pour d'autres systèmes.")]
     public PlayerV2_Arms ArmsController;
 
+    /// <summary>
+    /// Description: Instance locale du joueur sur ce client.
+    /// </summary>
+    public static PlayerV2_Controller LocalInstance { get; private set; }
+
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        LocalInstance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (LocalInstance == this)
+        {
+            LocalInstance = null;
+        }
+    }
+
+    /// <summary>
+    /// Description: Indique si le joueur local est en état de pause.
+    /// </summary>
+    public bool IsPaused { get; private set; }
+
+    /// <summary>
+    /// Description: Met en pause ou réactive le joueur local (bloque les inputs, pupilles réduites à 0.2, etc.).
+    /// </summary>
+    public void SetPaused(bool isPaused)
+    {
+        IsPaused = isPaused;
+
+        PlayerInputHandler input = GetComponent<PlayerInputHandler>();
+        if (input != null)
+        {
+            input.IsInputBlocked = isPaused;
+        }
+
+        Eye[] eyes = GetComponentsInChildren<Eye>();
+        for (int i = 0; i < eyes.Length; i++)
+        {
+            if (eyes[i] != null)
+            {
+                eyes[i].SetPaused(isPaused);
+            }
+        }
+    }
+
     private void Start()
     {
         if (HipsRigidbody == null || TorsoRigidbody == null)
