@@ -112,6 +112,13 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     [Tooltip("Role: Rigidbody de la tourelle (vue).\nUse Case: Rotation infinie libre de la caméra.")]
     public Rigidbody TorsoRigidbody;
 
+    /// <summary>
+    /// Description: Gets the true world position of the player's physical body.
+    /// Context: HipsRigidbody moves in physics space while root transform remains at spawn.
+    /// Justification: Critical for AI and tracking systems to locate the true player position.
+    /// </summary>
+    public Vector3 WorldPosition => HipsRigidbody != null ? HipsRigidbody.position : transform.position;
+
     [Header("Camera & Visuals")]
     [Tooltip("Role: La caméra du joueur.\nUse Case: Assignée au script de Look.")]
     public Transform CameraTransform;
@@ -134,6 +141,26 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
 
     [Tooltip("Role: Contrôleur physique des bras.\nUse Case: Référence centralisée pour d'autres systèmes.")]
     public PlayerV2_Arms ArmsController;
+
+    /// <summary>
+    /// Description: Global list of currently active player controllers in the scene.
+    /// Context: Maintained automatically on enable/disable.
+    /// Justification: Allows AI entities (such as Phantoms) to find valid target players without costly scene-wide searches.
+    /// </summary>
+    public static readonly System.Collections.Generic.List<PlayerV2_Controller> ActivePlayers = new System.Collections.Generic.List<PlayerV2_Controller>();
+
+    private void OnEnable()
+    {
+        if (!ActivePlayers.Contains(this))
+        {
+            ActivePlayers.Add(this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        ActivePlayers.Remove(this);
+    }
 
     private void Start()
     {

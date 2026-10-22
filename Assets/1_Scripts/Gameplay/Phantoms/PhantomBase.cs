@@ -1,0 +1,521 @@
+using System.Collections.Generic;
+using Mirror;
+using UnityEngine;
+
+namespace Gameplay.Phantoms
+{
+    /// <summary>
+    /// Description: Defines the possible behavioral states for Phantom AI entities.
+    /// Context: Used by PhantomBase and derived phantom controllers to drive state-machine decisions.
+    /// </summary>
+    public enum PhantomState
+    {
+        Idle,
+        Wandering,
+        Chasing,
+        Investigating,
+        Attacking
+    }
+
+    /// <summary>
+    /// Description: Abstract base class for all Phantom entities in the game.
+    /// Context: Runs server-side in Mirror multiplayer. Drives target detection via FOV and Line-of-Sight,
+    /// last-known-position tracking, state machine transitions, and IEntity exposure.
+    /// Justification: Provides a common extensible foundation so specialized phantoms can share core vision,
+    /// multiplayer targeting, and investigation logic while customizing movement.
+    /// </summary>
+    [RequireComponent(typeof(NetworkIdentity))]
+    public abstract class PhantomBase : NetworkBehaviour, IEntity
+    {
+        #region IEntity Implementation
+        [Header("Entity Settings")]
+        [Tooltip("Role: The display name of this phantom.\nUse Case: UI label rendering and logging.\nJustification: Identifies the enemy to players and debugging logs.")]
+        [SerializeField] private string _entityName = "Phantom";
+
+        [Tooltip("Role: Priority level for player visual detection.\nUse Case: Vision targeting and fear animations.\nJustification: Values >= 3 trigger fear saccades in robot eyes as defined in game design.")]
+        [SerializeField] private int _priorityLevel = 3;
+
+        [Tooltip("Role: The focal transform target for eye tracking and vision origin.\nUse Case: Where player heads/cameras focus, and raycast origin point for the phantom's vision.\nJustification: Required by IEntity interface. Must be assigned in prefab.")]
+        [SerializeField] private Transform _lookAtPoint;
+
+        public string Name
+        {
+            get => _entityName;
+            set => _entityName = value;
+        }
+
+        public int PriorityLevel
+        {
+            get => _priorityLevel;
+            set => _priorityLevel = value;
+        }
+
+        public Transform LookAtPoint => _lookAtPoint != null ? _lookAtPoint : transform;
+        #endregion
+
+        #region Vision & Detection Settings
+        [Header("Vision & Field of View")]
+        [Tooltip("Role: Horizontal field of view angle in degrees.\nUse Case: Players outside this cone cannot be seen.")]
+        [SerializeField] protected float _fieldOfViewAngle = 110f;
+
+        [Tooltip("Role: Maximum distance at which this phantom can see a player.\nUse Case: Vision cone range limit.")]
+        [SerializeField] protected float _detectionRadius = 15f;
+
+        [Tooltip("Role: Maximum distance before losing interest even if target is still in line of sight.\nUse Case: Max chase range cutoff.")]
+        [SerializeField] protected float _loseTargetRadius = 25f;
+
+        [Tooltip("Role: Layers that block line-of-sight (walls, obstacles, ground).\nUse Case: If a wall is between phantom and player, player remains undetected.")]
+        [SerializeField] protected LayerMask _obstacleLayer;
+
+        [Header("Multiplayer Target Switch Settings")]
+        [Tooltip("Role: Allows the phantom to switch to a much closer visible player while chasing.\nUse Case: False = tunnel-vision on current prey; True = switches if another player gets much closer.")]
+        [SerializeField] protected bool _allowTargetSwitchWhileChasing = false;
+
+        [Tooltip("Role: Proximity ratio required to trigger a target switch during chase.\nUse Case: e.g. 0.6 means new target must be at least 40% closer than current target.")]
+        [SerializeField] protected float _switchDistanceRatio = 0.6f;
+
+        [Header("Combat & Investigation Settings")]
+        [Tooltip("Role: Distance required to trigger an attack.\nUse Case: Transitions from Chasing to Attacking.")]
+        [SerializeField] protected float _attackRadius = 1.8f;
+
+        [Tooltip("Role: Cooldown in seconds between attacks.\nUse Case: Pacing attacks.")]
+        [SerializeField] protected float _attackCooldown = 2.0f;
+
+        [Tooltip("Role: Time in seconds to inspect the last known position before returning to Idle.\nUse Case: Gives players a window to escape and hide.")]
+        [SerializeField] protected float _investigateWaitTime = 3.0f;
+
+        [Tooltip("Role: Maximum time allowed to reach the last known position before giving up.")]
+        [SerializeField] protected float _maxInvestigateTravelTime = 8.0f;
+
+        [Header("Wander Settings")]
+        [Tooltip("Role: Radius within which random wander destinations are picked.\nUse Case: Exploration when no player is detected.")]
+        [SerializeField] protected float _wanderRadius = 10f;
+
+        [Tooltip("Role: Time in seconds to wait at a wander destination before picking a new one.\nUse Case: Natural pacing in idle/patrol state.")]
+        [SerializeField] protected float _wanderWaitTime = 3f;
+        #endregion
+
+        #region State Machine Variables
+        [Header("Current State (Debug)")]
+        [SerializeField] protected PhantomState _currentState = PhantomState.Idle;
+        [SerializeField] protected PlayerV2_Controller _currentTarget;
+
+        protected float _stateTimer = 0f;
+        protected float _lastAttackTime = -999f;
+
+        protected Vector3 _lastKnownPosition;
+        protected bool _hasLastKnownPosition = false;
+        protected float _investigateWaitTimer = 0f;
+        protected bool _hasReachedLastKnown = false;
+        #endregion
+
+        #region Unity Callbacks
+        protected virtual void Awake()
+        {
+            if (_lookAtPoint == null)
+            {
+                Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' is missing a '_lookAtPoint' assignment! Please set it on the prefab to satisfy IEntity requirements. Fail loudly per workspace rules.");
+            }
+
+            // Default obstacle layer mask if unassigned in inspector
+            if (_obstacleLayer.value == 0)
+            {
+                _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstable");
+                if (_obstacleLayer.value == 0)
+                {
+                    _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
+                }
+            }
+        }
+
+        [ServerCallback]
+        protected virtual void Update()
+        {
+            if (!isServer) return;
+
+            UpdateTargetDetection();
+            UpdateStateMachine();
+        }
+        #endregion
+
+        #region Vision & Detection Logic
+        /// <summary>
+        /// Description: Checks if a player is within the phantom's field of view and not obstructed by an obstacle.
+        /// Context: Runs server-side. Used for both initial target acquisition and maintaining chase.
+        /// </summary>
+        public virtual bool IsPlayerVisible(PlayerV2_Controller player, out float distance)
+        {
+            distance = float.MaxValue;
+            if (player == null || !player.gameObject.activeInHierarchy) return false;
+
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+            Vector3 targetPoint = player.LookAtPoint != null ? player.LookAtPoint.position : (player.WorldPosition + Vector3.up * 0.8f);
+
+            Vector3 directionToPlayer = targetPoint - eyeOrigin;
+            distance = directionToPlayer.magnitude;
+
+            float maxRange = (_currentTarget == player) ? _loseTargetRadius : _detectionRadius;
+            if (distance > maxRange) return false;
+
+            // FOV cone check
+            float angle = Vector3.Angle(transform.forward, directionToPlayer.normalized);
+            if (angle > _fieldOfViewAngle / 2f) return false;
+
+            // Line-of-sight raycast against obstacle layer
+            if (Physics.Raycast(eyeOrigin, directionToPlayer.normalized, out RaycastHit hit, distance, _obstacleLayer, QueryTriggerInteraction.Ignore))
+            {
+                // If the ray hit the player or their child colliders, it's not an obstruction
+                if (!hit.transform.IsChildOf(player.transform))
+                {
+                    // Blocked by an obstacle/wall!
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Description: Scans all active players and selects the closest visible one within FOV.
+        /// Context: Resolves multiplayer targeting conflicts when multiple players are present.
+        /// </summary>
+        protected virtual PlayerV2_Controller GetClosestVisiblePlayer()
+        {
+            IReadOnlyList<PlayerV2_Controller> players = PlayerV2_Controller.ActivePlayers;
+            PlayerV2_Controller bestPlayer = null;
+            float minDistance = float.MaxValue;
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                PlayerV2_Controller player = players[i];
+                if (player == null || !player.gameObject.activeInHierarchy) continue;
+
+                if (IsPlayerVisible(player, out float dist))
+                {
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                        bestPlayer = player;
+                    }
+                }
+            }
+
+            return bestPlayer;
+        }
+
+        /// <summary>
+        /// Description: Drives target acquisition, tracking, and vision loss server-side.
+        /// </summary>
+        protected virtual void UpdateTargetDetection()
+        {
+            switch (_currentState)
+            {
+                case PhantomState.Idle:
+                case PhantomState.Wandering:
+                case PhantomState.Investigating:
+                    // Look for any visible player
+                    PlayerV2_Controller spottedPlayer = GetClosestVisiblePlayer();
+                    if (spottedPlayer != null)
+                    {
+                        _currentTarget = spottedPlayer;
+                        _lastKnownPosition = spottedPlayer.WorldPosition;
+                        _hasLastKnownPosition = true;
+                        OnPlayerDetected(_currentTarget);
+                        TransitionToState(PhantomState.Chasing);
+                    }
+                    break;
+
+                case PhantomState.Chasing:
+                    // Validate current target
+                    if (_currentTarget == null || !_currentTarget.gameObject.activeInHierarchy)
+                    {
+                        OnPlayerLost();
+                        _currentTarget = null;
+                        if (_hasLastKnownPosition)
+                        {
+                            TransitionToState(PhantomState.Investigating);
+                        }
+                        else
+                        {
+                            TransitionToState(PhantomState.Idle);
+                        }
+                        return;
+                    }
+
+                    // Check if current target is still visible
+                    if (IsPlayerVisible(_currentTarget, out float currentDist))
+                    {
+                        // Target still in sight: update last known position
+                        _lastKnownPosition = _currentTarget.WorldPosition;
+                        _hasLastKnownPosition = true;
+
+                        // Optional: switch to another player if much closer
+                        if (_allowTargetSwitchWhileChasing)
+                        {
+                            PlayerV2_Controller closerPlayer = GetClosestVisiblePlayer();
+                            if (closerPlayer != null && closerPlayer != _currentTarget)
+                            {
+                                float closerDist = Vector3.Distance(transform.position, closerPlayer.WorldPosition);
+                                if (closerDist < currentDist * _switchDistanceRatio)
+                                {
+                                    Debug.Log($"[PhantomBase] '{gameObject.name}' switched focus to closer player '{closerPlayer.name}'.");
+                                    _currentTarget = closerPlayer;
+                                    _lastKnownPosition = closerPlayer.WorldPosition;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Lost line-of-sight! Target went behind a wall or out of FOV
+                        OnPlayerLost();
+                        TransitionToState(PhantomState.Investigating);
+                    }
+                    break;
+
+                case PhantomState.Attacking:
+                    // In attack range, keep target updated
+                    if (_currentTarget != null && _currentTarget.gameObject.activeInHierarchy)
+                    {
+                        _lastKnownPosition = _currentTarget.WorldPosition;
+                        _hasLastKnownPosition = true;
+                    }
+                    break;
+            }
+        }
+        #endregion
+
+        #region State Machine Logic
+        /// <summary>
+        /// Description: Executes state-specific logic for the current AI state.
+        /// </summary>
+        protected virtual void UpdateStateMachine()
+        {
+            switch (_currentState)
+            {
+                case PhantomState.Idle:
+                    UpdateIdleState();
+                    break;
+
+                case PhantomState.Wandering:
+                    UpdateWanderingState();
+                    break;
+
+                case PhantomState.Chasing:
+                    UpdateChasingState();
+                    break;
+
+                case PhantomState.Investigating:
+                    UpdateInvestigatingState();
+                    break;
+
+                case PhantomState.Attacking:
+                    UpdateAttackingState();
+                    break;
+            }
+        }
+
+        protected virtual void UpdateIdleState()
+        {
+            _stateTimer += Time.deltaTime;
+            if (_stateTimer >= _wanderWaitTime)
+            {
+                TransitionToState(PhantomState.Wandering);
+            }
+        }
+
+        protected virtual void UpdateWanderingState()
+        {
+            if (IsDestinationReached())
+            {
+                StopMovement();
+                TransitionToState(PhantomState.Idle);
+            }
+        }
+
+        protected virtual void UpdateChasingState()
+        {
+            if (_currentTarget == null)
+            {
+                StopMovement();
+                TransitionToState(PhantomState.Idle);
+                return;
+            }
+
+            Vector3 targetPosition = _currentTarget.WorldPosition;
+            float distanceToTarget = Vector3.Distance(transform.position, targetPosition);
+
+            if (distanceToTarget <= _attackRadius)
+            {
+                StopMovement();
+                TransitionToState(PhantomState.Attacking);
+                return;
+            }
+
+            MoveTowards(targetPosition);
+        }
+
+        /// <summary>
+        /// Description: Moves towards the last known position where the player was last seen.
+        /// If reached, pauses briefly to look around before returning to Idle.
+        /// </summary>
+        protected virtual void UpdateInvestigatingState()
+        {
+            _stateTimer += Time.deltaTime;
+
+            if (!_hasReachedLastKnown)
+            {
+                MoveTowards(_lastKnownPosition);
+
+                // Check if arrived at last known spot or timed out
+                if (IsDestinationReached() || _stateTimer >= _maxInvestigateTravelTime)
+                {
+                    _hasReachedLastKnown = true;
+                    StopMovement();
+                    _investigateWaitTimer = 0f;
+                }
+            }
+            else
+            {
+                // Inspecting area
+                _investigateWaitTimer += Time.deltaTime;
+                if (_investigateWaitTimer >= _investigateWaitTime)
+                {
+                    _currentTarget = null;
+                    _hasLastKnownPosition = false;
+                    TransitionToState(PhantomState.Idle);
+                }
+            }
+        }
+
+        protected virtual void UpdateAttackingState()
+        {
+            if (_currentTarget == null || !_currentTarget.gameObject.activeInHierarchy)
+            {
+                TransitionToState(PhantomState.Idle);
+                return;
+            }
+
+            float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.WorldPosition);
+            if (distanceToTarget > _attackRadius * 1.3f)
+            {
+                TransitionToState(PhantomState.Chasing);
+                return;
+            }
+
+            if (Time.time - _lastAttackTime >= _attackCooldown)
+            {
+                _lastAttackTime = Time.time;
+                OnAttackPlayer(_currentTarget);
+            }
+        }
+
+        /// <summary>
+        /// Description: Handles transition logic when entering a new state.
+        /// </summary>
+        protected virtual void TransitionToState(PhantomState newState)
+        {
+            _currentState = newState;
+            _stateTimer = 0f;
+
+            if (newState == PhantomState.Wandering)
+            {
+                PickAndStartWanderDestination();
+            }
+            else if (newState == PhantomState.Investigating)
+            {
+                _hasReachedLastKnown = false;
+                _investigateWaitTimer = 0f;
+                if (_hasLastKnownPosition)
+                {
+                    MoveTowards(_lastKnownPosition);
+                }
+            }
+        }
+        #endregion
+
+        #region Abstract / Virtual Methods
+        /// <summary>
+        /// Description: Orders the movement controller to move towards a target world position.
+        /// </summary>
+        protected abstract void MoveTowards(Vector3 destination);
+
+        /// <summary>
+        /// Description: Commands the movement controller to stop immediately.
+        /// </summary>
+        protected abstract void StopMovement();
+
+        /// <summary>
+        /// Description: Checks if the phantom has reached its current navigation destination.
+        /// </summary>
+        protected abstract bool IsDestinationReached();
+
+        /// <summary>
+        /// Description: Picks a random valid destination on the navigable space and initiates movement.
+        /// </summary>
+        protected abstract void PickAndStartWanderDestination();
+
+        /// <summary>
+        /// Description: Hook called when a player enters vision.
+        /// </summary>
+        protected virtual void OnPlayerDetected(PlayerV2_Controller player)
+        {
+            Debug.Log($"[PhantomBase] '{gameObject.name}' spotted player '{player.name}' in FOV! Initiating chase.");
+        }
+
+        /// <summary>
+        /// Description: Hook called when line-of-sight to target player is lost.
+        /// </summary>
+        protected virtual void OnPlayerLost()
+        {
+            Debug.Log($"[PhantomBase] '{gameObject.name}' lost line-of-sight. Investigating last known position: {_lastKnownPosition}.");
+        }
+
+        /// <summary>
+        /// Description: Hook called when executing an attack on the target player.
+        /// </summary>
+        protected virtual void OnAttackPlayer(PlayerV2_Controller player)
+        {
+            Debug.Log($"[PhantomBase] '{gameObject.name}' attacked player '{player.name}'!");
+        }
+        #endregion
+
+#if UNITY_EDITOR
+        #region Editor Gizmos
+        protected virtual void OnDrawGizmosSelected()
+        {
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+
+            // 1. Detection sphere
+            Gizmos.color = new Color(1f, 1f, 0f, 0.25f);
+            Gizmos.DrawWireSphere(transform.position, _detectionRadius);
+
+            // 2. Vision cone
+            Vector3 forward = transform.forward;
+            Vector3 leftBoundary = Quaternion.AngleAxis(-_fieldOfViewAngle / 2f, Vector3.up) * forward;
+            Vector3 rightBoundary = Quaternion.AngleAxis(_fieldOfViewAngle / 2f, Vector3.up) * forward;
+
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(eyeOrigin, leftBoundary * _detectionRadius);
+            Gizmos.DrawRay(eyeOrigin, rightBoundary * _detectionRadius);
+
+            // 3. Last Known Position marker
+            if (_hasLastKnownPosition)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(_lastKnownPosition, 0.5f);
+                Gizmos.DrawLine(transform.position, _lastKnownPosition);
+            }
+
+            // 4. Target Chase Ray
+            if (_currentTarget != null)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(eyeOrigin, _currentTarget.WorldPosition + Vector3.up * 0.8f);
+            }
+        }
+        #endregion
+#endif
+    }
+}
+
