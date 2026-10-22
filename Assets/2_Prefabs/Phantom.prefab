@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6408435616986711530}
   - component: {fileID: 5699617926144988616}
   - component: {fileID: 8155736493878657019}
+  - component: {fileID: 4210985721984210985}
   m_Layer: 7
   m_Name: Phantom
   m_TagString: Untagged
@@ -271,3 +272,24 @@ MonoBehaviour:
   _bobFrequency: 2.2
   _swayAngle: 6
   _swayFrequency: 1.4
+--- !u!114 &4210985721984210985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1236076825358577748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b819f7e8a937201bfa829471de9920, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Gameplay.Phantoms.PhantomGizmos
+  ShowVisionCone: 1
+  ShowPlayerSightlines: 1
+  ShowObstacleHitPoints: 1
+  ShowLastKnownPosition: 1
+  ShowNavMeshPath: 1
+  ShowStateBadge: 1
+  OnlyWhenSelected: 0
+  ConeTransparency: 0.18
+  EnableDynamicPulsing: 1

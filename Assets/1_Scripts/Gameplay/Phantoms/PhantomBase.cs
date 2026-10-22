@@ -109,6 +109,17 @@ namespace Gameplay.Phantoms
         protected bool _hasReachedLastKnown = false;
         #endregion
 
+        #region Public Accessors (for Gizmos and Debug Tools)
+        public PhantomState CurrentState => _currentState;
+        public PlayerV2_Controller CurrentTarget => _currentTarget;
+        public float FieldOfViewAngle => _fieldOfViewAngle;
+        public float DetectionRadius => _detectionRadius;
+        public float LoseTargetRadius => _loseTargetRadius;
+        public Vector3 LastKnownPosition => _lastKnownPosition;
+        public bool HasLastKnownPosition => _hasLastKnownPosition;
+        public LayerMask ObstacleLayer => _obstacleLayer;
+        #endregion
+
         #region Unity Callbacks
         protected virtual void Awake()
         {
@@ -484,6 +495,9 @@ namespace Gameplay.Phantoms
         #region Editor Gizmos
         protected virtual void OnDrawGizmosSelected()
         {
+            // If PhantomGizmos component is attached, let it handle the dedicated visual rendering
+            if (GetComponent<PhantomGizmos>() != null) return;
+
             Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
 
             // 1. Detection sphere
