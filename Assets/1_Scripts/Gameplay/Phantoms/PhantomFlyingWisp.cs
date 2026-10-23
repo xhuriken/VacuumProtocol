@@ -94,6 +94,10 @@ namespace Gameplay.Phantoms
             _wanderRadius = 8f;
             _wanderWaitTime = 1.5f;
 
+            _proximityDrainRadius = 3.5f;
+            _maxDrainRate = 8.0f;
+            _attackDamage = 10.0f;
+
             _groundLayer = LayerMask.GetMask("Ground", "Default");
             _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstacle", "Obstable");
         }

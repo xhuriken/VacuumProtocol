@@ -25,6 +25,7 @@ namespace Gameplay.Phantoms
         [BoxGroup("Modules")] public bool ShowObstacleHitPoints = true;
         [BoxGroup("Modules")] public bool ShowLastKnownPosition = true;
         [BoxGroup("Modules")] public bool ShowNavMeshPath = true;
+        [BoxGroup("Modules")] public bool ShowDrainAura = true;
         [BoxGroup("Modules")] public bool ShowStateBadge = true;
 
         [Header("Display Settings")]
@@ -112,7 +113,13 @@ namespace Gameplay.Phantoms
                 DrawNavMeshPath(coneWireColor);
             }
 
-            // 5. Floating Status Badge Label
+            // 5. Terror Proximity Drain Aura
+            if (ShowDrainAura && _phantom.EnableProximityDrain)
+            {
+                DrawDrainAura();
+            }
+
+            // 6. Floating Status Badge Label
             if (ShowStateBadge)
             {
                 DrawStateBadge(coneWireColor);
@@ -383,6 +390,16 @@ namespace Gameplay.Phantoms
             badgeStyle.fontSize = 11;
 
             Handles.Label(badgePos, statusText, badgeStyle);
+        }
+
+        private void DrawDrainAura()
+        {
+            float radius = _phantom.ProximityDrainRadius;
+            Gizmos.color = new Color(0.9f, 0.1f, 0.3f, 0.35f);
+            Gizmos.DrawWireSphere(transform.position, radius);
+
+            Handles.color = new Color(0.9f, 0.1f, 0.3f, 0.05f);
+            Handles.DrawSolidDisc(transform.position, Vector3.up, radius);
         }
 #endif
     }

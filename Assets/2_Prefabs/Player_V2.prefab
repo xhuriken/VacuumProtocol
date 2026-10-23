@@ -5724,8 +5724,8 @@ ConfigurableJoint:
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
-  m_ProjectionMode: 0
-  m_ProjectionDistance: 0.1
+  m_ProjectionMode: 1
+  m_ProjectionDistance: 0.02
   m_ProjectionAngle: 180
   m_ConfiguredInWorldSpace: 0
   m_SwapBodies: 0
@@ -7601,8 +7601,8 @@ ConfigurableJoint:
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
-  m_ProjectionMode: 0
-  m_ProjectionDistance: 0.1
+  m_ProjectionMode: 1
+  m_ProjectionDistance: 0.02
   m_ProjectionAngle: 180
   m_ConfiguredInWorldSpace: 0
   m_SwapBodies: 0
@@ -8635,8 +8635,8 @@ ConfigurableJoint:
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
-  m_ProjectionMode: 0
-  m_ProjectionDistance: 0.1
+  m_ProjectionMode: 1
+  m_ProjectionDistance: 0.02
   m_ProjectionAngle: 180
   m_ConfiguredInWorldSpace: 0
   m_SwapBodies: 0
@@ -9295,8 +9295,8 @@ ConfigurableJoint:
     positionDamper: 0
     maximumForce: 3.4028233e+38
     useAcceleration: 0
-  m_ProjectionMode: 0
-  m_ProjectionDistance: 0.1
+  m_ProjectionMode: 1
+  m_ProjectionDistance: 0.02
   m_ProjectionAngle: 180
   m_ConfiguredInWorldSpace: 0
   m_SwapBodies: 0
@@ -11225,6 +11225,7 @@ GameObject:
   - component: {fileID: 4075397423627972799}
   - component: {fileID: 4487953502993931012}
   - component: {fileID: 9182736451234567890}
+  - component: {fileID: 9182736451234567891}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -12026,6 +12027,45 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _audioController: {fileID: 6081403777989489320}
+--- !u!114 &9182736451234567890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593bf819b13945a0b7e8293740de6321, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMouthVacuum
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _suctionRange: 7
+  _coneAngle: 45
+  _drainRatePerSecond: 10
+  _obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 265
+  _showDebugGizmos: 1
+--- !u!114 &9182736451234567891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e1f7c89a024461bb7d81239c054e812, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Player.Mechanics::Player.Mechanics.PlayerHealth
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _maxHealth: 100
+  _enableDebugLogs: 1
 --- !u!1 &7751720572721550308
 GameObject:
   m_ObjectHideFlags: 0
@@ -12931,23 +12971,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -3601641790179886237, guid: fabe8ff51d11d1b4da9a40015d82b2ca, type: 3}
   m_PrefabInstance: {fileID: 3736337850283348533}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9182736451234567890
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7637031514935271185}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 593bf819b13945a0b7e8293740de6321, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerMouthVacuum
-  _suctionRange: 7
-  _coneAngle: 45
-  _drainRatePerSecond: 40
-  _obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 265
-  _showDebugGizmos: 1
-

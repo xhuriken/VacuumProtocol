@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using Player.Mechanics;
 
 namespace Gameplay.Phantoms
 {
@@ -104,6 +105,26 @@ namespace Gameplay.Phantoms
 
         [Tooltip("Role: Speed reduction ratio when caught in mouth vacuum (0 = stopped, 1 = full speed).")]
         [SerializeField] protected float _suctionSlowdownRatio = 0.25f;
+
+        [Header("Proximity Terror Drain Aura")]
+        [Tooltip("Role: Enables continuous health drain for players within proximity aura.")]
+        [SerializeField] protected bool _enableProximityDrain = true;
+
+        [Tooltip("Role: Radius of the terror / miasma aura in meters.")]
+        [SerializeField] protected float _proximityDrainRadius = 6.0f;
+
+        [Tooltip("Role: Maximum health drain rate in PV per second at point-blank range.")]
+        [SerializeField] protected float _maxDrainRate = 20.0f;
+
+        [Tooltip("Role: Falloff curve for damage rate based on normalized distance (0 = point blank, 1 = max radius).")]
+        [SerializeField] protected AnimationCurve _drainFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+
+        [Tooltip("Role: Layers that block the drain aura (walls, obstacles). If blocked by a wall, no damage.")]
+        [SerializeField] protected LayerMask _drainObstacleLayer;
+
+        [Header("Direct Attack Settings")]
+        [Tooltip("Role: Direct damage dealt to player on physical attack.")]
+        [SerializeField] protected float _attackDamage = 25.0f;
         #endregion
 
         #region State Machine Variables
@@ -135,6 +156,10 @@ namespace Gameplay.Phantoms
         public float CurrentEctoplasm => _currentEctoplasm;
         public float MaxEctoplasm => _maxEctoplasm;
         public float SuctionSlowdownRatio => _suctionSlowdownRatio;
+        public float ProximityDrainRadius => _proximityDrainRadius;
+        public float MaxDrainRate => _maxDrainRate;
+        public bool EnableProximityDrain => _enableProximityDrain;
+        public float AttackDamage => _attackDamage;
 
         /// <summary>
         /// Global registry of active phantoms in the scene for O(1) high-performance queries without Physics.OverlapSphere.
@@ -172,6 +197,11 @@ namespace Gameplay.Phantoms
                     _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
                 }
             }
+
+            if (_drainObstacleLayer.value == 0)
+            {
+                _drainObstacleLayer = _obstacleLayer;
+            }
         }
 
         [ServerCallback]
@@ -181,6 +211,11 @@ namespace Gameplay.Phantoms
 
             UpdateTargetDetection();
             UpdateStateMachine();
+
+            if (_enableProximityDrain)
+            {
+                UpdateProximityDrain();
+            }
         }
         #endregion
 
@@ -598,11 +633,74 @@ namespace Gameplay.Phantoms
         }
 
         /// <summary>
+        /// Description: Evaluates distance to all active players and applies proximity terror drain if line-of-sight is unobstructed.
+        /// Runs server-side. Zero allocation via PlayerV2_Controller.ActivePlayers registry.
+        /// </summary>
+        protected virtual void UpdateProximityDrain()
+        {
+            var activePlayers = PlayerV2_Controller.ActivePlayers;
+            if (activePlayers == null || activePlayers.Count == 0) return;
+
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+
+            for (int i = 0; i < activePlayers.Count; i++)
+            {
+                PlayerV2_Controller player = activePlayers[i];
+                if (player == null || !player.gameObject.activeInHierarchy) continue;
+
+                Vector3 playerTargetPos = player.LookAtPoint != null ? player.LookAtPoint.position : (player.WorldPosition + Vector3.up * 0.8f);
+                Vector3 toPlayer = playerTargetPos - eyeOrigin;
+                float distance = toPlayer.magnitude;
+
+                if (distance > _proximityDrainRadius || distance < 0.01f) continue;
+
+                // Line of sight check: solid obstacles block the terror aura!
+                if (Physics.Raycast(eyeOrigin, toPlayer.normalized, out RaycastHit hit, distance, _drainObstacleLayer, QueryTriggerInteraction.Ignore))
+                {
+                    if (!hit.transform.IsChildOf(player.transform))
+                    {
+                        // Player is safe behind cover
+                        continue;
+                    }
+                }
+
+                // Compute damage rate from distance falloff curve
+                float normalizedDist = Mathf.Clamp01(distance / _proximityDrainRadius);
+                float drainRate = _maxDrainRate * _drainFalloffCurve.Evaluate(normalizedDist);
+                float damageThisFrame = drainRate * Time.deltaTime;
+
+                if (damageThisFrame > 0f)
+                {
+                    PlayerHealth health = player.GetComponent<PlayerHealth>();
+                    if (health != null)
+                    {
+                        health.TakeDamage(damageThisFrame, Name);
+                    }
+                    else
+                    {
+                        Debug.LogError($"[PhantomBase] Critical Error: 'PlayerHealth' component is missing on player '{player.name}'! Fail loudly per workspace rules.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Description: Hook called when executing an attack on the target player.
         /// </summary>
         protected virtual void OnAttackPlayer(PlayerV2_Controller player)
         {
-            Debug.Log($"[PhantomBase] '{gameObject.name}' attacked player '{player.name}'!");
+            if (player == null) return;
+            Debug.Log($"<color=red>[PhantomBase]</color> '{gameObject.name}' attacked player '{player.name}' dealing {_attackDamage} damage!");
+
+            PlayerHealth health = player.GetComponent<PlayerHealth>();
+            if (health != null)
+            {
+                health.TakeDamage(_attackDamage, Name);
+            }
+            else
+            {
+                Debug.LogError($"[PhantomBase] Critical Error: 'PlayerHealth' is missing on player '{player.name}' during attack! Fail loudly per workspace rules.");
+            }
         }
         #endregion
 
@@ -614,6 +712,13 @@ namespace Gameplay.Phantoms
             if (GetComponent<PhantomGizmos>() != null) return;
 
             Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+
+            // 0. Proximity Terror Drain Radius
+            if (_enableProximityDrain)
+            {
+                Gizmos.color = new Color(1f, 0f, 0.3f, 0.15f);
+                Gizmos.DrawWireSphere(transform.position, _proximityDrainRadius);
+            }
 
             // 1. Detection sphere
             Gizmos.color = new Color(1f, 1f, 0f, 0.25f);
