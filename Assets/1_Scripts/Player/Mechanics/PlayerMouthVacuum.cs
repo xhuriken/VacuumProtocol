@@ -25,7 +25,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [SerializeField] private float _coneAngle = 45f;
 
     [Tooltip("Role: Ectoplasmic health drained per second from phantoms inside the cone.")]
-    [SerializeField] private float _drainRatePerSecond = 40f;
+    [SerializeField] private float _drainRatePerSecond = 10f;
 
     [Tooltip("Role: Layers that block mouth line-of-sight (walls, obstacles, ground).")]
     [SerializeField] private LayerMask _obstacleLayer;

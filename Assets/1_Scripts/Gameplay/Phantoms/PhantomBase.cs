@@ -97,10 +97,10 @@ namespace Gameplay.Phantoms
 
         [Header("Mouth Vacuum Capture Settings")]
         [Tooltip("Role: Maximum ectoplasm / capture threshold of the phantom.\nUse Case: Depleted by mouth dual-click suction.")]
-        [SerializeField] protected float _maxEctoplasm = 100f;
+        [SerializeField] protected float _maxEctoplasm = 150f;
 
         [SyncVar]
-        [SerializeField] protected float _currentEctoplasm = 100f;
+        [SerializeField] protected float _currentEctoplasm = 150f;
 
         [Tooltip("Role: Speed reduction ratio when caught in mouth vacuum (0 = stopped, 1 = full speed).")]
         [SerializeField] protected float _suctionSlowdownRatio = 0.25f;
@@ -578,12 +578,23 @@ namespace Gameplay.Phantoms
         }
 
         /// <summary>
+        /// Event invoked when this phantom is defeated or destroyed, notifying parent spawners.
+        /// </summary>
+        public event System.Action<PhantomBase> OnDefeated;
+
+        /// <summary>
         /// Description: Authoritative hook called when the phantom's ectoplasm is completely depleted.
         /// </summary>
         protected virtual void OnPhantomCaptured()
         {
             Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
+            OnDefeated?.Invoke(this);
             NetworkServer.Destroy(gameObject);
+        }
+
+        protected virtual void OnDestroy()
+        {
+            OnDefeated?.Invoke(this);
         }
 
         /// <summary>
