@@ -78,19 +78,19 @@ namespace Gameplay.Phantoms
 
         #region Runtime State
         [Title("Runtime State (Read Only)")]
-        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
+        [ShowInInspector, ReadOnly]
         private readonly List<PhantomBase> _activeRoomPhantoms = new List<PhantomBase>();
 
-        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
+        [ShowInInspector, ReadOnly]
         private int _totalSpawnedCount = 0;
 
-        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
+        [ShowInInspector, ReadOnly]
         private bool _hasPlayersInRoom = false;
 
-        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
+        [ShowInInspector, ReadOnly]
         private float _spawnTimer = 0f;
 
-        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
+        [ShowInInspector, ReadOnly]
         private int _roundRobinIndex = 0;
 
         private float _lastPlayerCheckTime = -999f;
