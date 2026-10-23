@@ -4,6 +4,10 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.AI;
 
+// Disambiguate attributes shared between Mirror and Sirenix.OdinInspector
+using ShowInInspector = Sirenix.OdinInspector.ShowInInspectorAttribute;
+using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -74,19 +78,19 @@ namespace Gameplay.Phantoms
 
         #region Runtime State
         [Title("Runtime State (Read Only)")]
-        [ShowInInspector, ReadOnly]
+        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private readonly List<PhantomBase> _activeRoomPhantoms = new List<PhantomBase>();
 
-        [ShowInInspector, ReadOnly]
+        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private int _totalSpawnedCount = 0;
 
-        [ShowInInspector, ReadOnly]
+        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private bool _hasPlayersInRoom = false;
 
-        [ShowInInspector, ReadOnly]
+        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private float _spawnTimer = 0f;
 
-        [ShowInInspector, ReadOnly]
+        [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private int _roundRobinIndex = 0;
 
         private float _lastPlayerCheckTime = -999f;
