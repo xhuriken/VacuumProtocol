@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Mirror;
-using UnityEngine;
 using Player.Mechanics;
+using UnityEngine;
 
 namespace Gameplay.Phantoms
 {

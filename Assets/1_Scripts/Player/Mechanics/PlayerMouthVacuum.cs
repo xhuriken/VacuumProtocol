@@ -30,11 +30,34 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [Tooltip("Role: Layers that block mouth line-of-sight (walls, obstacles, ground).")]
     [SerializeField] private LayerMask _obstacleLayer;
 
+    [Header("Suction Visuals")]
+    [Tooltip("Role: Renderer of the 3D suction cone displaying the distortion material.")]
+    [SerializeField] private Renderer _suctionConeRenderer;
+
+    [Tooltip("Role: Duration in seconds to smoothly fade in the suction visuals and vortex speed.")]
+    [SerializeField] private float _fadeInDuration = 0.35f;
+
+    [Tooltip("Role: Duration in seconds to smoothly fade out the suction visuals and vortex speed.")]
+    [SerializeField] private float _fadeOutDuration = 0.50f;
+
     [Header("Debug")]
     [SerializeField] private bool _showDebugGizmos = true;
 
+    [SyncVar]
+    private bool _isVacuumingNetworked;
+
     private PlayerInputHandler _input;
     private PlayerV2_Controller _controller;
+
+    private MaterialPropertyBlock _mpb;
+    private float _initialVortexSpeed = 3f;
+    private float _initialDistortionStrength = 0.025f;
+    private Color _initialTint = Color.cyan;
+    private float _currentTransition = 0f;
+
+    private static readonly int PropVortexSpeed = Shader.PropertyToID("_VortexSpeed");
+    private static readonly int PropVacuumTint = Shader.PropertyToID("_VacuumTint");
+    private static readonly int PropDistortionStrength = Shader.PropertyToID("_DistortionStrength");
 
     private void Awake()
     {
@@ -49,13 +72,140 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
             }
         }
+
+        InitSuctionVisuals();
+    }
+
+    /// <summary>
+    /// Description: Initializes the suction cone material property block and caches starting values.
+    /// Fails loudly if renderer is missing.
+    /// </summary>
+    private void InitSuctionVisuals()
+    {
+        _mpb = new MaterialPropertyBlock();
+
+        if (_suctionConeRenderer == null)
+        {
+            // Auto-search in children for ease of setup
+            _suctionConeRenderer = GetComponentInChildren<MeshRenderer>();
+        }
+
+        if (_suctionConeRenderer == null)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] '_suctionConeRenderer' is missing on '{gameObject.name}'. Please assign the 3D suction cone renderer.", this);
+            return;
+        }
+
+        Material mat = _suctionConeRenderer.sharedMaterial;
+        if (mat != null)
+        {
+            if (mat.HasProperty(PropVortexSpeed)) _initialVortexSpeed = mat.GetFloat(PropVortexSpeed);
+            if (mat.HasProperty(PropDistortionStrength)) _initialDistortionStrength = mat.GetFloat(PropDistortionStrength);
+            if (mat.HasProperty(PropVacuumTint))
+            {
+                _initialTint = mat.GetColor(PropVacuumTint);
+                if (_initialTint.a <= 0.0001f)
+                {
+                    _initialTint.a = 0.3f;
+                }
+            }
+        }
+
+        // Start fully hidden and idle
+        _suctionConeRenderer.enabled = false;
+        ApplyVisualProperties(0f);
     }
 
     private void Update()
     {
-        if (!isLocalPlayer || _input == null || !_input.IsVacuuming) return;
+        UpdateVisuals();
+
+        if (!isLocalPlayer || _input == null) return;
+
+        bool isVacuuming = _input.IsVacuuming;
+
+        // Synchronize visual state across Mirror network
+        if (isVacuuming != _isVacuumingNetworked)
+        {
+            CmdSetVacuumingVisual(isVacuuming);
+        }
+
+        if (!isVacuuming) return;
 
         ProcessMouthSuction();
+    }
+
+    /// <summary>
+    /// Description: Smoothly animates vortex speed, distortion strength, and tint alpha.
+    /// Anti-spam protected via Mathf.MoveTowards without popping or clipping.
+    /// </summary>
+    private void UpdateVisuals()
+    {
+        if (_suctionConeRenderer == null) return;
+
+        bool active = isLocalPlayer
+
+            ? (_input != null && _input.IsVacuuming)
+
+            : _isVacuumingNetworked;
+
+        float target = active ? 1f : 0f;
+        float duration = active ? _fadeInDuration : _fadeOutDuration;
+        float step = Time.deltaTime / Mathf.Max(0.001f, duration);
+
+        _currentTransition = Mathf.MoveTowards(_currentTransition, target, step);
+
+        if (_currentTransition <= 0.0001f)
+        {
+            if (_suctionConeRenderer.enabled)
+            {
+                _suctionConeRenderer.enabled = false;
+            }
+            return;
+        }
+
+        if (!_suctionConeRenderer.enabled)
+        {
+            _suctionConeRenderer.enabled = true;
+        }
+
+        ApplyVisualProperties(_currentTransition);
+    }
+
+    /// <summary>
+    /// Description: Updates shader properties via MaterialPropertyBlock for zero-allocation, per-player visual state.
+    /// </summary>
+    private void ApplyVisualProperties(float transition)
+    {
+        if (_suctionConeRenderer == null) return;
+
+        _suctionConeRenderer.GetPropertyBlock(_mpb);
+
+        // Smooth speed ramp (0 at rest -> initial speed when active)
+        _mpb.SetFloat(PropVortexSpeed, Mathf.Lerp(0f, _initialVortexSpeed, transition));
+
+        // Smooth distortion strength ramp (no heatwave at rest -> full heatwave when active)
+        _mpb.SetFloat(PropDistortionStrength, Mathf.Lerp(0f, _initialDistortionStrength, transition));
+
+        // Smooth tint color ramp:
+        // Transition alpha from 0 to initial start alpha
+        float currentAlpha = Mathf.Lerp(0f, _initialTint.a, transition);
+
+        // For multiplicative shading (SceneColor * Tint), pure neutral/untinted is White (1,1,1).
+        // We lerp RGB from neutral White (1,1,1) to _initialTint.rgb, and Alpha from 0 to _initialTint.a:
+        Color neutralTint = new Color(1f, 1f, 1f, 0f);
+        Color currentTint = Color.Lerp(neutralTint, _initialTint, transition);
+        currentTint.a = currentAlpha;
+
+        _mpb.SetColor(PropVacuumTint, currentTint);
+
+        _suctionConeRenderer.SetPropertyBlock(_mpb);
+    }
+
+    [Command]
+    private void CmdSetVacuumingVisual(bool active)
+    {
+        _isVacuumingNetworked = active;
     }
 
     /// <summary>
@@ -126,12 +276,16 @@ public class PlayerMouthVacuum : NetworkBehaviour
         Vector3 leftBoundary = Quaternion.AngleAxis(-_coneAngle / 2f, viewRef.up) * forward;
         Vector3 rightBoundary = Quaternion.AngleAxis(_coneAngle / 2f, viewRef.up) * forward;
 
-        Color coneColor = isActive 
-            ? new Color(0.6f, 0.1f, 1f, 0.25f) 
+        Color coneColor = isActive
+
+            ? new Color(0.6f, 0.1f, 1f, 0.25f)
+
             : new Color(0.2f, 0.8f, 1f, 0.08f);
 
-        Color wireColor = isActive 
-            ? new Color(0.8f, 0.2f, 1f, 0.9f) 
+        Color wireColor = isActive
+
+            ? new Color(0.8f, 0.2f, 1f, 0.9f)
+
             : new Color(0.2f, 0.8f, 1f, 0.3f);
 
         Handles.color = coneColor;

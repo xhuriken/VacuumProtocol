@@ -48,7 +48,7 @@ public class PlayerViewRange : NetworkBehaviour
     /// <summary>
     /// Description: Start callback. Disables logic for remote clients.
     /// Context: Lifecycle event.
-    /// Justification: Remote players don't need to run detection logic locally since their eye movements aren't networked (to save bandwidth).
+    /// Justification: Remote players don't need to run detections logic locally since their eye movements aren't networked (to save bandwidth).
     /// </summary>
     private void Start()
     {
