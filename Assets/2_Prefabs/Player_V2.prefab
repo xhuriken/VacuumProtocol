@@ -11224,6 +11224,7 @@ GameObject:
   - component: {fileID: 4855294185999831831}
   - component: {fileID: 4075397423627972799}
   - component: {fileID: 4487953502993931012}
+  - component: {fileID: 9182736451234567890}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -12930,3 +12931,23 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -3601641790179886237, guid: fabe8ff51d11d1b4da9a40015d82b2ca, type: 3}
   m_PrefabInstance: {fileID: 3736337850283348533}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &9182736451234567890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593bf819b13945a0b7e8293740de6321, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMouthVacuum
+  _suctionRange: 7
+  _coneAngle: 45
+  _drainRatePerSecond: 40
+  _obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 265
+  _showDebugGizmos: 1
+

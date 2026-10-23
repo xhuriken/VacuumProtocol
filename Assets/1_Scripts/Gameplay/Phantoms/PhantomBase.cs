@@ -14,6 +14,7 @@ namespace Gameplay.Phantoms
         Wandering,
         Chasing,
         Investigating,
+        BeingVacuumed,
         Attacking
     }
 
@@ -93,6 +94,16 @@ namespace Gameplay.Phantoms
 
         [Tooltip("Role: Time in seconds to wait at a wander destination before picking a new one.\nUse Case: Natural pacing in idle/patrol state.")]
         [SerializeField] protected float _wanderWaitTime = 3f;
+
+        [Header("Mouth Vacuum Capture Settings")]
+        [Tooltip("Role: Maximum ectoplasm / capture threshold of the phantom.\nUse Case: Depleted by mouth dual-click suction.")]
+        [SerializeField] protected float _maxEctoplasm = 100f;
+
+        [SyncVar]
+        [SerializeField] protected float _currentEctoplasm = 100f;
+
+        [Tooltip("Role: Speed reduction ratio when caught in mouth vacuum (0 = stopped, 1 = full speed).")]
+        [SerializeField] protected float _suctionSlowdownRatio = 0.25f;
         #endregion
 
         #region State Machine Variables
@@ -107,6 +118,9 @@ namespace Gameplay.Phantoms
         protected bool _hasLastKnownPosition = false;
         protected float _investigateWaitTimer = 0f;
         protected bool _hasReachedLastKnown = false;
+
+        protected float _lastMouthSuctionTime = -999f;
+        protected Vector3 _lastSuctionNozzlePos;
         #endregion
 
         #region Public Accessors (for Gizmos and Debug Tools)
@@ -118,6 +132,27 @@ namespace Gameplay.Phantoms
         public Vector3 LastKnownPosition => _lastKnownPosition;
         public bool HasLastKnownPosition => _hasLastKnownPosition;
         public LayerMask ObstacleLayer => _obstacleLayer;
+        public float CurrentEctoplasm => _currentEctoplasm;
+        public float MaxEctoplasm => _maxEctoplasm;
+        public float SuctionSlowdownRatio => _suctionSlowdownRatio;
+
+        /// <summary>
+        /// Global registry of active phantoms in the scene for O(1) high-performance queries without Physics.OverlapSphere.
+        /// </summary>
+        public static readonly List<PhantomBase> ActivePhantoms = new List<PhantomBase>();
+
+        protected virtual void OnEnable()
+        {
+            if (!ActivePhantoms.Contains(this))
+            {
+                ActivePhantoms.Add(this);
+            }
+        }
+
+        protected virtual void OnDisable()
+        {
+            ActivePhantoms.Remove(this);
+        }
         #endregion
 
         #region Unity Callbacks
@@ -131,7 +166,7 @@ namespace Gameplay.Phantoms
             // Default obstacle layer mask if unassigned in inspector
             if (_obstacleLayer.value == 0)
             {
-                _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstable");
+                _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstacle", "Obstable");
                 if (_obstacleLayer.value == 0)
                 {
                     _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
@@ -320,6 +355,10 @@ namespace Gameplay.Phantoms
                     UpdateInvestigatingState();
                     break;
 
+                case PhantomState.BeingVacuumed:
+                    UpdateBeingVacuumedState();
+                    break;
+
                 case PhantomState.Attacking:
                     UpdateAttackingState();
                     break;
@@ -480,6 +519,71 @@ namespace Gameplay.Phantoms
         protected virtual void OnPlayerLost()
         {
             Debug.Log($"[PhantomBase] '{gameObject.name}' lost line-of-sight. Investigating last known position: {_lastKnownPosition}.");
+        }
+
+        /// <summary>
+        /// Description: Updates behavior while trapped inside the player's mouth suction stream.
+        /// </summary>
+        protected virtual void UpdateBeingVacuumedState()
+        {
+            // If suction stopped for more than 0.3s, break free
+            if (Time.time - _lastMouthSuctionTime > 0.3f)
+            {
+                if (_currentTarget != null && IsPlayerVisible(_currentTarget, out _))
+                {
+                    TransitionToState(PhantomState.Chasing);
+                }
+                else if (_hasLastKnownPosition)
+                {
+                    TransitionToState(PhantomState.Investigating);
+                }
+                else
+                {
+                    TransitionToState(PhantomState.Idle);
+                }
+                return;
+            }
+
+            // Slowly orient towards the mouth
+            Vector3 toNozzle = _lastSuctionNozzlePos - transform.position;
+            toNozzle.y = 0;
+            if (toNozzle.sqrMagnitude > 0.1f)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toNozzle.normalized), Time.deltaTime * 6f);
+            }
+        }
+
+        /// <summary>
+        /// Description: Hook called when the player actively vacuums this phantom with the mouth (dual-click IsVacuuming).
+        /// Slows down the phantom and drains its ectoplasmic health.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, float drainAmount)
+        {
+            _lastMouthSuctionTime = Time.time;
+            _lastSuctionNozzlePos = nozzlePos;
+
+            if (_currentState != PhantomState.BeingVacuumed && _currentState != PhantomState.Attacking)
+            {
+                TransitionToState(PhantomState.BeingVacuumed);
+            }
+
+            if (isServer)
+            {
+                _currentEctoplasm -= drainAmount * Time.deltaTime;
+                if (_currentEctoplasm <= 0f)
+                {
+                    OnPhantomCaptured();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Description: Authoritative hook called when the phantom's ectoplasm is completely depleted.
+        /// </summary>
+        protected virtual void OnPhantomCaptured()
+        {
+            Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
+            NetworkServer.Destroy(gameObject);
         }
 
         /// <summary>

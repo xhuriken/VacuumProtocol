@@ -1,4 +1,5 @@
 using UnityEngine;
+using VacuumProtocol.Core;
 
 /// <summary>
 /// Description: Represents a generic item in the world that can be detected by entities like the player.
@@ -6,7 +7,7 @@ using UnityEngine;
 /// Justification: Implements IEntity to integrate with the player's vision system and serves as a base container for physics properties (mass/suction resistance).
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
-public class Collectible : MonoBehaviour, IEntity
+public class Collectible : MonoBehaviour, IEntity, IVacuumable
 {
     [Header("Entity Settings")]
     [Tooltip("Role: The display name of the collectible.\nUse Case: UI Label rendering.\nJustification: Gives the player readable text when looking at the object.")]
@@ -131,4 +132,43 @@ public class Collectible : MonoBehaviour, IEntity
     {
         transform.localScale = _originalScale;
     }
+
+    #region IVacuumable Implementation
+    public Rigidbody Rigidbody => _rb;
+
+    public void OnSuctionPulled(Vector3 nozzlePosition, Vector3 suctionDirection, float pullForce, float visibilityFactor)
+    {
+        if (_rb == null) return;
+
+        Vector3 toItem = transform.position - nozzlePosition;
+        float distance = toItem.magnitude;
+        if (distance < 0.01f) return;
+
+        Vector3 direction = toItem.normalized;
+        float resistance = Mathf.Max(0.05f, _pullResistance);
+        float forceAmount = (pullForce / resistance) * visibilityFactor;
+        float distanceScale = Mathf.Clamp(2.0f - (distance / 4f), 0.5f, 2.0f);
+        Vector3 attractionForce = -direction * (forceAmount * distanceScale);
+
+        _rb.AddForce(attractionForce, ForceMode.Force);
+    }
+
+    public void OnSuctionDrained(float drainAmount, Mirror.NetworkConnectionToClient playerConnection)
+    {
+        // Physical items don't have drainable fluid/dirt
+    }
+
+    public bool CanBeAbsorbed(float distanceToNozzle, float absorbThreshold)
+    {
+        return distanceToNozzle <= absorbThreshold;
+    }
+
+    public void OnAbsorbed(PlayerVacuumController playerVacuum)
+    {
+        if (playerVacuum != null && playerVacuum.isLocalPlayer)
+        {
+            playerVacuum.AbsorbObject(gameObject);
+        }
+    }
+    #endregion
 }

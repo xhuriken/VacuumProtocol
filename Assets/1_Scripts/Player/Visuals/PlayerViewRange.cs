@@ -92,38 +92,39 @@ public class PlayerViewRange : NetworkBehaviour
 
         foreach (Collider target in targetsInRadius)
         {
-            if (_showDebugLogs) Debug.Log($"<color=cyan>[ViewRange]</color> Checking {target.name}...");
+            IEntity entity = target.GetComponentInParent<IEntity>();
+            if (entity == null) continue;
 
-            Vector3 directionToTarget = (target.transform.position - _viewReference.position).normalized;
+            // Don't detect ourselves
+            MonoBehaviour entityMono = entity as MonoBehaviour;
+            if (entityMono != null && entityMono.gameObject == this.gameObject) continue;
+
+            if (_showDebugLogs) Debug.Log($"<color=cyan>[ViewRange]</color> Checking {entity.Name}...");
+
+            // Use LookAtPoint if provided by the entity, or collider bounds center as fallback (avoids aiming at ground pivot)
+            Vector3 targetPosition = entity.LookAtPoint != null ? entity.LookAtPoint.position : target.bounds.center;
+            Vector3 directionToTarget = (targetPosition - _viewReference.position).normalized;
 
             // Cone / FOV check
             float angle = Vector3.Angle(_viewReference.forward, directionToTarget);
             if (angle < _viewAngle / 2f)
             {
-                float distanceToTarget = Vector3.Distance(_viewReference.position, target.transform.position);
+                float distanceToTarget = Vector3.Distance(_viewReference.position, targetPosition);
 
                 // Line-of-sight check to ensure no obstacles are blocking the view
                 if (!Physics.Raycast(_viewReference.position, directionToTarget, distanceToTarget, _obstacleLayer))
                 {
-                    IEntity entity = target.GetComponentInParent<IEntity>();
-                    if (entity != null)
-                    {
-                        // Don't detect ourselves (comparaison sécurisée)
-                        MonoBehaviour entityMono = entity as MonoBehaviour;
-                        if (entityMono != null && entityMono.gameObject == this.gameObject) continue;
-
-                        if (_showDebugLogs) Debug.Log($"<color=green>[ViewRange] Entity Accepted:</color> {entity.Name}, Prio: {entity.PriorityLevel}");
-                        _detectedEntities.Add(entity);
-                    }
+                    if (_showDebugLogs) Debug.Log($"<color=green>[ViewRange] Entity Accepted:</color> {entity.Name}, Prio: {entity.PriorityLevel}");
+                    _detectedEntities.Add(entity);
                 }
                 else if (_showDebugLogs)
                 {
-                    Debug.Log($"<color=red>[ViewRange] Entity {target.name} Rejected:</color> Obstacle in the way.");
+                    Debug.Log($"<color=red>[ViewRange] Entity {entity.Name} Rejected:</color> Obstacle in the way.");
                 }
             }
             else if (_showDebugLogs)
             {
-                Debug.Log($"<color=orange>[ViewRange] Entity {target.name} Rejected:</color> Outside FOV (Angle: {angle} > {_viewAngle / 2f}).");
+                Debug.Log($"<color=orange>[ViewRange] Entity {entity.Name} Rejected:</color> Outside FOV (Angle: {angle} > {_viewAngle / 2f}).");
             }
         }
         UpdatePriority();

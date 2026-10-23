@@ -161,6 +161,12 @@ namespace Gameplay.Phantoms
                     wireColor = new Color(1f, 0.1f, 0.5f, 1f);
                     break;
 
+                case PhantomState.BeingVacuumed:
+                    float vacAlpha = Mathf.Clamp01(ConeTransparency * 2f + pulse * 0.25f);
+                    solidColor = new Color(0.6f, 0.1f, 1f, vacAlpha);
+                    wireColor = Color.Lerp(new Color(0.8f, 0.2f, 1f, 1f), Color.cyan, pulse);
+                    break;
+
                 default:
                     solidColor = new Color(1f, 1f, 1f, ConeTransparency);
                     wireColor = Color.white;
@@ -254,7 +260,7 @@ namespace Gameplay.Phantoms
                         Handles.color = Color.red;
                         Handles.DrawWireDisc(targetPoint + Vector3.up * 0.4f, Vector3.up, 0.35f);
                         Handles.DrawWireDisc(targetPoint + Vector3.up * 0.4f, Vector3.forward, 0.35f);
-                        Handles.Label(targetPoint + Vector3.up * 0.65f, $"[LOCKED TARGET: {player.Name} ({distance:F1}m)]", targetLabelStyle);
+                        Handles.Label(targetPoint + Vector3.up * 0.65f, $"[TARGET: {player.Name} ({distance:F1}m)]", targetLabelStyle);
                     }
                     else
                     {
@@ -364,6 +370,10 @@ namespace Gameplay.Phantoms
             {
                 float dist = Vector3.Distance(transform.position, _phantom.LastKnownPosition);
                 statusText += $"\n>>> INVESTIGATING SPOT ({dist:F1}m)";
+            }
+            else if (_phantom.CurrentState == PhantomState.BeingVacuumed)
+            {
+                statusText += $"\n>>> BEING VACUUMED ({_phantom.CurrentEctoplasm:F0}/{_phantom.MaxEctoplasm:F0} HP)";
             }
 
             GUIStyle badgeStyle = new GUIStyle();

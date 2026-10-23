@@ -83,7 +83,10 @@ namespace Gameplay.Phantoms
                 return;
             }
 
-            _agent.speed = _chaseSpeed;
+            float targetSpeed = (_currentState == PhantomState.BeingVacuumed)
+                ? (_chaseSpeed * _suctionSlowdownRatio)
+                : _chaseSpeed;
+            _agent.speed = targetSpeed;
 
             if (_agent.isStopped)
             {
