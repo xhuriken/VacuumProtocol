@@ -18,17 +18,33 @@ using UnityEditor;
 public class PlayerMouthVacuum : NetworkBehaviour
 {
     [Header("Mouth Suction Parameters")]
-    [Tooltip("Role: Maximum distance the mouth vacuum can reach to pull and drain phantoms.")]
-    [SerializeField] private float _suctionRange = 7.0f;
+    [Tooltip("Role: Maximum distance along cone axis Z that the mouth vacuum reaches.")]
+    [SerializeField] private float _coneLength = 5.5f;
 
-    [Tooltip("Role: Opening angle of the mouth suction cone in degrees.")]
-    [SerializeField] private float _coneAngle = 45f;
+    [Tooltip("Role: Maximum radius expansion profile along cone length Z matching VacuumCone1.")]
+    [SerializeField] private AnimationCurve _coneRadiusProfile;
 
     [Tooltip("Role: Ectoplasmic health drained per second from phantoms inside the cone.")]
     [SerializeField] private float _drainRatePerSecond = 10f;
 
     [Tooltip("Role: Layers that block mouth line-of-sight (walls, obstacles, ground).")]
     [SerializeField] private LayerMask _obstacleLayer;
+
+    [Header("Subliminal Lightning Tethers")]
+    [Tooltip("Role: Additive electric material for the subliminal vortex lightning arcs.")]
+    [SerializeField] private Material _lightningMaterial;
+
+    [Tooltip("Role: Maximum number of simultaneous electric tethers.")]
+    [SerializeField] private int _maxLightningTethers = 4;
+
+    [Tooltip("Role: Number of points per lightning arc.")]
+    [SerializeField] private int _tetherPoints = 12;
+
+    [Tooltip("Role: Maximum lateral zig-zag offset of lightning arcs in meters.")]
+    [SerializeField] private float _lightningJitter = 0.16f;
+
+    [Tooltip("Role: Width of the lightning arc lines.")]
+    [SerializeField] private float _lightningLineWidth = 0.045f;
 
     [Header("Suction Visuals")]
     [Tooltip("Role: Renderer of the 3D suction cone displaying the distortion material.")]
@@ -65,10 +81,24 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private static readonly int PropVacuumTint = Shader.PropertyToID("_VacuumTint");
     private static readonly int PropDistortionStrength = Shader.PropertyToID("_DistortionStrength");
 
+    private LineRenderer[] _lightningLines;
+    private readonly List<PhantomBase> _activeCapturedPhantoms = new List<PhantomBase>();
+
     private void Awake()
     {
         _input = GetComponent<PlayerInputHandler>();
         _controller = GetComponent<PlayerV2_Controller>();
+
+        if (_coneRadiusProfile == null || _coneRadiusProfile.length == 0)
+        {
+            _coneRadiusProfile = new AnimationCurve(
+                new Keyframe(0f, 0.35f),
+                new Keyframe(1f, 1.20f),
+                new Keyframe(2.5f, 2.10f),
+                new Keyframe(4f, 2.75f),
+                new Keyframe(5.5f, 2.50f)
+            );
+        }
 
         if (_obstacleLayer.value == 0)
         {
@@ -80,6 +110,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
         }
 
         InitSuctionVisuals();
+        InitLightningTethers();
     }
 
     /// <summary>
@@ -219,6 +250,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
             {
                 SetConeRenderersEnabled(false);
             }
+            UpdateLightningTethers();
             return;
         }
 
@@ -277,94 +309,267 @@ public class PlayerMouthVacuum : NetworkBehaviour
         _isVacuumingNetworked = active;
     }
 
+    private void InitLightningTethers()
+    {
+        if (_lightningMaterial == null)
+        {
+            _lightningMaterial = Resources.Load<Material>("Mat_SuctionLightning");
+            if (_lightningMaterial == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                if (shader != null)
+                {
+                    _lightningMaterial = new Material(shader)
+                    {
+                        name = "Runtime_LightningMat"
+                    };
+                    _lightningMaterial.SetFloat("_Surface", 1);
+                    _lightningMaterial.SetFloat("_Blend", 1);
+                    _lightningMaterial.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                    _lightningMaterial.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                    _lightningMaterial.SetColor("_BaseColor", new Color(0.25f, 0.85f, 1f, 1f));
+                }
+            }
+        }
+
+        Transform root = _suctionConeRenderer != null ? _suctionConeRenderer.transform : transform;
+        _lightningLines = new LineRenderer[_maxLightningTethers];
+
+        for (int i = 0; i < _maxLightningTethers; i++)
+        {
+            GameObject lineObj = new GameObject($"LightningTether_{i}");
+            lineObj.transform.SetParent(root, false);
+
+            LineRenderer lr = lineObj.AddComponent<LineRenderer>();
+            lr.positionCount = _tetherPoints;
+            lr.startWidth = _lightningLineWidth;
+            lr.endWidth = _lightningLineWidth * 0.5f;
+            lr.material = _lightningMaterial;
+            lr.useWorldSpace = true;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            lr.enabled = false;
+
+            _lightningLines[i] = lr;
+        }
+    }
+
+    /// <summary>
+    /// Description: Tests whether a world-space point is inside the largest suction cone mesh (VacuumCone1).
+    /// Returns local cone position for centripetal and depth calculations.
+    /// </summary>
+    public bool IsInsideSuctionCone(Vector3 worldPoint, out Vector3 localConePos)
+    {
+        localConePos = Vector3.zero;
+        if (_suctionConeRenderer == null) return false;
+
+        Transform coneT = _suctionConeRenderer.transform;
+        localConePos = coneT.InverseTransformPoint(worldPoint);
+
+        // Distance along cone forward axis Z (from mouth nozzle Z=0 to _coneLength)
+        if (localConePos.z < 0f || localConePos.z > _coneLength)
+        {
+            return false;
+        }
+
+        // Radial distance from central axis in local XY plane
+        float radiusAtZ = _coneRadiusProfile != null ? _coneRadiusProfile.Evaluate(localConePos.z) : 2.5f;
+        float radialDistance = Mathf.Sqrt(localConePos.x * localConePos.x + localConePos.y * localConePos.y);
+
+        return radialDistance <= radiusAtZ;
+    }
+
     /// <summary>
     /// Description: Scans all active phantoms and applies suction and drain to those within the mouth cone.
     /// </summary>
     private void ProcessMouthSuction()
     {
-        Transform viewRef = _controller.CameraTransform != null ? _controller.CameraTransform : transform;
-        Vector3 mouthOrigin = viewRef.position;
-        Vector3 mouthForward = viewRef.forward;
+        _activeCapturedPhantoms.Clear();
+
+        if (_suctionConeRenderer == null) return;
+
+        Transform coneT = _suctionConeRenderer.transform;
+        Vector3 nozzleOrigin = coneT.position;
+        Vector3 coneForward = coneT.forward;
+        Vector3 coneUp = coneT.up;
+        Vector3 coneRight = coneT.right;
 
         IReadOnlyList<PhantomBase> phantoms = PhantomBase.ActivePhantoms;
-        if (phantoms == null || phantoms.Count == 0) return;
-
-        for (int i = 0; i < phantoms.Count; i++)
+        if (phantoms != null && phantoms.Count > 0)
         {
-            PhantomBase phantom = phantoms[i];
-            if (phantom == null || !phantom.gameObject.activeInHierarchy) continue;
-
-            Vector3 toPhantom = phantom.LookAtPoint.position - mouthOrigin;
-            float distance = toPhantom.magnitude;
-
-            if (distance > _suctionRange || distance < 0.01f) continue;
-
-            // Angular check (Cone containment)
-            float angle = Vector3.Angle(mouthForward, toPhantom.normalized);
-            if (angle > _coneAngle / 2f) continue;
-
-            // Obstacle Line-of-sight check
-            if (Physics.Raycast(mouthOrigin, toPhantom.normalized, out RaycastHit hit, distance, _obstacleLayer, QueryTriggerInteraction.Ignore))
+            for (int i = 0; i < phantoms.Count; i++)
             {
-                if (!hit.transform.IsChildOf(phantom.transform))
+                PhantomBase phantom = phantoms[i];
+                if (phantom == null || !phantom.gameObject.activeInHierarchy) continue;
+
+                Vector3 phantomTargetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
+
+                // 1. Precise volumetric containment check inside VacuumCone1
+                if (!IsInsideSuctionCone(phantomTargetPos, out _))
                 {
-                    // Blocked by a wall!
                     continue;
                 }
-            }
 
-            // Target valid: apply instant client feedback and authoritative server command
-            phantom.OnMouthSuctionApplied(mouthOrigin, _drainRatePerSecond);
-            CmdApplyMouthSuction(phantom.gameObject, mouthOrigin, _drainRatePerSecond);
+                // 2. Obstacle line-of-sight check against walls/doors
+                Vector3 toPhantom = phantomTargetPos - nozzleOrigin;
+                float distance = toPhantom.magnitude;
+                if (distance > 0.05f)
+                {
+                    if (Physics.Raycast(nozzleOrigin, toPhantom.normalized, out RaycastHit hit, distance, _obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        if (!hit.transform.IsChildOf(phantom.transform))
+                        {
+                            // Obstructed by a wall!
+                            continue;
+                        }
+                    }
+                }
+
+                _activeCapturedPhantoms.Add(phantom);
+
+                // Apply instant client-side prediction and authoritative server command
+                phantom.OnMouthSuctionApplied(nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
+                CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
+            }
         }
+
+        UpdateLightningTethers();
     }
 
     [Command]
-    private void CmdApplyMouthSuction(GameObject phantomObj, Vector3 nozzlePos, float drainRate)
+    private void CmdApplyMouthSuction(GameObject phantomObj, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainRate)
     {
         if (phantomObj == null) return;
         PhantomBase phantom = phantomObj.GetComponent<PhantomBase>();
         if (phantom != null)
         {
-            phantom.OnMouthSuctionApplied(nozzlePos, drainRate);
+            phantom.OnMouthSuctionApplied(nozzlePos, coneForward, coneUp, coneRight, drainRate);
+        }
+    }
+
+    /// <summary>
+    /// Description: Updates subliminal lightning arcs connecting the mouth nozzle to each captured phantom.
+    /// </summary>
+    private void UpdateLightningTethers()
+    {
+        if (_lightningLines == null || _lightningLines.Length == 0) return;
+
+        bool isVacuuming = isLocalPlayer
+            ? (_input != null && _input.IsVacuuming)
+            : _isVacuumingNetworked;
+
+        if (!isVacuuming || _activeCapturedPhantoms.Count == 0 || _suctionConeRenderer == null)
+        {
+            for (int i = 0; i < _lightningLines.Length; i++)
+            {
+                if (_lightningLines[i] != null && _lightningLines[i].enabled)
+                {
+                    _lightningLines[i].enabled = false;
+                }
+            }
+            return;
+        }
+
+        Vector3 nozzlePos = _suctionConeRenderer.transform.position;
+        Vector3 coneForward = _suctionConeRenderer.transform.forward;
+
+        for (int i = 0; i < _lightningLines.Length; i++)
+        {
+            LineRenderer lr = _lightningLines[i];
+            if (lr == null) continue;
+
+            if (i < _activeCapturedPhantoms.Count)
+            {
+                PhantomBase phantom = _activeCapturedPhantoms[i];
+                if (phantom == null || !phantom.gameObject.activeInHierarchy)
+                {
+                    lr.enabled = false;
+                    continue;
+                }
+
+                // Subliminal strobe: rapid flicker for intense electric energy
+                bool subliminalFlicker = (Time.frameCount % 2 == 0) || (Random.value > 0.15f);
+                lr.enabled = subliminalFlicker;
+
+                if (!subliminalFlicker) continue;
+
+                Vector3 targetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
+
+                // Animate dynamic line width with high-voltage pulse
+                float widthPulse = _lightningLineWidth * Random.Range(0.8f, 1.4f);
+                lr.startWidth = widthPulse;
+                lr.endWidth = widthPulse * 0.6f;
+
+                // Calculate curved fractal arc points from nozzle to target
+                for (int p = 0; p < _tetherPoints; p++)
+                {
+                    float t = (float)p / (_tetherPoints - 1);
+                    Vector3 basePt = Vector3.Lerp(nozzlePos, targetPos, t);
+
+                    // Pull slightly towards the vortex central axis along the way
+                    float axialDist = Vector3.Dot(basePt - nozzlePos, coneForward);
+                    Vector3 axisPt = nozzlePos + coneForward * axialDist;
+                    basePt = Vector3.Lerp(axisPt, basePt, Mathf.SmoothStep(0f, 1f, t));
+
+                    // Add erratic high-voltage zig-zag noise on intermediate points
+                    if (p > 0 && p < _tetherPoints - 1)
+                    {
+                        float jitterScale = Mathf.Sin(t * Mathf.PI) * _lightningJitter;
+                        Vector3 randJitter = Random.insideUnitSphere * jitterScale;
+                        basePt += randJitter;
+                    }
+
+                    lr.SetPosition(p, basePt);
+                }
+            }
+            else
+            {
+                if (lr.enabled) lr.enabled = false;
+            }
         }
     }
 
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        if (!_showDebugGizmos || _controller == null) return;
+        if (!_showDebugGizmos || _suctionConeRenderer == null) return;
 
-        Transform viewRef = _controller.CameraTransform != null ? _controller.CameraTransform : transform;
-        Vector3 origin = viewRef.position;
-        Vector3 forward = viewRef.forward;
-
+        Transform coneT = _suctionConeRenderer.transform;
         bool isActive = _input != null && _input.IsVacuuming;
 
-        // Draw mouth suction cone
-        Vector3 leftBoundary = Quaternion.AngleAxis(-_coneAngle / 2f, viewRef.up) * forward;
-        Vector3 rightBoundary = Quaternion.AngleAxis(_coneAngle / 2f, viewRef.up) * forward;
-
-        Color coneColor = isActive
-
-            ? new Color(0.6f, 0.1f, 1f, 0.25f)
-
-            : new Color(0.2f, 0.8f, 1f, 0.08f);
-
         Color wireColor = isActive
-
-            ? new Color(0.8f, 0.2f, 1f, 0.9f)
-
-            : new Color(0.2f, 0.8f, 1f, 0.3f);
-
-        Handles.color = coneColor;
-        Handles.DrawSolidArc(origin, viewRef.up, leftBoundary, _coneAngle, _suctionRange);
+            ? new Color(0.9f, 0.2f, 1f, 0.85f)
+            : new Color(0.2f, 0.8f, 1f, 0.35f);
 
         Handles.color = wireColor;
-        Handles.DrawWireArc(origin, viewRef.up, leftBoundary, _coneAngle, _suctionRange);
         Gizmos.color = wireColor;
-        Gizmos.DrawRay(origin, leftBoundary * _suctionRange);
-        Gizmos.DrawRay(origin, rightBoundary * _suctionRange);
+
+        // Draw cross-section rings along VacuumCone1 length
+        float[] ringDistances = new float[] { 0.1f, 1.0f, 2.5f, 4.0f, _coneLength };
+        Vector3[] prevPoints = new Vector3[16];
+
+        for (int r = 0; r < ringDistances.Length; r++)
+        {
+            float z = ringDistances[r];
+            float radius = _coneRadiusProfile != null ? _coneRadiusProfile.Evaluate(z) : 2.5f;
+            Vector3 ringCenter = coneT.TransformPoint(new Vector3(0, 0, z));
+
+            Handles.DrawWireDisc(ringCenter, coneT.forward, radius);
+
+            // Connect longitudinal hull lines
+            for (int i = 0; i < 16; i++)
+            {
+                float angle = i * Mathf.PI * 2f / 16f;
+                Vector3 localHullPoint = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, z);
+                Vector3 worldHullPoint = coneT.TransformPoint(localHullPoint);
+
+                if (r > 0)
+                {
+                    Gizmos.DrawLine(prevPoints[i], worldHullPoint);
+                }
+                prevPoints[i] = worldHullPoint;
+            }
+        }
     }
 #endif
 }

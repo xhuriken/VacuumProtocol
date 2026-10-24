@@ -88,6 +88,18 @@ MonoBehaviour:
   _maxEctoplasm: 35
   _currentEctoplasm: 35
   _suctionSlowdownRatio: 0.2
+  _centeringStrength: 7
+  _maxCenteringSpeed: 5
+  _suctionPullSpeed: 2.4
+  _shakeFrequency: 35
+  _shakeAmplitude: 0.08
+  _struggleResistance: 0.25
+  _escapeDashForce: 4.5
+  _escapeIntervalMin: 0.9
+  _escapeIntervalMax: 1.8
+  _escapeDashDuration: 0.35
+  _swallowThresholdRatio: 0.25
+  _swallowDiveSpeed: 12
   _enableProximityDrain: 1
   _proximityDrainRadius: 6
   _maxDrainRate: 20

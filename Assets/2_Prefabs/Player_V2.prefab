@@ -26611,12 +26611,67 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _suctionRange: 7
-  _coneAngle: 45
+  _coneLength: 5.5
+  _coneRadiusProfile:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.35
+      inSlope: 0.85
+      outSlope: 0.85
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1.2
+      inSlope: 0.65
+      outSlope: 0.65
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 2.5
+      value: 2.1
+      inSlope: 0.5
+      outSlope: 0.5
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 4
+      value: 2.75
+      inSlope: 0.2
+      outSlope: 0.2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 5.5
+      value: 2.5
+      inSlope: -0.2
+      outSlope: -0.2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   _drainRatePerSecond: 10
   _obstacleLayer:
     serializedVersion: 2
     m_Bits: 265
+  _lightningMaterial: {fileID: 2100000, guid: a0b1c850d2ec488e9e2ee7ee016e348f, type: 2}
+  _maxLightningTethers: 4
+  _tetherPoints: 12
+  _lightningJitter: 0.16
+  _lightningLineWidth: 0.045
   _suctionConeRenderer: {fileID: 6426735813776031197}
   _additionalConeRenderers:
   - {fileID: 3492194764150479775}

@@ -96,15 +96,53 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Time in seconds to wait at a wander destination before picking a new one.\nUse Case: Natural pacing in idle/patrol state.")]
         [SerializeField] protected float _wanderWaitTime = 3f;
 
-        [Header("Mouth Vacuum Capture Settings")]
+        [Header("Mouth Vacuum Capture & Struggle Settings")]
         [Tooltip("Role: Maximum ectoplasm / capture threshold of the phantom.\nUse Case: Depleted by mouth dual-click suction.")]
         [SerializeField] protected float _maxEctoplasm = 150f;
 
-        [SyncVar]
+        [SyncVar(hook = nameof(OnEctoplasmChanged))]
         [SerializeField] protected float _currentEctoplasm = 150f;
 
         [Tooltip("Role: Speed reduction ratio when caught in mouth vacuum (0 = stopped, 1 = full speed).")]
         [SerializeField] protected float _suctionSlowdownRatio = 0.25f;
+
+        [Tooltip("Role: Centripetal force dragging the phantom towards the central axis of the suction cone.")]
+        [SerializeField] protected float _centeringStrength = 7.0f;
+
+        [Tooltip("Role: Maximum speed at which the phantom can be pulled laterally towards the center axis.")]
+        [SerializeField] protected float _maxCenteringSpeed = 5.0f;
+
+        [Tooltip("Role: Axial drag speed pulling the phantom towards the mouth nozzle.")]
+        [SerializeField] protected float _suctionPullSpeed = 2.4f;
+
+        [Tooltip("Role: Frequency of panic jitter / vibration while caught in the suction vortex.")]
+        [SerializeField] protected float _shakeFrequency = 35.0f;
+
+        [Tooltip("Role: Amplitude of panic jitter / vibration in meters.")]
+        [SerializeField] protected float _shakeAmplitude = 0.08f;
+
+        [Tooltip("Role: Resistance factor (0 to 1) reducing the effectiveness of suction centering and drag.")]
+        [Range(0f, 0.9f)]
+        [SerializeField] protected float _struggleResistance = 0.35f;
+
+        [Tooltip("Role: Impulse force applied when the phantom performs an escape dash.")]
+        [SerializeField] protected float _escapeDashForce = 5.2f;
+
+        [Tooltip("Role: Minimum interval in seconds between escape dash attempts.")]
+        [SerializeField] protected float _escapeIntervalMin = 1.0f;
+
+        [Tooltip("Role: Maximum interval in seconds between escape dash attempts.")]
+        [SerializeField] protected float _escapeIntervalMax = 2.2f;
+
+        [Tooltip("Role: Duration in seconds of the escape dash impulse burst.")]
+        [SerializeField] protected float _escapeDashDuration = 0.35f;
+
+        [Tooltip("Role: Size/health threshold ratio (e.g. 0.25 = 25%) where the phantom gives up, collapses, and is swallowed into the nozzle.")]
+        [Range(0.1f, 0.5f)]
+        [SerializeField] protected float _swallowThresholdRatio = 0.25f;
+
+        [Tooltip("Role: Speed at which the defeated phantom dives directly into the nozzle once the swallow threshold is reached.")]
+        [SerializeField] protected float _swallowDiveSpeed = 12.0f;
 
         [Header("Proximity Terror Drain Aura")]
         [Tooltip("Role: Enables continuous health drain for players within proximity aura.")]
@@ -142,6 +180,18 @@ namespace Gameplay.Phantoms
 
         protected float _lastMouthSuctionTime = -999f;
         protected Vector3 _lastSuctionNozzlePos;
+        protected Vector3 _lastConeForward = Vector3.forward;
+        protected Vector3 _lastConeUp = Vector3.up;
+        protected Vector3 _lastConeRight = Vector3.right;
+
+        protected Vector3 _initialLocalScale = Vector3.one;
+        protected float _escapeTimer = 0f;
+        protected float _currentEscapeInterval = 1.5f;
+        protected Vector3 _currentEscapeVelocity = Vector3.zero;
+        protected float _escapeDurationTimer = 0f;
+
+        [SyncVar]
+        protected bool _isBeingSwallowed = false;
         #endregion
 
         #region Public Accessors (for Gizmos and Debug Tools)
@@ -183,6 +233,9 @@ namespace Gameplay.Phantoms
         #region Unity Callbacks
         protected virtual void Awake()
         {
+            _initialLocalScale = transform.localScale;
+            _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
+
             if (_lookAtPoint == null)
             {
                 Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' is missing a '_lookAtPoint' assignment! Please set it on the prefab to satisfy IEntity requirements. Fail loudly per workspace rules.");
@@ -557,13 +610,44 @@ namespace Gameplay.Phantoms
         }
 
         /// <summary>
+        private void OnEctoplasmChanged(float oldVal, float newVal)
+        {
+            UpdateVisualScaleFromEctoplasm();
+        }
+
+        /// <summary>
+        /// Description: Dynamically shrinks the phantom proportional to remaining ectoplasm health,
+        /// reaching _swallowThresholdRatio right as the swallow threshold is attained.
+        /// </summary>
+        protected virtual void UpdateVisualScaleFromEctoplasm()
+        {
+            if (_isBeingSwallowed) return;
+
+            float thresholdEctoplasm = _maxEctoplasm * _swallowThresholdRatio;
+            if (_currentEctoplasm <= thresholdEctoplasm)
+            {
+                transform.localScale = _initialLocalScale * _swallowThresholdRatio;
+                return;
+            }
+
+            float remainingRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEctoplasm) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEctoplasm));
+            float scaleFactor = Mathf.Lerp(_swallowThresholdRatio, 1.0f, remainingRatio);
+            transform.localScale = _initialLocalScale * scaleFactor;
+        }
+
+        /// <summary>
         /// Description: Updates behavior while trapped inside the player's mouth suction stream.
+        /// Incorporates centripetal axis attraction, nozzle drag, panic jitter, struggle escape dashes,
+        /// combat in suction, progressive scale shrinking, and high-speed swallow plunge.
         /// </summary>
         protected virtual void UpdateBeingVacuumedState()
         {
-            // If suction stopped for more than 0.3s, break free
-            if (Time.time - _lastMouthSuctionTime > 0.3f)
+            // If suction stopped for more than 0.3s and we are not in final swallow dive, break free!
+            if (!_isBeingSwallowed && Time.time - _lastMouthSuctionTime > 0.3f)
             {
+                _currentEscapeVelocity = Vector3.zero;
+                _escapeDurationTimer = 0f;
+
                 if (_currentTarget != null && IsPlayerVisible(_currentTarget, out _))
                 {
                     TransitionToState(PhantomState.Chasing);
@@ -579,37 +663,161 @@ namespace Gameplay.Phantoms
                 return;
             }
 
-            // Slowly orient towards the mouth
-            Vector3 toNozzle = _lastSuctionNozzlePos - transform.position;
-            toNozzle.y = 0;
-            if (toNozzle.sqrMagnitude > 0.1f)
+            // --- 1. Final Swallow Sequence (Gulp) ---
+            if (_isBeingSwallowed)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toNozzle.normalized), Time.deltaTime * 6f);
+                Vector3 toNozzle = _lastSuctionNozzlePos - transform.position;
+                float distToNozzle = toNozzle.magnitude;
+
+                if (distToNozzle > 0.15f)
+                {
+                    // High-speed plunge directly into mouth nozzle
+                    transform.position += toNozzle.normalized * (_swallowDiveSpeed * Time.deltaTime);
+
+                    // Rapidly shrink scale to zero as it approaches the nozzle
+                    float shrinkProgress = Mathf.Clamp01(distToNozzle / 1.5f);
+                    transform.localScale = _initialLocalScale * (_swallowThresholdRatio * shrinkProgress);
+
+                    // Spiral / vortex roll towards the mouth
+                    transform.Rotate(Vector3.forward, 720f * Time.deltaTime, Space.Self);
+                }
+                else
+                {
+                    // Plunged into mouth! Disappear and capture
+                    if (isServer)
+                    {
+                        OnPhantomCaptured();
+                    }
+                    return;
+                }
+                return;
+            }
+
+            // --- 2. Active Combat & Attack while in Suction ---
+            if (_currentTarget != null && _currentTarget.gameObject.activeInHierarchy)
+            {
+                float distToTarget = Vector3.Distance(transform.position, _currentTarget.WorldPosition);
+                if (distToTarget <= _attackRadius)
+                {
+                    if (Time.time - _lastAttackTime >= _attackCooldown)
+                    {
+                        _lastAttackTime = Time.time;
+                        OnAttackPlayer(_currentTarget);
+                    }
+                }
+            }
+
+            // --- 3. Centering Force (Attraction towards central cone axis) ---
+            Vector3 fromNozzle = transform.position - _lastSuctionNozzlePos;
+            float axialDistance = Vector3.Dot(fromNozzle, _lastConeForward);
+            Vector3 centerAxisPoint = _lastSuctionNozzlePos + _lastConeForward * Mathf.Max(0.01f, axialDistance);
+
+            Vector3 toAxis = centerAxisPoint - transform.position;
+            Vector3 centeringVel = Vector3.zero;
+            if (toAxis.sqrMagnitude > 0.001f)
+            {
+                float centeringSpeed = Mathf.Min(toAxis.magnitude * _centeringStrength, _maxCenteringSpeed);
+                centeringVel = toAxis.normalized * (centeringSpeed * (1f - _struggleResistance));
+            }
+
+            // --- 4. Axial Suction Drag towards Mouth Nozzle ---
+            Vector3 toNozzleDir = (_lastSuctionNozzlePos - transform.position);
+            Vector3 pullVel = Vector3.zero;
+            if (toNozzleDir.sqrMagnitude > 0.01f)
+            {
+                pullVel = toNozzleDir.normalized * (_suctionPullSpeed * (1f - _struggleResistance * 0.5f));
+            }
+
+            // --- 5. Panic Jitter / Shake ---
+            float shakeTime = Time.time * _shakeFrequency;
+            Vector3 shakeOffset = (_lastConeRight * Mathf.Sin(shakeTime) + _lastConeUp * Mathf.Cos(shakeTime * 1.35f)) * _shakeAmplitude;
+
+            // --- 6. Struggle / Escape Dash AI ---
+            _escapeTimer += Time.deltaTime;
+            if (_escapeTimer >= _currentEscapeInterval)
+            {
+                _escapeTimer = 0f;
+                _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
+
+                // Select escape direction (Up, Down, Left, Right, or Backwards)
+                int dirChoice = Random.Range(0, 5);
+                Vector3 escapeDir = _lastConeRight;
+                switch (dirChoice)
+                {
+                    case 0: escapeDir = _lastConeRight; break;
+                    case 1: escapeDir = -_lastConeRight; break;
+                    case 2: escapeDir = _lastConeUp; break;
+                    case 3: escapeDir = -_lastConeUp; break;
+                    case 4: escapeDir = _lastConeForward; break; // pushing back away from player
+                }
+
+                _currentEscapeVelocity = escapeDir.normalized * _escapeDashForce;
+                _escapeDurationTimer = _escapeDashDuration;
+            }
+
+            if (_escapeDurationTimer > 0f)
+            {
+                _escapeDurationTimer -= Time.deltaTime;
+                _currentEscapeVelocity = Vector3.Lerp(_currentEscapeVelocity, Vector3.zero, Time.deltaTime * 5f);
+            }
+            else
+            {
+                _currentEscapeVelocity = Vector3.zero;
+            }
+
+            // Combine all physical forces
+            Vector3 totalVelocity = centeringVel + pullVel + _currentEscapeVelocity;
+            transform.position += (totalVelocity * Time.deltaTime) + shakeOffset;
+
+            // Orient towards the nozzle with slight panic tilt
+            if (toNozzleDir.sqrMagnitude > 0.05f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(toNozzleDir.normalized, _lastConeUp);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 8f);
             }
         }
 
         /// <summary>
-        /// Description: Hook called when the player actively vacuums this phantom with the mouth (dual-click IsVacuuming).
-        /// Slows down the phantom and drains its ectoplasmic health.
+        /// Description: Hook called when the player actively vacuums this phantom with the mouth.
+        /// Passes nozzle position and cone coordinate frame for centering and struggle calculations.
         /// </summary>
-        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, float drainAmount)
+        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount)
         {
             _lastMouthSuctionTime = Time.time;
             _lastSuctionNozzlePos = nozzlePos;
+            _lastConeForward = coneForward;
+            _lastConeUp = coneUp;
+            _lastConeRight = coneRight;
 
-            if (_currentState != PhantomState.BeingVacuumed && _currentState != PhantomState.Attacking)
+            if (_currentState != PhantomState.BeingVacuumed && _currentState != PhantomState.Attacking && !_isBeingSwallowed)
             {
                 TransitionToState(PhantomState.BeingVacuumed);
             }
 
             if (isServer)
             {
-                _currentEctoplasm -= drainAmount * Time.deltaTime;
-                if (_currentEctoplasm <= 0f)
+                if (!_isBeingSwallowed)
                 {
-                    OnPhantomCaptured();
+                    _currentEctoplasm -= drainAmount * Time.deltaTime;
+                    UpdateVisualScaleFromEctoplasm();
+
+                    if (_currentEctoplasm <= _maxEctoplasm * _swallowThresholdRatio)
+                    {
+                        _isBeingSwallowed = true;
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Description: Backward compatible overload for mouth suction application.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, float drainAmount)
+        {
+            Vector3 forward = (transform.position - nozzlePos).normalized;
+            Vector3 up = Vector3.up;
+            Vector3 right = Vector3.Cross(up, forward).normalized;
+            OnMouthSuctionApplied(nozzlePos, forward, up, right, drainAmount);
         }
 
         /// <summary>

@@ -84,6 +84,11 @@ namespace Gameplay.Phantoms
             _maxEctoplasm = 35f;
             _currentEctoplasm = 35f;
             _suctionSlowdownRatio = 0.2f;
+            _struggleResistance = 0.25f;
+            _escapeDashForce = 4.5f;
+            _escapeIntervalMin = 0.9f;
+            _escapeIntervalMax = 1.8f;
+            _swallowThresholdRatio = 0.25f;
 
             _fieldOfViewAngle = 135f;
             _detectionRadius = 12f;
@@ -272,19 +277,8 @@ namespace Gameplay.Phantoms
         {
             if (!isServer) return;
 
+            // Execute full base suction physics (centering, nozzle pull, jitter, escape dashes, shrink, swallow)
             base.UpdateBeingVacuumedState();
-
-            // When caught in mouth vacuum stream, apply physical suction drag towards the nozzle
-            Vector3 toNozzle = _lastSuctionNozzlePos - transform.position;
-            if (toNozzle.sqrMagnitude > 0.2f)
-            {
-                // Drags towards mouth nozzle
-                transform.position += toNozzle.normalized * (_vacuumDragSpeed * Time.deltaTime);
-
-                // Add erratic panic vibration
-                float jitter = Mathf.Sin(Time.time * 25f) * 0.04f;
-                transform.position += transform.right * jitter;
-            }
         }
         #endregion
 
