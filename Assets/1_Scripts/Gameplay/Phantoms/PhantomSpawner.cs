@@ -11,6 +11,7 @@ namespace Gameplay.Phantoms
     /// Context: Placed in gameplay or test scenes. Runs server-side in Mirror multiplayer.
     /// Justification: Automates phantom instantiation on the NavMesh, enforces max instance limits, and exposes Odin Inspector buttons for testing.
     /// </summary>
+    [RequireComponent(typeof(NetworkIdentity))]
     public class PhantomSpawner : NetworkBehaviour
     {
         [Header("Prefab & Spawning Settings")]
@@ -55,7 +56,7 @@ namespace Gameplay.Phantoms
         [ServerCallback]
         private void Update()
         {
-            if (!isServer) return;
+            if (!NetworkServer.active || netIdentity == null || !isServer) return;
 
             // Clean up destroyed or disabled phantoms from the tracker list
             _alivePhantoms.RemoveAll(p => p == null);
@@ -71,7 +72,7 @@ namespace Gameplay.Phantoms
         [GUIColor(0.3f, 0.8f, 1f)]
         public GameObject SpawnPhantom()
         {
-            if (!isServer)
+            if (!NetworkServer.active || netIdentity == null || !isServer)
             {
                 Debug.LogWarning("[PhantomSpawner] SpawnPhantom can only be executed on the Server/Host (must be in Play Mode with active server).");
                 return null;
@@ -143,7 +144,7 @@ namespace Gameplay.Phantoms
         [GUIColor(1f, 0.4f, 0.4f)]
         public void ClearAllPhantoms()
         {
-            if (!isServer)
+            if (!NetworkServer.active || netIdentity == null || !isServer)
             {
                 Debug.LogWarning("[PhantomSpawner] ClearAllPhantoms can only be executed on the Server/Host.");
                 return;
