@@ -51,8 +51,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _ConeLength: 6
     - _DistortionStrength: 0.1
-    - _FresnelPower: 0.68
+    - _EndFadeLength: 1.5
+    - _FresnelPower: 0.28
     - _NoiseFrequency: 20
     - _QueueControl: 0
     - _QueueOffset: 0

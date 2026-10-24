@@ -49,7 +49,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
   sceneId: 0
-  _assetId: 2194830155
+  _assetId: 2138278442
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
@@ -88,6 +88,37 @@ MonoBehaviour:
   _maxEctoplasm: 35
   _currentEctoplasm: 35
   _suctionSlowdownRatio: 0.2
+  _enableProximityDrain: 1
+  _proximityDrainRadius: 6
+  _maxDrainRate: 20
+  _drainFalloffCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _drainObstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  _attackDamage: 25
   _currentState: 0
   _currentTarget: {fileID: 0}
   _flightChaseSpeed: 4.2
@@ -157,7 +188,8 @@ MonoBehaviour:
   ShowPlayerSightlines: 1
   ShowObstacleHitPoints: 1
   ShowLastKnownPosition: 1
-  ShowNavMeshPath: 0
+  ShowNavMeshPath: 1
+  ShowDrainAura: 1
   ShowStateBadge: 1
   OnlyWhenSelected: 0
   ConeTransparency: 0.18

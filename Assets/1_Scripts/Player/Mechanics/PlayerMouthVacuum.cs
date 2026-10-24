@@ -34,6 +34,12 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [Tooltip("Role: Renderer of the 3D suction cone displaying the distortion material.")]
     [SerializeField] private Renderer _suctionConeRenderer;
 
+    [Tooltip("Role: Optional additional renderers (concentric interior shells) sharing the distortion material.")]
+    [SerializeField] private Renderer[] _additionalConeRenderers;
+
+    [Tooltip("Role: Particle system creating 3D volumetric aerodynamic streamlines and swirling dust rushing into the mouth.")]
+    [SerializeField] private ParticleSystem _suctionParticles;
+
     [Tooltip("Role: Duration in seconds to smoothly fade in the suction visuals and vortex speed.")]
     [SerializeField] private float _fadeInDuration = 0.35f;
 
@@ -77,8 +83,8 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Initializes the suction cone material property block and caches starting values.
-    /// Fails loudly if renderer is missing.
+    /// Description: Initializes the suction cone material property block, particle system, and caches starting values.
+    /// Fails loudly if renderer or particle system is missing.
     /// </summary>
     private void InitSuctionVisuals()
     {
@@ -111,9 +117,50 @@ public class PlayerMouthVacuum : NetworkBehaviour
             }
         }
 
+        if (_suctionParticles == null && _suctionConeRenderer != null)
+        {
+            _suctionParticles = _suctionConeRenderer.GetComponentInChildren<ParticleSystem>();
+            if (_suctionParticles == null && _suctionConeRenderer.transform.parent != null)
+            {
+                Transform pChild = _suctionConeRenderer.transform.parent.Find("MouthSuctionParticles");
+                if (pChild != null)
+                {
+                    _suctionParticles = pChild.GetComponent<ParticleSystem>();
+                }
+            }
+        }
+
+        if (_suctionParticles == null)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] '_suctionParticles' is missing on '{gameObject.name}'. Please assign the dedicated mouth suction ParticleSystem in the inspector.", this);
+        }
+        else
+        {
+            _suctionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
         // Start fully hidden and idle
-        _suctionConeRenderer.enabled = false;
+        SetConeRenderersEnabled(false);
         ApplyVisualProperties(0f);
+    }
+
+    private void SetConeRenderersEnabled(bool isEnabled)
+    {
+        if (_suctionConeRenderer != null)
+        {
+            _suctionConeRenderer.enabled = isEnabled;
+        }
+
+        if (_additionalConeRenderers != null)
+        {
+            for (int i = 0; i < _additionalConeRenderers.Length; i++)
+            {
+                if (_additionalConeRenderers[i] != null)
+                {
+                    _additionalConeRenderers[i].enabled = isEnabled;
+                }
+            }
+        }
     }
 
     private void Update()
@@ -136,7 +183,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Smoothly animates vortex speed, distortion strength, and tint alpha.
+    /// Description: Smoothly animates vortex speed, distortion strength, tint alpha, and controls the particle system.
     /// Anti-spam protected via Mathf.MoveTowards without popping or clipping.
     /// </summary>
     private void UpdateVisuals()
@@ -144,10 +191,21 @@ public class PlayerMouthVacuum : NetworkBehaviour
         if (_suctionConeRenderer == null) return;
 
         bool active = isLocalPlayer
-
             ? (_input != null && _input.IsVacuuming)
-
             : _isVacuumingNetworked;
+
+        // Particle system playback synchronization
+        if (_suctionParticles != null)
+        {
+            if (active && !_suctionParticles.isEmitting)
+            {
+                _suctionParticles.Play(true);
+            }
+            else if (!active && _suctionParticles.isEmitting)
+            {
+                _suctionParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+        }
 
         float target = active ? 1f : 0f;
         float duration = active ? _fadeInDuration : _fadeOutDuration;
@@ -159,14 +217,14 @@ public class PlayerMouthVacuum : NetworkBehaviour
         {
             if (_suctionConeRenderer.enabled)
             {
-                _suctionConeRenderer.enabled = false;
+                SetConeRenderersEnabled(false);
             }
             return;
         }
 
         if (!_suctionConeRenderer.enabled)
         {
-            _suctionConeRenderer.enabled = true;
+            SetConeRenderersEnabled(true);
         }
 
         ApplyVisualProperties(_currentTransition);
@@ -200,6 +258,17 @@ public class PlayerMouthVacuum : NetworkBehaviour
         _mpb.SetColor(PropVacuumTint, currentTint);
 
         _suctionConeRenderer.SetPropertyBlock(_mpb);
+
+        if (_additionalConeRenderers != null)
+        {
+            for (int i = 0; i < _additionalConeRenderers.Length; i++)
+            {
+                if (_additionalConeRenderers[i] != null)
+                {
+                    _additionalConeRenderers[i].SetPropertyBlock(_mpb);
+                }
+            }
+        }
     }
 
     [Command]
