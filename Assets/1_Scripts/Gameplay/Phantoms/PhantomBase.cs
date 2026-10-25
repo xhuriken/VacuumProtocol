@@ -192,6 +192,7 @@ namespace Gameplay.Phantoms
 
         [SyncVar]
         protected bool _isBeingSwallowed = false;
+        protected bool _isDefeatedInvoked = false;
         #endregion
 
         #region Public Accessors (for Gizmos and Debug Tools)
@@ -831,13 +832,21 @@ namespace Gameplay.Phantoms
         protected virtual void OnPhantomCaptured()
         {
             Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
-            OnDefeated?.Invoke(this);
+            if (!_isDefeatedInvoked)
+            {
+                _isDefeatedInvoked = true;
+                OnDefeated?.Invoke(this);
+            }
             NetworkServer.Destroy(gameObject);
         }
 
         protected virtual void OnDestroy()
         {
-            OnDefeated?.Invoke(this);
+            if (!_isDefeatedInvoked)
+            {
+                _isDefeatedInvoked = true;
+                OnDefeated?.Invoke(this);
+            }
         }
 
         /// <summary>

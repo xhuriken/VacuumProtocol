@@ -319,6 +319,22 @@ namespace Gameplay.Phantoms
             return instance;
         }
 
+        private void OnDestroy()
+        {
+            if (_activeRoomPhantoms != null)
+            {
+                for (int i = 0; i < _activeRoomPhantoms.Count; i++)
+                {
+                    var p = _activeRoomPhantoms[i];
+                    if (p != null)
+                    {
+                        p.OnDefeated -= HandlePhantomDefeated;
+                    }
+                }
+                _activeRoomPhantoms.Clear();
+            }
+        }
+
         /// <summary>
         /// Description: Delegate handler invoked when a tracked phantom is defeated or destroyed.
         /// Immediately frees the concurrency quota for this room.
@@ -330,7 +346,8 @@ namespace Gameplay.Phantoms
             phantom.OnDefeated -= HandlePhantomDefeated;
             if (_activeRoomPhantoms.Remove(phantom))
             {
-                Debug.Log($"<color=magenta>[PhantomRoomSpawner]</color> Phantom '{phantom.name}' defeated! Room '{gameObject.name}' active count: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms}");
+                string spawnerName = (this != null && gameObject != null) ? gameObject.name : "DestroyedRoomSpawner";
+                Debug.Log($"<color=magenta>[PhantomRoomSpawner]</color> Phantom '{phantom.name}' defeated! Room '{spawnerName}' active count: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms}");
             }
         }
 
