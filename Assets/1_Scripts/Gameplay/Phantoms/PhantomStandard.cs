@@ -59,10 +59,40 @@ namespace Gameplay.Phantoms
         {
             base.OnStartServer();
 
-            if (_agent != null && !_agent.isOnNavMesh)
+            if (!EnsureAgentOnNavMesh())
             {
-                Debug.LogError($"[PhantomStandard] Critical Error: '{gameObject.name}' is not placed on a baked NavMesh! Ensure a NavMeshSurface is baked and the spawn point is valid.");
+                Debug.LogError($"[PhantomStandard] Critical Error: '{gameObject.name}' is not placed on a baked NavMesh! Ensure a NavMeshSurface is baked (or 'NavMesh-AmongUsMap.asset' assigned) and the spawn point is valid.");
             }
+        }
+        #endregion
+
+        #region NavMesh Recovery & Verification
+        /// <summary>
+        /// Description: Verifies if the NavMeshAgent is placed on a valid NavMesh.
+        /// If off the NavMesh (e.g. spawned slightly above or offset), attempts to recover by sampling the nearest NavMesh point and warping.
+        /// </summary>
+        private bool EnsureAgentOnNavMesh()
+        {
+            if (_agent == null)
+            {
+                Debug.LogError($"[PhantomStandard] Critical Error: NavMeshAgent missing on '{gameObject.name}'! Fail loudly per workspace rules.");
+                return false;
+            }
+
+            if (!_agent.isOnNavMesh)
+            {
+                // Attempt recovery by searching for the closest NavMesh polygon within 5 meters
+                if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5.0f, NavMesh.AllAreas))
+                {
+                    _agent.Warp(hit.position);
+                    Debug.Log($"<color=green>[PhantomStandard]</color> Successfully warped '{gameObject.name}' onto NavMesh at {hit.position}.");
+                    return true;
+                }
+
+                return false;
+            }
+
+            return true;
         }
         #endregion
 
@@ -77,7 +107,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void MoveTowards(Vector3 destination)
         {
-            if (_agent == null || !_agent.isOnNavMesh)
+            if (!EnsureAgentOnNavMesh())
             {
                 Debug.LogError($"[PhantomStandard] Cannot MoveTowards: Agent on '{gameObject.name}' is missing or not placed on a NavMesh.");
                 return;
@@ -130,7 +160,11 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override bool IsDestinationReached()
         {
-            if (_agent == null || !_agent.isOnNavMesh) return true;
+            if (_agent == null) return true;
+            if (!_agent.isOnNavMesh)
+            {
+                if (!EnsureAgentOnNavMesh()) return false;
+            }
 
             if (!_agent.pathPending)
             {
@@ -151,7 +185,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void PickAndStartWanderDestination()
         {
-            if (_agent == null || !_agent.isOnNavMesh)
+            if (!EnsureAgentOnNavMesh())
             {
                 Debug.LogError($"[PhantomStandard] Cannot PickAndStartWanderDestination: Agent on '{gameObject.name}' is missing or not on a NavMesh.");
                 return;

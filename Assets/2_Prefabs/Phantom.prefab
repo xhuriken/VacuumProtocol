@@ -108,6 +108,52 @@ MonoBehaviour:
   _maxInvestigateTravelTime: 8
   _wanderRadius: 10
   _wanderWaitTime: 3
+  _maxEctoplasm: 150
+  _currentEctoplasm: 150
+  _suctionSlowdownRatio: 0.25
+  _centeringStrength: 7
+  _maxCenteringSpeed: 5
+  _suctionPullSpeed: 2.4
+  _shakeFrequency: 35
+  _shakeAmplitude: 0.08
+  _struggleResistance: 0.35
+  _escapeDashForce: 25
+  _escapeIntervalMin: 1
+  _escapeIntervalMax: 2.2
+  _escapeDashDuration: 0.35
+  _swallowThresholdRatio: 0.25
+  _swallowDiveSpeed: 12
+  _enableProximityDrain: 1
+  _proximityDrainRadius: 6
+  _maxDrainRate: 20
+  _drainFalloffCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _drainObstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  _attackDamage: 25
   _currentState: 0
   _currentTarget: {fileID: 0}
   _chaseSpeed: 3.8
@@ -165,6 +211,7 @@ MonoBehaviour:
   ShowObstacleHitPoints: 1
   ShowLastKnownPosition: 1
   ShowNavMeshPath: 1
+  ShowDrainAura: 1
   ShowStateBadge: 1
   OnlyWhenSelected: 0
   ConeTransparency: 0.18

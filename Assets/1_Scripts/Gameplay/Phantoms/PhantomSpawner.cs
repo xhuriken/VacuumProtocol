@@ -103,6 +103,12 @@ namespace Gameplay.Phantoms
                 {
                     spawnPosition = pt.position;
                     spawnRotation = pt.rotation;
+
+                    // If a valid NavMesh exists near this spawn point, snap to the exact floor level
+                    if (NavMesh.SamplePosition(spawnPosition, out NavMeshHit navHit, 5.0f, NavMesh.AllAreas))
+                    {
+                        spawnPosition = navHit.position;
+                    }
                 }
                 else
                 {
@@ -129,6 +135,17 @@ namespace Gameplay.Phantoms
 
             // 3. Instantiate and network spawn
             GameObject phantomInstance = Instantiate(_phantomPrefab, spawnPosition, spawnRotation);
+
+            // If the prefab uses a NavMeshAgent, ensure it is properly warped onto the NavMesh
+            NavMeshAgent agent = phantomInstance.GetComponent<NavMeshAgent>();
+            if (agent != null && !agent.isOnNavMesh)
+            {
+                if (NavMesh.SamplePosition(spawnPosition, out NavMeshHit agentHit, 5.0f, NavMesh.AllAreas))
+                {
+                    agent.Warp(agentHit.position);
+                }
+            }
+
             NetworkServer.Spawn(phantomInstance);
 
             _alivePhantoms.Add(phantomInstance);
