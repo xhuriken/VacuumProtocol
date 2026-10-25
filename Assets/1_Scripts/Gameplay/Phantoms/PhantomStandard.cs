@@ -120,22 +120,19 @@ namespace Gameplay.Phantoms
 
             Vector3 flatRight = Vector3.Cross(Vector3.up, flatAway).normalized;
 
-            // 11 radial directions on the horizontal ground plane:
-            // Lateral flanks (left/right 90°), backward away from player (180°),
-            // and diagonal angles (45°, 135°, etc.) targeting adjacent corridors and doorways
+            // Planar radial directions on the horizontal ground plane:
+            // Lateral flanks (left/right 90°), forward-lateral flanks (past the player), and backward retreats
             return new Vector3[]
             {
                 flatRight,
                 -flatRight,
-                flatAway,
-                (flatAway + flatRight).normalized,
-                (flatAway - flatRight).normalized,
-                (flatAway + flatRight * 0.5f).normalized,
-                (flatAway - flatRight * 0.5f).normalized,
-                Quaternion.Euler(0f, 30f, 0f) * flatRight,
-                Quaternion.Euler(0f, -30f, 0f) * -flatRight,
-                (-flatAway + flatRight).normalized,
-                (-flatAway - flatRight).normalized
+                (flatRight * 0.85f - flatAway * 0.45f).normalized,  // Forward-Right flank past player
+                (-flatRight * 0.85f - flatAway * 0.45f).normalized, // Forward-Left flank past player
+                (flatRight * 0.85f + flatAway * 0.45f).normalized,  // Backward-Right retreat
+                (-flatRight * 0.85f + flatAway * 0.45f).normalized, // Backward-Left retreat
+                (flatRight * 0.5f + flatAway * 0.85f).normalized,
+                (-flatRight * 0.5f + flatAway * 0.85f).normalized,
+                flatAway                                            // Pure backward retreat
             };
         }
         #endregion

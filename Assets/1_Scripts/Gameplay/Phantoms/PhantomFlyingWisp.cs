@@ -1,5 +1,8 @@
+using System.Collections.Generic;
+using Mirror;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using Player.Mechanics;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -66,6 +69,28 @@ namespace Gameplay.Phantoms
         [Title("Mouth Suction Pull")]
         [Tooltip("Role: Speed at which this lightweight wisp is dragged into the player's mouth nozzle while being vacuumed.")]
         [SerializeField] private float _vacuumDragSpeed = 1.8f;
+
+        [Title("Suction Retaliation: Electric Ecto-Needles")]
+        [Tooltip("Role: Enables active projectile retaliation when caught in mouth suction.")]
+        [SerializeField] private bool _enableSuctionNeedles = true;
+
+        [Tooltip("Role: Minimum interval in seconds between electric needle bursts while in suction.")]
+        [SerializeField] private float _needleIntervalMin = 1.8f;
+
+        [Tooltip("Role: Maximum interval in seconds between electric needle bursts while in suction.")]
+        [SerializeField] private float _needleIntervalMax = 2.8f;
+
+        [Tooltip("Role: Duration of the charging telegraph before launching needles.")]
+        [SerializeField] private float _needleTelegraphDuration = 0.35f;
+
+        [Tooltip("Role: Flight speed of the ectoplasmic needle projectiles in meters/sec.")]
+        [SerializeField] private float _needleSpeed = 16.0f;
+
+        [Tooltip("Role: Damage / ectoplasm drain dealt to the player on needle hit.")]
+        [SerializeField] private float _needleDamage = 8.0f;
+
+        [Tooltip("Role: Number of needles fired in a burst.")]
+        [SerializeField] private int _needleBurstCount = 2;
         #endregion
 
         #region Runtime Variables
@@ -73,6 +98,21 @@ namespace Gameplay.Phantoms
         private Vector3 _currentVelocity;
         private float _phaseOffset;
         private bool _isDestinationSet = false;
+
+        private float _needleCooldownTimer = 0f;
+        private float _currentNeedleInterval = 2.2f;
+        private bool _isTelegraphingNeedle = false;
+        private float _needleTelegraphTimer = 0f;
+
+        private class ActiveServerNeedle
+        {
+            public Vector3 Position;
+            public Vector3 Velocity;
+            public float RemainingTime;
+            public float Damage;
+        }
+
+        private readonly List<ActiveServerNeedle> _serverActiveNeedles = new List<ActiveServerNeedle>();
         #endregion
 
         #region Unity Lifecycle
@@ -85,9 +125,9 @@ namespace Gameplay.Phantoms
             _currentEctoplasm = 35f;
             _suctionSlowdownRatio = 0.2f;
             _struggleResistance = 0.25f;
-            _escapeDashForce = 4.5f;
-            _escapeIntervalMin = 0.9f;
-            _escapeIntervalMax = 1.8f;
+            _escapeDashForce = 9.0f;
+            _escapeIntervalMin = 1.0f;
+            _escapeIntervalMax = 1.9f;
             _swallowThresholdRatio = 0.25f;
 
             _fieldOfViewAngle = 135f;
@@ -277,8 +317,140 @@ namespace Gameplay.Phantoms
         {
             if (!isServer) return;
 
-            // Execute full base suction physics (centering, nozzle pull, jitter, escape dashes, shrink, swallow)
+            // Execute full base suction physics (centering, nozzle pull, jitter, flanking escape dashes, shrink, swallow)
             base.UpdateBeingVacuumedState();
+
+            // Simulate active projectiles server-side
+            UpdateServerNeedles();
+
+            if (!_enableSuctionNeedles || _isBeingSwallowed || _isDashing || _isTelegraphingDash)
+            {
+                _isTelegraphingNeedle = false;
+                return;
+            }
+
+            if (!_isTelegraphingNeedle)
+            {
+                _needleCooldownTimer += Time.deltaTime;
+                if (_needleCooldownTimer >= _currentNeedleInterval)
+                {
+                    _needleCooldownTimer = 0f;
+                    _currentNeedleInterval = Random.Range(_needleIntervalMin, _needleIntervalMax);
+
+                    _isTelegraphingNeedle = true;
+                    _needleTelegraphTimer = _needleTelegraphDuration;
+                    RpcOnNeedleTelegraphed();
+                }
+            }
+            else
+            {
+                _needleTelegraphTimer -= Time.deltaTime;
+
+                // Keep eyes / stinger oriented towards player mouth nozzle
+                Vector3 toNozzle = (_lastSuctionNozzlePos - transform.position);
+                if (toNozzle.sqrMagnitude > 0.01f)
+                {
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toNozzle.normalized, Vector3.up), Time.deltaTime * 12f);
+                }
+
+                if (_needleTelegraphTimer <= 0f)
+                {
+                    _isTelegraphingNeedle = false;
+                    LaunchNeedleBurst();
+                }
+            }
+        }
+
+        private void LaunchNeedleBurst()
+        {
+            Vector3 origin = LookAtPoint != null ? LookAtPoint.position : transform.position;
+            Vector3 baseDir = (_lastSuctionNozzlePos - origin);
+            if (baseDir.sqrMagnitude < 0.01f) baseDir = transform.forward;
+            baseDir.Normalize();
+
+            for (int i = 0; i < _needleBurstCount; i++)
+            {
+                float spread = (i - (_needleBurstCount - 1) * 0.5f) * 0.08f;
+                Vector3 spreadDir = (baseDir + transform.right * spread).normalized;
+                Vector3 launchPos = origin + transform.right * (spread * 0.4f);
+
+                _serverActiveNeedles.Add(new ActiveServerNeedle
+                {
+                    Position = launchPos,
+                    Velocity = spreadDir * _needleSpeed,
+                    RemainingTime = 1.2f,
+                    Damage = _needleDamage
+                });
+
+                RpcSpawnNeedleVisual(launchPos, spreadDir * _needleSpeed, 1.2f);
+            }
+        }
+
+        private void UpdateServerNeedles()
+        {
+            float dt = Time.deltaTime;
+            for (int i = _serverActiveNeedles.Count - 1; i >= 0; i--)
+            {
+                ActiveServerNeedle needle = _serverActiveNeedles[i];
+                needle.RemainingTime -= dt;
+
+                Vector3 step = needle.Velocity * dt;
+                float stepDist = step.magnitude;
+
+                RaycastHit[] hits = Physics.SphereCastAll(needle.Position, 0.22f, needle.Velocity.normalized, stepDist, ~0, QueryTriggerInteraction.Ignore);
+                bool hitObstacle = false;
+
+                for (int h = 0; h < hits.Length; h++)
+                {
+                    RaycastHit hit = hits[h];
+                    if (hit.collider == null) continue;
+                    if (hit.collider.transform.IsChildOf(transform)) continue;
+
+                    PlayerHealth ph = hit.collider.GetComponentInParent<PlayerHealth>();
+                    if (ph != null)
+                    {
+                        ph.TakeDamage(needle.Damage, "Phantom Wasp Needle");
+                        hitObstacle = true;
+                        break;
+                    }
+
+                    if (((1 << hit.collider.gameObject.layer) & _obstacleLayer.value) != 0)
+                    {
+                        hitObstacle = true;
+                        break;
+                    }
+                }
+
+                if (hitObstacle)
+                {
+                    _serverActiveNeedles.RemoveAt(i);
+                    continue;
+                }
+
+                needle.Position += step;
+
+                if (needle.RemainingTime <= 0f)
+                {
+                    _serverActiveNeedles.RemoveAt(i);
+                }
+            }
+        }
+
+        [ClientRpc]
+        private void RpcOnNeedleTelegraphed()
+        {
+            // Electric charging feedback on clients
+        }
+
+        [ClientRpc]
+        private void RpcSpawnNeedleVisual(Vector3 origin, Vector3 velocity, float lifetime)
+        {
+            GameObject needleObj = new GameObject("PhantomNeedleVisual");
+            needleObj.transform.position = origin;
+            needleObj.transform.rotation = Quaternion.LookRotation(velocity.normalized);
+
+            PhantomNeedleVisual visual = needleObj.AddComponent<PhantomNeedleVisual>();
+            visual.Init(velocity, lifetime);
         }
         #endregion
 
@@ -372,5 +544,75 @@ namespace Gameplay.Phantoms
         }
 #endif
         #endregion
+    }
+
+    /// <summary>
+    /// Description: Client-side visual representation of an electric ectoplasm needle fired by a phantom wasp.
+    /// Features high-speed laser streak, additive glow material, and automatic timeout cleanup.
+    /// </summary>
+    public class PhantomNeedleVisual : MonoBehaviour
+    {
+        private Vector3 _velocity;
+        private float _lifetime;
+        private LineRenderer _line;
+
+        public void Init(Vector3 velocity, float lifetime)
+        {
+            _velocity = velocity;
+            _lifetime = lifetime;
+
+            _line = GetComponent<LineRenderer>();
+            if (_line == null)
+            {
+                _line = gameObject.AddComponent<LineRenderer>();
+            }
+
+            _line.positionCount = 2;
+            _line.useWorldSpace = true;
+            _line.startWidth = 0.04f;
+            _line.endWidth = 0.015f;
+            _line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _line.receiveShadows = false;
+
+            Material mat = Resources.Load<Material>("Mat_SuctionLightning");
+            if (mat == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                if (shader != null)
+                {
+                    mat = new Material(shader);
+                    mat.SetColor("_BaseColor", new Color(0.2f, 1f, 1f, 1f));
+                }
+            }
+
+            if (mat != null)
+            {
+                _line.material = mat;
+            }
+
+            UpdatePositions();
+        }
+
+        private void Update()
+        {
+            _lifetime -= Time.deltaTime;
+            if (_lifetime <= 0f)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            transform.position += _velocity * Time.deltaTime;
+            UpdatePositions();
+        }
+
+        private void UpdatePositions()
+        {
+            if (_line == null) return;
+            Vector3 head = transform.position;
+            Vector3 tail = head - _velocity.normalized * 0.55f;
+            _line.SetPosition(0, head);
+            _line.SetPosition(1, tail);
+        }
     }
 }

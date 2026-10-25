@@ -389,7 +389,8 @@ namespace Gameplay.Phantoms
             {
                 int streamCount = _phantom.ActiveSuctionStreamCount;
                 string streamInfo = streamCount > 1 ? $" [{streamCount}x MULTI-SUCTION]" : "";
-                statusText += $"\n>>> BEING VACUUMED ({_phantom.CurrentEctoplasm:F0}/{_phantom.MaxEctoplasm:F0} HP){streamInfo}";
+                string dashInfo = _phantom.IsDashing ? " \n>>> [DASH BURST!]" : (_phantom.IsTelegraphingDash ? " \n>>> [TELEGRAPHING DASH!]" : "");
+                statusText += $"\n>>> BEING VACUUMED ({_phantom.CurrentEctoplasm:F0}/{_phantom.MaxEctoplasm:F0} HP){streamInfo}{dashInfo}";
             }
 
             GUIStyle badgeStyle = new GUIStyle();

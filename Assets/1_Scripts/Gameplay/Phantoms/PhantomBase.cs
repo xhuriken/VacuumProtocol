@@ -156,16 +156,26 @@ namespace Gameplay.Phantoms
         [SerializeField] protected float _struggleResistance = 0.35f;
 
         [Tooltip("Role: Impulse force applied when the phantom performs an escape dash.")]
-        [SerializeField] protected float _escapeDashForce = 5.2f;
+        [SerializeField] protected float _escapeDashForce = 8.5f;
 
         [Tooltip("Role: Minimum interval in seconds between escape dash attempts.")]
         [SerializeField] protected float _escapeIntervalMin = 1.0f;
 
         [Tooltip("Role: Maximum interval in seconds between escape dash attempts.")]
-        [SerializeField] protected float _escapeIntervalMax = 2.2f;
+        [SerializeField] protected float _escapeIntervalMax = 2.0f;
 
         [Tooltip("Role: Duration in seconds of the escape dash impulse burst.")]
-        [SerializeField] protected float _escapeDashDuration = 0.35f;
+        [SerializeField] protected float _escapeDashDuration = 0.32f;
+
+        [Header("Dash Feeling & Telegraph")]
+        [Tooltip("Role: Wind-up duration in seconds before the dash fires where the phantom compresses and vibrates frantically.")]
+        [SerializeField] protected float _dashTelegraphDuration = 0.22f;
+
+        [Tooltip("Role: Squash factor along dash axis during wind-up (0 = none, 0.35 = 35% squash).")]
+        [SerializeField] protected float _dashSquashAmount = 0.35f;
+
+        [Tooltip("Role: Stretch factor along dash axis during explosive burst (0 = none, 0.55 = 55% stretch).")]
+        [SerializeField] protected float _dashStretchAmount = 0.55f;
 
         [Tooltip("Role: Size/health threshold ratio (e.g. 0.25 = 25%) where the phantom gives up, collapses, and is swallowed into the nozzle.")]
         [Range(0.1f, 0.5f)]
@@ -232,6 +242,10 @@ namespace Gameplay.Phantoms
         protected float _currentEscapeInterval = 1.5f;
         protected Vector3 _currentEscapeVelocity = Vector3.zero;
         protected float _escapeDurationTimer = 0f;
+        protected bool _isDashing = false;
+        protected bool _isTelegraphingDash = false;
+        protected float _dashTelegraphTimer = 0f;
+        protected float _visualSquashStretch = 0f;
 
         [SyncVar]
         protected bool _isBeingSwallowed = false;
@@ -264,6 +278,8 @@ namespace Gameplay.Phantoms
         public Vector3 ChosenEscapeDirection => _chosenEscapeDirection;
         public float LastEscapeEvaluationTime => _lastEscapeEvaluationTime;
         public int ActiveSuctionStreamCount => _activeSuctionStreams.Count;
+        public bool IsDashing => _isDashing;
+        public bool IsTelegraphingDash => _isTelegraphingDash;
 
         /// <summary>
         /// Global registry of active phantoms in the scene for O(1) high-performance queries without Physics.OverlapSphere.
@@ -542,15 +558,9 @@ namespace Gameplay.Phantoms
             }
 
             Vector3 targetPosition = _currentTarget.WorldPosition;
-            float distanceToTarget = Vector3.Distance(transform.position, targetPosition);
 
-            if (distanceToTarget <= _attackRadius)
-            {
-                StopMovement();
-                TransitionToState(PhantomState.Attacking);
-                return;
-            }
-
+            // In pursuit, the phantom relentlessly closes distance to maintain proximity terror drain.
+            // Continuous pressure rather than locking into a stationary melee attack.
             MoveTowards(targetPosition);
         }
 
@@ -676,24 +686,75 @@ namespace Gameplay.Phantoms
             UpdateVisualScaleFromEctoplasm();
         }
 
+        protected virtual void LateUpdate()
+        {
+            if (_isBeingSwallowed) return;
+
+            // Smoothly decay dynamic dash squash/stretch back to neutral
+            if (Mathf.Abs(_visualSquashStretch) > 0.001f)
+            {
+                _visualSquashStretch = Mathf.MoveTowards(_visualSquashStretch, 0f, Time.deltaTime * 4.5f);
+            }
+            else
+            {
+                _visualSquashStretch = 0f;
+            }
+
+            ApplyVisualSquashStretch();
+        }
+
         /// <summary>
-        /// Description: Dynamically shrinks the phantom proportional to remaining ectoplasm health,
+        /// Description: Dynamically calculates scale proportional to remaining ectoplasm health,
         /// reaching _swallowThresholdRatio right as the swallow threshold is attained.
         /// </summary>
         protected virtual void UpdateVisualScaleFromEctoplasm()
         {
+            ApplyVisualSquashStretch();
+        }
+
+        /// <summary>
+        /// Description: Applies base ectoplasm scale modulated by dynamic dash squash and stretch deformation.
+        /// </summary>
+        protected virtual void ApplyVisualSquashStretch()
+        {
             if (_isBeingSwallowed) return;
 
             float thresholdEctoplasm = _maxEctoplasm * _swallowThresholdRatio;
-            if (_currentEctoplasm <= thresholdEctoplasm)
-            {
-                transform.localScale = _initialLocalScale * _swallowThresholdRatio;
-                return;
-            }
-
             float remainingRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEctoplasm) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEctoplasm));
-            float scaleFactor = Mathf.Lerp(_swallowThresholdRatio, 1.0f, remainingRatio);
-            transform.localScale = _initialLocalScale * scaleFactor;
+            float ectoScaleFactor = (_currentEctoplasm <= thresholdEctoplasm)
+                ? _swallowThresholdRatio
+                : Mathf.Lerp(_swallowThresholdRatio, 1.0f, remainingRatio);
+
+            Vector3 baseScale = _initialLocalScale * ectoScaleFactor;
+
+            if (Mathf.Abs(_visualSquashStretch) > 0.001f && _chosenEscapeDirection.sqrMagnitude > 0.01f)
+            {
+                Vector3 localDir = transform.InverseTransformDirection(_chosenEscapeDirection.normalized);
+
+                float axialScale = (_visualSquashStretch < 0f)
+                    ? (1.0f - _dashSquashAmount * Mathf.Abs(_visualSquashStretch))
+                    : (1.0f + _dashStretchAmount * _visualSquashStretch);
+
+                float lateralScale = (_visualSquashStretch < 0f)
+                    ? (1.0f + (_dashSquashAmount * 0.5f) * Mathf.Abs(_visualSquashStretch))
+                    : (1.0f - (_dashStretchAmount * 0.35f) * _visualSquashStretch);
+
+                float absX = Mathf.Abs(localDir.x);
+                float absY = Mathf.Abs(localDir.y);
+                float absZ = Mathf.Abs(localDir.z);
+
+                Vector3 scaleMult = new Vector3(
+                    Mathf.Lerp(lateralScale, axialScale, absX),
+                    Mathf.Lerp(lateralScale, axialScale, absY),
+                    Mathf.Lerp(lateralScale, axialScale, absZ)
+                );
+
+                transform.localScale = Vector3.Scale(baseScale, scaleMult);
+            }
+            else
+            {
+                transform.localScale = baseScale;
+            }
         }
 
         /// <summary>
@@ -849,7 +910,9 @@ namespace Gameplay.Phantoms
 
             Vector3 toAxis = centerAxisPoint - transform.position;
             Vector3 centeringVel = Vector3.zero;
-            if (toAxis.sqrMagnitude > 0.001f)
+
+            // CRITICAL: Centering force is completely suppressed during active dash so phantom physically breaks out!
+            if (!_isDashing && toAxis.sqrMagnitude > 0.001f)
             {
                 float centeringSpeed = Mathf.Min(toAxis.magnitude * _centeringStrength, _maxCenteringSpeed);
                 centeringVel = toAxis.normalized * (centeringSpeed * (1f - _struggleResistance));
@@ -873,47 +936,80 @@ namespace Gameplay.Phantoms
                 }
                 avgPullMultiplier /= Mathf.Max(1, _activeSuctionStreams.Count);
 
-                pullVel = toNozzleNorm * (_suctionPullSpeed * streamBonus * avgPullMultiplier * (1f - _struggleResistance * 0.3f));
+                float basePull = _suctionPullSpeed * streamBonus * avgPullMultiplier * (1f - _struggleResistance * 0.3f);
 
-                // Luigi's Mansion Resistance:
-                // Ghost actively pulls backward away from the nozzle (-toNozzleNorm).
-                // Resistance force is strongest at high ectoplasm, gradually weakening as drained.
-                float thresholdEcto = _maxEctoplasm * _swallowThresholdRatio;
-                float healthRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEcto) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEcto));
+                if (_isDashing)
+                {
+                    // Suppress pull heavily during dash so phantom punches through
+                    pullVel = toNozzleNorm * (basePull * 0.15f);
+                    resistanceVel = Vector3.zero;
+                }
+                else
+                {
+                    pullVel = toNozzleNorm * basePull;
 
-                // Rhythmic struggle tug pulses (tug-of-war)
-                float tugPulse = Mathf.Max(0f, Mathf.Sin(Time.time * _struggleTugFrequency * Mathf.PI));
-                float tugMultiplier = 1.0f + (tugPulse * _struggleTugImpulse);
+                    // Luigi's Mansion Resistance:
+                    // Ghost actively pulls backward away from the nozzle (-toNozzleNorm).
+                    // Resistance force is strongest at high ectoplasm, gradually weakening as drained.
+                    float thresholdEcto = _maxEctoplasm * _swallowThresholdRatio;
+                    float healthRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEcto) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEcto));
 
-                float dynamicResistance = _tuggingResistanceForce * healthRatio * tugMultiplier;
-                resistanceVel = -toNozzleNorm * dynamicResistance;
+                    // Rhythmic struggle tug pulses (tug-of-war)
+                    float tugPulse = Mathf.Max(0f, Mathf.Sin(Time.time * _struggleTugFrequency * Mathf.PI));
+                    float tugMultiplier = 1.0f + (tugPulse * _struggleTugImpulse);
+
+                    float dynamicResistance = _tuggingResistanceForce * healthRatio * tugMultiplier;
+                    resistanceVel = -toNozzleNorm * dynamicResistance;
+                }
             }
 
             // --- 8. Panic Jitter / Shake ---
             float shakeTime = Time.time * _shakeFrequency;
-            Vector3 shakeOffset = (_lastConeRight * Mathf.Sin(shakeTime) + _lastConeUp * Mathf.Cos(shakeTime * 1.35f)) * _shakeAmplitude;
+            float shakeMult = _isTelegraphingDash ? 2.8f : (_isDashing ? 0.2f : 1.0f);
+            Vector3 shakeOffset = (_lastConeRight * Mathf.Sin(shakeTime) + _lastConeUp * Mathf.Cos(shakeTime * 1.35f)) * (_shakeAmplitude * shakeMult);
 
             // --- 9. Intelligent Escape Dash AI with Raycasts ---
             _escapeTimer += Time.deltaTime;
-            if (_escapeTimer >= _currentEscapeInterval)
+
+            if (!_isDashing && !_isTelegraphingDash)
             {
-                _escapeTimer = 0f;
-                _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
+                if (_escapeTimer >= _currentEscapeInterval)
+                {
+                    _escapeTimer = 0f;
+                    _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
 
-                Vector3 bestEscapeDir = EvaluateBestEscapeDirection(toNozzleDir);
-                _chosenEscapeDirection = bestEscapeDir;
-                _currentEscapeVelocity = bestEscapeDir.normalized * _escapeDashForce;
-                _escapeDurationTimer = _escapeDashDuration;
+                    // 1. Evaluate best escape direction (flanking priority)
+                    _chosenEscapeDirection = EvaluateBestEscapeDirection(toNozzleDir);
+
+                    // 2. Begin Telegraph Wind-Up
+                    _isTelegraphingDash = true;
+                    _dashTelegraphTimer = _dashTelegraphDuration;
+                    _visualSquashStretch = -1.0f;
+                    RpcOnDashTelegraphed(_chosenEscapeDirection);
+                }
             }
-
-            if (_escapeDurationTimer > 0f)
+            else if (_isTelegraphingDash)
+            {
+                _dashTelegraphTimer -= Time.deltaTime;
+                if (_dashTelegraphTimer <= 0f)
+                {
+                    // 3. Launch the Dash Burst!
+                    _isTelegraphingDash = false;
+                    _isDashing = true;
+                    _escapeDurationTimer = _escapeDashDuration;
+                    _currentEscapeVelocity = _chosenEscapeDirection.normalized * _escapeDashForce;
+                    _visualSquashStretch = 1.0f;
+                    RpcOnDashBurst(_chosenEscapeDirection);
+                }
+            }
+            else if (_isDashing)
             {
                 _escapeDurationTimer -= Time.deltaTime;
-                _currentEscapeVelocity = Vector3.Lerp(_currentEscapeVelocity, Vector3.zero, Time.deltaTime * 5f);
-            }
-            else
-            {
-                _currentEscapeVelocity = Vector3.zero;
+                if (_escapeDurationTimer <= 0f)
+                {
+                    _isDashing = false;
+                    _currentEscapeVelocity = Vector3.zero;
+                }
             }
 
             // Combine all physical forces
@@ -928,9 +1024,26 @@ namespace Gameplay.Phantoms
             }
         }
 
+        [ClientRpc]
+        protected void RpcOnDashTelegraphed(Vector3 dir)
+        {
+            _chosenEscapeDirection = dir;
+            _isTelegraphingDash = true;
+            _visualSquashStretch = -1.0f;
+        }
+
+        [ClientRpc]
+        protected void RpcOnDashBurst(Vector3 dir)
+        {
+            _chosenEscapeDirection = dir;
+            _isTelegraphingDash = false;
+            _isDashing = true;
+            _visualSquashStretch = 1.0f;
+        }
+
         /// <summary>
         /// Description: Generates candidate escape direction vectors for raycast testing.
-        /// Default 3D aerial behavior generates a 3D spherical/hemispherical array of rays.
+        /// Prioritizes lateral and forward-lateral flanking breakout vectors to bypass the suction cone.
         /// Overridden by grounded phantoms (PhantomStandard) to generate horizontal floor/corridor rays.
         /// </summary>
         protected virtual Vector3[] GetCandidateEscapeDirections(Vector3 awayFromNozzle)
@@ -938,26 +1051,27 @@ namespace Gameplay.Phantoms
             Vector3 right = _lastConeRight;
             Vector3 up = _lastConeUp;
 
+            // Lateral flanks (right, left, overhead), forward-lateral flanks (past the player), and backward corridors
             return new Vector3[]
             {
                 right,
                 -right,
                 up,
-                -up,
+                (right * 0.85f - awayFromNozzle * 0.40f).normalized,   // Forward-Right flank past player
+                (-right * 0.85f - awayFromNozzle * 0.40f).normalized,  // Forward-Left flank past player
+                (up * 0.85f - awayFromNozzle * 0.40f).normalized,      // Forward-Overhead flank past player
+                (right * 0.85f + awayFromNozzle * 0.45f).normalized,   // Backward-Right retreat
+                (-right * 0.85f + awayFromNozzle * 0.45f).normalized,  // Backward-Left retreat
+                (up * 0.85f + awayFromNozzle * 0.45f).normalized,      // Backward-Overhead retreat
                 (right + up).normalized,
                 (-right + up).normalized,
-                (right - up).normalized,
-                (-right - up).normalized,
-                (awayFromNozzle + right * 0.8f).normalized,
-                (awayFromNozzle - right * 0.8f).normalized,
-                (awayFromNozzle + up * 0.8f).normalized,
-                (awayFromNozzle - up * 0.8f).normalized
+                awayFromNozzle                                         // Pure backward fallback
             };
         }
 
         /// <summary>
         /// Description: Evaluates surrounding space with multiple raycasts to determine the optimal escape trajectory.
-        /// Searches for maximal unobstructed clearance in directions leading outside the suction cone and away from the nozzle.
+        /// Searches for maximal unobstructed clearance in directions leading outside the suction cone and around the player.
         /// Records all evaluated rays for real-time visualization in PhantomGizmos.
         /// </summary>
         protected virtual Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
@@ -981,17 +1095,26 @@ namespace Gameplay.Phantoms
                 Vector3 hitPoint = hit ? hitInfo.point : (origin + dir * _escapeRayDistance);
 
                 // Scoring formulation:
-                // 1. Base score = clearance distance (more space = better escape)
+                // 1. Base score = distance clearance (more open space = better)
                 float score = distance;
 
-                // 2. Bonus for heading away from the mouth nozzle
-                float awayDot = Vector3.Dot(dir, awayFromNozzle);
-                score *= (1.0f + 0.45f * Mathf.Clamp01(awayDot));
+                // 2. Lateral & Overhead Flanking Bonus:
+                // Perpendicular breakout quickly leaves the cone and circumvents the vacuum stream
+                float lateralFactor = Mathf.Max(Mathf.Abs(Vector3.Dot(dir, _lastConeRight)), Mathf.Max(0f, Vector3.Dot(dir, _lastConeUp)));
+                score *= (1.0f + 0.65f * lateralFactor);
 
-                // 3. Penalty if hitting obstacle in immediate vicinity (< 1.2m)
+                // 3. Tactical Forward-Flank Bonus:
+                // Heading forward-laterally into the player's blind spot allows circling and draining
+                float forwardFlank = -Vector3.Dot(dir, awayFromNozzle);
+                if (forwardFlank > 0.15f && distance > 2.5f)
+                {
+                    score *= 1.35f;
+                }
+
+                // 4. Immediate obstacle proximity penalty (< 1.2m)
                 if (distance < 1.2f)
                 {
-                    score *= 0.15f;
+                    score *= 0.1f;
                 }
 
                 _lastEscapeRays.Add(new EscapeRaycastData

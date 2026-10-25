@@ -108,8 +108,8 @@ MonoBehaviour:
   _maxInvestigateTravelTime: 8
   _wanderRadius: 10
   _wanderWaitTime: 3
-  _maxEctoplasm: 150
-  _currentEctoplasm: 150
+  _maxEctoplasm: 1000
+  _currentEctoplasm: 1000
   _suctionSlowdownRatio: 0.25
   _centeringStrength: 7
   _maxCenteringSpeed: 5
@@ -123,6 +123,10 @@ MonoBehaviour:
   _escapeDashDuration: 0.35
   _swallowThresholdRatio: 0.25
   _swallowDiveSpeed: 12
+  _escapeRayDistance: 8
+  _tuggingResistanceForce: 1.5
+  _struggleTugFrequency: 1.8
+  _struggleTugImpulse: 1.6
   _enableProximityDrain: 1
   _proximityDrainRadius: 6
   _maxDrainRate: 20
@@ -213,6 +217,7 @@ MonoBehaviour:
   ShowNavMeshPath: 1
   ShowDrainAura: 1
   ShowStateBadge: 1
+  ShowEscapeRaycasts: 1
   OnlyWhenSelected: 0
   ConeTransparency: 0.18
   EnableDynamicPulsing: 1
