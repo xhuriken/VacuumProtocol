@@ -921,22 +921,16 @@ namespace Gameplay.Phantoms
         }
 
         /// <summary>
-        /// Description: Evaluates surrounding 3D space with multiple raycasts to determine the optimal escape trajectory.
-        /// Searches for maximal unobstructed clearance in directions leading outside the suction cone and away from the nozzle.
-        /// Records all evaluated rays for real-time visualization in PhantomGizmos.
+        /// Description: Generates candidate escape direction vectors for raycast testing.
+        /// Default 3D aerial behavior generates a 3D spherical/hemispherical array of rays.
+        /// Overridden by grounded phantoms (PhantomStandard) to generate horizontal floor/corridor rays.
         /// </summary>
-        protected virtual Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
+        protected virtual Vector3[] GetCandidateEscapeDirections(Vector3 awayFromNozzle)
         {
-            _lastEscapeRays.Clear();
-            _lastEscapeEvaluationTime = Time.time;
-
-            Vector3 awayFromNozzle = -toNozzleDir.normalized;
             Vector3 right = _lastConeRight;
             Vector3 up = _lastConeUp;
 
-            // Generate 12 radial candidate escape directions:
-            // 4 orthogonal cardinal, 4 orthogonal diagonals, 4 backward diagonals pointing away from nozzle
-            Vector3[] candidateDirs = new Vector3[]
+            return new Vector3[]
             {
                 right,
                 -right,
@@ -951,10 +945,24 @@ namespace Gameplay.Phantoms
                 (awayFromNozzle + up * 0.8f).normalized,
                 (awayFromNozzle - up * 0.8f).normalized
             };
+        }
+
+        /// <summary>
+        /// Description: Evaluates surrounding space with multiple raycasts to determine the optimal escape trajectory.
+        /// Searches for maximal unobstructed clearance in directions leading outside the suction cone and away from the nozzle.
+        /// Records all evaluated rays for real-time visualization in PhantomGizmos.
+        /// </summary>
+        protected virtual Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
+        {
+            _lastEscapeRays.Clear();
+            _lastEscapeEvaluationTime = Time.time;
+
+            Vector3 awayFromNozzle = -toNozzleDir.normalized;
+            Vector3[] candidateDirs = GetCandidateEscapeDirections(awayFromNozzle);
 
             Vector3 bestDir = awayFromNozzle;
             float bestScore = -float.MaxValue;
-            Vector3 origin = transform.position;
+            Vector3 origin = transform.position + Vector3.up * 0.8f;
 
             for (int i = 0; i < candidateDirs.Length; i++)
             {
@@ -1214,27 +1222,28 @@ namespace Gameplay.Phantoms
             // 5. Intelligent Escape Raycasts
             if (_lastEscapeRays != null && _lastEscapeRays.Count > 0)
             {
+                Vector3 rayOrigin = transform.position + Vector3.up * 0.8f;
                 for (int i = 0; i < _lastEscapeRays.Count; i++)
                 {
                     var r = _lastEscapeRays[i];
                     if (r.HitObstacle)
                     {
                         Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.7f);
-                        Gizmos.DrawLine(transform.position, r.HitPoint);
+                        Gizmos.DrawLine(rayOrigin, r.HitPoint);
                         Gizmos.DrawWireSphere(r.HitPoint, 0.08f);
                     }
                     else
                     {
                         Gizmos.color = new Color(1f, 0.9f, 0.2f, 0.5f);
-                        Gizmos.DrawLine(transform.position, transform.position + r.Direction * r.Distance);
+                        Gizmos.DrawLine(rayOrigin, rayOrigin + r.Direction * r.Distance);
                     }
                 }
 
                 if (_chosenEscapeDirection.sqrMagnitude > 0.01f)
                 {
                     Gizmos.color = Color.green;
-                    Gizmos.DrawLine(transform.position, transform.position + _chosenEscapeDirection * 3.0f);
-                    Gizmos.DrawWireSphere(transform.position + _chosenEscapeDirection * 3.0f, 0.15f);
+                    Gizmos.DrawLine(rayOrigin, rayOrigin + _chosenEscapeDirection * 3.0f);
+                    Gizmos.DrawWireSphere(rayOrigin + _chosenEscapeDirection * 3.0f, 0.15f);
                 }
             }
         }

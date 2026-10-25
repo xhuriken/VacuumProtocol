@@ -416,7 +416,7 @@ namespace Gameplay.Phantoms
                 return;
             }
 
-            Vector3 origin = transform.position;
+            Vector3 origin = transform.position + Vector3.up * 0.8f;
 
             for (int i = 0; i < rays.Count; i++)
             {

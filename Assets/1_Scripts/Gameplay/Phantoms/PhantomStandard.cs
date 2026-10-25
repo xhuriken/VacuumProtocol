@@ -106,18 +106,37 @@ namespace Gameplay.Phantoms
         }
 
         /// <summary>
-        /// Description: Biases escape raycast direction to be largely horizontal along the floor for grounded phantoms.
+        /// Description: Generates planar horizontal radial directions on the floor plane (XZ).
+        /// Grounded phantoms probe corridors, doorways, and open floor space instead of the ceiling.
         /// </summary>
-        protected override Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
+        protected override Vector3[] GetCandidateEscapeDirections(Vector3 awayFromNozzle)
         {
-            Vector3 bestDir = base.EvaluateBestEscapeDirection(toNozzleDir);
-            bestDir.y *= 0.2f;
-            if (bestDir.sqrMagnitude > 0.01f)
+            Vector3 flatAway = Vector3.ProjectOnPlane(awayFromNozzle, Vector3.up);
+            if (flatAway.sqrMagnitude < 0.01f)
             {
-                bestDir.Normalize();
+                flatAway = -transform.forward;
             }
-            _chosenEscapeDirection = bestDir;
-            return bestDir;
+            flatAway.Normalize();
+
+            Vector3 flatRight = Vector3.Cross(Vector3.up, flatAway).normalized;
+
+            // 11 radial directions on the horizontal ground plane:
+            // Lateral flanks (left/right 90°), backward away from player (180°),
+            // and diagonal angles (45°, 135°, etc.) targeting adjacent corridors and doorways
+            return new Vector3[]
+            {
+                flatRight,
+                -flatRight,
+                flatAway,
+                (flatAway + flatRight).normalized,
+                (flatAway - flatRight).normalized,
+                (flatAway + flatRight * 0.5f).normalized,
+                (flatAway - flatRight * 0.5f).normalized,
+                Quaternion.Euler(0f, 30f, 0f) * flatRight,
+                Quaternion.Euler(0f, -30f, 0f) * -flatRight,
+                (-flatAway + flatRight).normalized,
+                (-flatAway - flatRight).normalized
+            };
         }
         #endregion
 
