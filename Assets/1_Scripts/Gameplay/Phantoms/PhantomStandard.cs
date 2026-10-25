@@ -59,65 +59,18 @@ namespace Gameplay.Phantoms
         {
             base.OnStartServer();
 
-            if (!EnsureAgentOnNavMesh())
+            if (_agent != null && !_agent.isOnNavMesh)
             {
-                Debug.LogError($"[PhantomStandard] Critical Error: '{gameObject.name}' is not placed on a baked NavMesh! Ensure a NavMeshSurface is baked (or 'NavMesh-AmongUsMap.asset' assigned) and the spawn point is valid.");
-            }
-        }
-        #endregion
-
-        #region NavMesh Recovery & Verification
-        private float _lastNavMeshErrorLogTime = -999f;
-        private Vector3 _fallbackDestination;
-        private bool _hasFallbackDestination = false;
-
-        /// <summary>
-        /// Description: Verifies if the NavMeshAgent is placed on a valid NavMesh.
-        /// If off the NavMesh (e.g. spawned slightly above or offset), attempts to recover by sampling the nearest NavMesh point and warping.
-        /// </summary>
-        private bool EnsureAgentOnNavMesh()
-        {
-            if (_agent == null)
-            {
-                Debug.LogError($"[PhantomStandard] Critical Error: NavMeshAgent missing on '{gameObject.name}'! Fail loudly per workspace rules.");
-                return false;
-            }
-
-            if (!_agent.isOnNavMesh)
-            {
-#if UNITY_EDITOR
-                // In Editor, auto-hook NavMeshData if present in project but unassigned on NavMeshSurface
-                var surface = Object.FindAnyObjectByType<Unity.AI.Navigation.NavMeshSurface>();
-                if (surface != null && surface.navMeshData == null)
-                {
-                    string[] guids = UnityEditor.AssetDatabase.FindAssets("t:NavMeshData NavMesh-AmongUsMap");
-                    if (guids.Length > 0)
-                    {
-                        string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                        var data = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(path);
-                        if (data != null)
-                        {
-                            surface.navMeshData = data;
-                            surface.RemoveData();
-                            surface.AddData();
-                            Debug.Log($"<color=cyan>[PhantomStandard]</color> Auto-hooked NavMeshData '{path}' to NavMeshSurface on '{surface.gameObject.name}'!");
-                        }
-                    }
-                }
-#endif
-
-                // Attempt recovery by searching for the closest NavMesh polygon within 10 meters
-                if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 10.0f, NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5.0f, NavMesh.AllAreas))
                 {
                     _agent.Warp(hit.position);
-                    Debug.Log($"<color=green>[PhantomStandard]</color> Successfully warped '{gameObject.name}' onto NavMesh at {hit.position}.");
-                    return true;
                 }
-
-                return false;
             }
 
-            return true;
+            if (_agent == null || !_agent.isOnNavMesh)
+            {
+                Debug.LogError($"[PhantomStandard] Critical Error: '{gameObject.name}' is not placed on a baked NavMesh! Ensure a NavMeshSurface is baked and the spawn point is valid.", this);
+            }
         }
         #endregion
 
@@ -127,36 +80,20 @@ namespace Gameplay.Phantoms
         private const float DESTINATION_UPDATE_INTERVAL = 0.2f;
 
         /// <summary>
-        /// Description: Updates destination for chasing the target player.
+        /// Description: Updates destination for chasing the target player via NavMeshAgent.
         /// Throttles SetDestination calls to avoid canceling path calculations every frame.
-        /// If NavMesh is not available, falls back to direct translation movement loudly per workspace rules so phantom is never stuck.
         /// </summary>
         protected override void MoveTowards(Vector3 destination)
         {
-            float targetSpeed = (_currentState == PhantomState.BeingVacuumed)
-                ? (_chaseSpeed * _suctionSlowdownRatio)
-                : _chaseSpeed;
-
-            if (!EnsureAgentOnNavMesh())
+            if (_agent == null || !_agent.isOnNavMesh)
             {
-                // FAIL LOUDLY per workspace rule, but move directly so phantom is NEVER stuck!
-                if (Time.time - _lastNavMeshErrorLogTime >= 5.0f)
-                {
-                    _lastNavMeshErrorLogTime = Time.time;
-                    Debug.LogError($"[PhantomStandard] NavMesh not detected or agent is off-mesh on '{gameObject.name}'! Moving with emergency direct ground translation. Make sure NavMeshSurface is baked.", this);
-                }
-
-                Vector3 direction = (destination - transform.position);
-                direction.y = 0f;
-                if (direction.sqrMagnitude > 0.05f)
-                {
-                    direction.Normalize();
-                    transform.position += direction * targetSpeed * Time.deltaTime;
-                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction, Vector3.up), Time.deltaTime * 6f);
-                }
+                Debug.LogError($"[PhantomStandard] Cannot MoveTowards: Agent on '{gameObject.name}' is missing or not placed on a NavMesh.", this);
                 return;
             }
 
+            float targetSpeed = (_currentState == PhantomState.BeingVacuumed)
+                ? (_chaseSpeed * _suctionSlowdownRatio)
+                : _chaseSpeed;
             _agent.speed = targetSpeed;
 
             if (_agent.isStopped)
@@ -179,7 +116,7 @@ namespace Gameplay.Phantoms
                 bool pathAssigned = _agent.SetDestination(targetPos);
                 if (!pathAssigned)
                 {
-                    Debug.LogWarning($"[PhantomStandard] '{gameObject.name}' could not compute path to destination {targetPos}.");
+                    Debug.LogWarning($"[PhantomStandard] '{gameObject.name}' could not compute path to destination {targetPos}.", this);
                 }
             }
         }
@@ -189,7 +126,6 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void StopMovement()
         {
-            _hasFallbackDestination = false;
             if (_agent != null && _agent.isOnNavMesh)
             {
                 _agent.isStopped = true;
@@ -197,35 +133,12 @@ namespace Gameplay.Phantoms
             }
         }
 
-        protected override void UpdateWanderingState()
-        {
-            if (_hasFallbackDestination)
-            {
-                MoveTowards(_fallbackDestination);
-                if (Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(_fallbackDestination.x, 0, _fallbackDestination.z)) < 1.5f)
-                {
-                    _hasFallbackDestination = false;
-                    StopMovement();
-                    TransitionToState(PhantomState.Idle);
-                }
-                return;
-            }
-
-            base.UpdateWanderingState();
-        }
-
         /// <summary>
         /// Description: Evaluates if the agent has reached its target destination.
         /// </summary>
         protected override bool IsDestinationReached()
         {
-            if (_hasFallbackDestination)
-            {
-                return Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), new Vector3(_fallbackDestination.x, 0, _fallbackDestination.z)) < 1.5f;
-            }
-
-            if (_agent == null) return true;
-            if (!_agent.isOnNavMesh) return false;
+            if (_agent == null || !_agent.isOnNavMesh) return true;
 
             if (!_agent.pathPending)
             {
@@ -246,16 +159,14 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void PickAndStartWanderDestination()
         {
-            Vector3 randomDirection = Random.insideUnitSphere * _wanderRadius;
-            randomDirection += transform.position;
-
-            if (!EnsureAgentOnNavMesh())
+            if (_agent == null || !_agent.isOnNavMesh)
             {
-                // Fallback wander destination without NavMesh
-                _fallbackDestination = transform.position + new Vector3(Random.Range(-_wanderRadius, _wanderRadius), 0f, Random.Range(-_wanderRadius, _wanderRadius));
-                _hasFallbackDestination = true;
+                Debug.LogError($"[PhantomStandard] Cannot PickAndStartWanderDestination: Agent on '{gameObject.name}' is missing or not on a NavMesh.", this);
                 return;
             }
+
+            Vector3 randomDirection = Random.insideUnitSphere * _wanderRadius;
+            randomDirection += transform.position;
 
             if (NavMesh.SamplePosition(randomDirection, out NavMeshHit hit, _wanderRadius, NavMesh.AllAreas))
             {
