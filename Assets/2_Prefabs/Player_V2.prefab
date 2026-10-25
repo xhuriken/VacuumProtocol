@@ -26611,6 +26611,22 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  _stats:
+    BaseConeLength: 5.5
+    ConeSizeMultiplier: 1
+    BaseDrainRate: 10
+    DrainMultiplier: 1
+    SuctionPullMultiplier: 1
+    MaxLightningTethers: 4
+    TetherPoints: 24
+    BaseCoreWidth: 0.012
+    BaseAuraWidth: 0.026
+    LightningWidthMultiplier: 1
+    TetherBirthDuration: 0.2
+    TetherDeathDuration: 0.32
+    LightningJitter: 0.12
+    CrackleFrequency: 24
+    EnergyFlowSpeed: 4.5
   _coneLength: 5.5
   _coneRadiusProfile:
     serializedVersion: 2
@@ -26668,10 +26684,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 265
   _lightningMaterial: {fileID: 2100000, guid: a0b1c850d2ec488e9e2ee7ee016e348f, type: 2}
-  _maxLightningTethers: 4
-  _tetherPoints: 12
-  _lightningJitter: 0.16
-  _lightningLineWidth: 0.045
   _suctionConeRenderer: {fileID: 6426735813776031197}
   _additionalConeRenderers:
   - {fileID: 3492194764150479775}

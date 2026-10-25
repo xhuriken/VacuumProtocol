@@ -91,6 +91,9 @@ namespace Gameplay.Phantoms
 
         [Tooltip("Role: Number of needles fired in a burst.")]
         [SerializeField] private int _needleBurstCount = 2;
+
+        [Tooltip("Role: Shared material for ectoplasmic electric needle visual streaks.")]
+        [SerializeField] private Material _needleMaterial;
         #endregion
 
         #region Runtime Variables
@@ -145,6 +148,13 @@ namespace Gameplay.Phantoms
 
             _groundLayer = LayerMask.GetMask("Ground", "Default");
             _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstacle", "Obstable");
+
+#if UNITY_EDITOR
+            if (_needleMaterial == null)
+            {
+                _needleMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/4_Graphics/Shader/Player/Mat_SuctionLightning.mat");
+            }
+#endif
         }
 
         protected override void Awake()
@@ -163,6 +173,17 @@ namespace Gameplay.Phantoms
             {
                 _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstacle", "Obstable");
                 if (_obstacleLayer.value == 0) _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
+            }
+
+#if UNITY_EDITOR
+            if (_needleMaterial == null)
+            {
+                _needleMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/4_Graphics/Shader/Player/Mat_SuctionLightning.mat");
+            }
+#endif
+            if (_needleMaterial == null)
+            {
+                Debug.LogError($"[PhantomFlyingWisp] '{name}' has no '_needleMaterial' assigned! Please assign Mat_SuctionLightning in inspector.", this);
             }
         }
         #endregion
@@ -445,12 +466,25 @@ namespace Gameplay.Phantoms
         [ClientRpc]
         private void RpcSpawnNeedleVisual(Vector3 origin, Vector3 velocity, float lifetime)
         {
+            if (velocity.sqrMagnitude < 0.001f)
+            {
+                Debug.LogError($"[PhantomFlyingWisp] RpcSpawnNeedleVisual received zero velocity vector! Cannot spawn needle visual.", this);
+                return;
+            }
+
             GameObject needleObj = new GameObject("PhantomNeedleVisual");
             needleObj.transform.position = origin;
-            needleObj.transform.rotation = Quaternion.LookRotation(velocity.normalized);
+            needleObj.transform.rotation = Quaternion.LookRotation(velocity);
 
             PhantomNeedleVisual visual = needleObj.AddComponent<PhantomNeedleVisual>();
-            visual.Init(velocity, lifetime);
+            if (visual == null)
+            {
+                Debug.LogError($"[PhantomFlyingWisp] Failed to attach PhantomNeedleVisual component to '{needleObj.name}'!", this);
+                Destroy(needleObj);
+                return;
+            }
+
+            visual.Init(velocity, lifetime, _needleMaterial);
         }
         #endregion
 
@@ -544,75 +578,5 @@ namespace Gameplay.Phantoms
         }
 #endif
         #endregion
-    }
-
-    /// <summary>
-    /// Description: Client-side visual representation of an electric ectoplasm needle fired by a phantom wasp.
-    /// Features high-speed laser streak, additive glow material, and automatic timeout cleanup.
-    /// </summary>
-    public class PhantomNeedleVisual : MonoBehaviour
-    {
-        private Vector3 _velocity;
-        private float _lifetime;
-        private LineRenderer _line;
-
-        public void Init(Vector3 velocity, float lifetime)
-        {
-            _velocity = velocity;
-            _lifetime = lifetime;
-
-            _line = GetComponent<LineRenderer>();
-            if (_line == null)
-            {
-                _line = gameObject.AddComponent<LineRenderer>();
-            }
-
-            _line.positionCount = 2;
-            _line.useWorldSpace = true;
-            _line.startWidth = 0.04f;
-            _line.endWidth = 0.015f;
-            _line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _line.receiveShadows = false;
-
-            Material mat = Resources.Load<Material>("Mat_SuctionLightning");
-            if (mat == null)
-            {
-                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                if (shader != null)
-                {
-                    mat = new Material(shader);
-                    mat.SetColor("_BaseColor", new Color(0.2f, 1f, 1f, 1f));
-                }
-            }
-
-            if (mat != null)
-            {
-                _line.material = mat;
-            }
-
-            UpdatePositions();
-        }
-
-        private void Update()
-        {
-            _lifetime -= Time.deltaTime;
-            if (_lifetime <= 0f)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            transform.position += _velocity * Time.deltaTime;
-            UpdatePositions();
-        }
-
-        private void UpdatePositions()
-        {
-            if (_line == null) return;
-            Vector3 head = transform.position;
-            Vector3 tail = head - _velocity.normalized * 0.55f;
-            _line.SetPosition(0, head);
-            _line.SetPosition(1, tail);
-        }
     }
 }

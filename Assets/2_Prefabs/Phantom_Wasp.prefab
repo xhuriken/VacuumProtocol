@@ -154,6 +154,14 @@ MonoBehaviour:
   _wallAvoidanceDistance: 1.4
   _avoidanceForce: 4.5
   _vacuumDragSpeed: 2
+  _enableSuctionNeedles: 1
+  _needleIntervalMin: 1.8
+  _needleIntervalMax: 2.8
+  _needleTelegraphDuration: 0.35
+  _needleSpeed: 16
+  _needleDamage: 8
+  _needleBurstCount: 2
+  _needleMaterial: {fileID: 2100000, guid: a0b1c850d2ec488e9e2ee7ee016e348f, type: 2}
 --- !u!114 &2001000000000000005
 MonoBehaviour:
   m_ObjectHideFlags: 0
