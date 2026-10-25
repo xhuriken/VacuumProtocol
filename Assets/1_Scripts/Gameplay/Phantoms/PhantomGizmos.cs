@@ -27,6 +27,7 @@ namespace Gameplay.Phantoms
         [BoxGroup("Modules")] public bool ShowNavMeshPath = true;
         [BoxGroup("Modules")] public bool ShowDrainAura = true;
         [BoxGroup("Modules")] public bool ShowStateBadge = true;
+        [BoxGroup("Modules")] public bool ShowEscapeRaycasts = true;
 
         [Header("Display Settings")]
         [BoxGroup("Display")]
@@ -119,7 +120,13 @@ namespace Gameplay.Phantoms
                 DrawDrainAura();
             }
 
-            // 6. Floating Status Badge Label
+            // 6. Intelligent Escape Raycasts & Chosen Dash Trajectory
+            if (ShowEscapeRaycasts)
+            {
+                DrawEscapeRaycasts();
+            }
+
+            // 7. Floating Status Badge Label
             if (ShowStateBadge)
             {
                 DrawStateBadge(coneWireColor);
@@ -380,7 +387,9 @@ namespace Gameplay.Phantoms
             }
             else if (_phantom.CurrentState == PhantomState.BeingVacuumed)
             {
-                statusText += $"\n>>> BEING VACUUMED ({_phantom.CurrentEctoplasm:F0}/{_phantom.MaxEctoplasm:F0} HP)";
+                int streamCount = _phantom.ActiveSuctionStreamCount;
+                string streamInfo = streamCount > 1 ? $" [{streamCount}x MULTI-SUCTION]" : "";
+                statusText += $"\n>>> BEING VACUUMED ({_phantom.CurrentEctoplasm:F0}/{_phantom.MaxEctoplasm:F0} HP){streamInfo}";
             }
 
             GUIStyle badgeStyle = new GUIStyle();
@@ -390,6 +399,56 @@ namespace Gameplay.Phantoms
             badgeStyle.fontSize = 11;
 
             Handles.Label(badgePos, statusText, badgeStyle);
+        }
+
+        /// <summary>
+        /// Description: Renders the real-time escape raycasts and chosen dash trajectory in Scene View.
+        /// Red line + sphere = blocked obstacle; Yellow line = clear open path; Green line + cone = chosen best direction.
+        /// </summary>
+        private void DrawEscapeRaycasts()
+        {
+            var rays = _phantom.LastEscapeRays;
+            if (rays == null || rays.Count == 0) return;
+
+            // Display while caught in vacuum or for 3 seconds after an escape evaluation
+            if (_phantom.CurrentState != PhantomState.BeingVacuumed && Time.time - _phantom.LastEscapeEvaluationTime > 3.0f)
+            {
+                return;
+            }
+
+            Vector3 origin = transform.position;
+
+            for (int i = 0; i < rays.Count; i++)
+            {
+                var r = rays[i];
+                if (r.HitObstacle)
+                {
+                    Handles.color = new Color(1f, 0.2f, 0.2f, 0.7f);
+                    Handles.DrawLine(origin, r.HitPoint);
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawWireSphere(r.HitPoint, 0.08f);
+                }
+                else
+                {
+                    Handles.color = new Color(1f, 0.9f, 0.2f, 0.45f);
+                    Handles.DrawLine(origin, origin + r.Direction * r.Distance);
+                }
+            }
+
+            // Bold Green Arrow for the chosen escape path
+            if (_phantom.ChosenEscapeDirection.sqrMagnitude > 0.01f)
+            {
+                Handles.color = new Color(0.2f, 1f, 0.35f, 1f);
+                Vector3 chosenEnd = origin + _phantom.ChosenEscapeDirection * 2.8f;
+                Handles.DrawLine(origin, chosenEnd);
+                Handles.ConeHandleCap(0, chosenEnd, Quaternion.LookRotation(_phantom.ChosenEscapeDirection), 0.35f, EventType.Repaint);
+
+                GUIStyle escapeStyle = new GUIStyle();
+                escapeStyle.normal.textColor = Color.green;
+                escapeStyle.fontStyle = FontStyle.Bold;
+                escapeStyle.fontSize = 11;
+                Handles.Label(chosenEnd + Vector3.up * 0.2f, "[CHOSEN ESCAPE PATH]", escapeStyle);
+            }
         }
 
         private void DrawDrainAura()

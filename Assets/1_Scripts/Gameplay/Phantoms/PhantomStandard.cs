@@ -74,6 +74,53 @@ namespace Gameplay.Phantoms
         }
         #endregion
 
+        #region State Transitions & Safety
+        protected override void TransitionToState(PhantomState newState)
+        {
+            if (newState == PhantomState.BeingVacuumed)
+            {
+                // When caught in mouth suction or being swallowed, disable NavMeshAgent
+                // so that 3D suction pull, jitter, Luigi's Mansion resistance, and swallow plunge
+                // can lift and move the phantom in 3D without NavMesh floor clamp!
+                if (_agent != null && _agent.enabled)
+                {
+                    _agent.isStopped = true;
+                    _agent.ResetPath();
+                    _agent.enabled = false;
+                }
+            }
+            else if (_currentState == PhantomState.BeingVacuumed && newState != PhantomState.BeingVacuumed)
+            {
+                // Breaking free from mouth vacuum: re-enable NavMeshAgent on nearest valid NavMesh floor
+                if (_agent != null && !_agent.enabled)
+                {
+                    _agent.enabled = true;
+                    if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5.0f, NavMesh.AllAreas))
+                    {
+                        _agent.Warp(hit.position);
+                    }
+                }
+            }
+
+            base.TransitionToState(newState);
+        }
+
+        /// <summary>
+        /// Description: Biases escape raycast direction to be largely horizontal along the floor for grounded phantoms.
+        /// </summary>
+        protected override Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
+        {
+            Vector3 bestDir = base.EvaluateBestEscapeDirection(toNozzleDir);
+            bestDir.y *= 0.2f;
+            if (bestDir.sqrMagnitude > 0.01f)
+            {
+                bestDir.Normalize();
+            }
+            _chosenEscapeDirection = bestDir;
+            return bestDir;
+        }
+        #endregion
+
         #region Movement Implementation
         private float _lastDestinationUpdateTime = 0f;
         private Vector3 _lastDestination = Vector3.positiveInfinity;
@@ -84,10 +131,9 @@ namespace Gameplay.Phantoms
         /// Throttles SetDestination calls to avoid canceling path calculations every frame.
         /// </summary>
         protected override void MoveTowards(Vector3 destination)
-        {
-            if (_agent == null || !_agent.isOnNavMesh)
+        {   
+            if (_agent == null || !_agent.enabled || !_agent.isOnNavMesh)
             {
-                Debug.LogError($"[PhantomStandard] Cannot MoveTowards: Agent on '{gameObject.name}' is missing or not placed on a NavMesh.", this);
                 return;
             }
 
@@ -126,7 +172,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void StopMovement()
         {
-            if (_agent != null && _agent.isOnNavMesh)
+            if (_agent != null && _agent.enabled && _agent.isOnNavMesh)
             {
                 _agent.isStopped = true;
                 _agent.ResetPath();
@@ -138,7 +184,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override bool IsDestinationReached()
         {
-            if (_agent == null || !_agent.isOnNavMesh) return true;
+            if (_agent == null || !_agent.enabled || !_agent.isOnNavMesh) return true;
 
             if (!_agent.pathPending)
             {
@@ -159,9 +205,8 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected override void PickAndStartWanderDestination()
         {
-            if (_agent == null || !_agent.isOnNavMesh)
+            if (_agent == null || !_agent.enabled || !_agent.isOnNavMesh)
             {
-                Debug.LogError($"[PhantomStandard] Cannot PickAndStartWanderDestination: Agent on '{gameObject.name}' is missing or not on a NavMesh.", this);
                 return;
             }
 

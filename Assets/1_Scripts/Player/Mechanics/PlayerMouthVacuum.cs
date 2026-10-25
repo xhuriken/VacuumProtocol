@@ -428,7 +428,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 _activeCapturedPhantoms.Add(phantom);
 
                 // Apply instant client-side prediction and authoritative server command
-                phantom.OnMouthSuctionApplied(nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
+                phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
                 CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
             }
         }
@@ -443,7 +443,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
         PhantomBase phantom = phantomObj.GetComponent<PhantomBase>();
         if (phantom != null)
         {
-            phantom.OnMouthSuctionApplied(nozzlePos, coneForward, coneUp, coneRight, drainRate);
+            phantom.OnMouthSuctionApplied(netId, nozzlePos, coneForward, coneUp, coneRight, drainRate);
         }
     }
 
