@@ -100,6 +100,10 @@ MonoBehaviour:
   _escapeDashDuration: 0.35
   _swallowThresholdRatio: 0.25
   _swallowDiveSpeed: 12
+  _escapeRayDistance: 8
+  _tuggingResistanceForce: 3
+  _struggleTugFrequency: 1
+  _struggleTugImpulse: 15
   _enableProximityDrain: 1
   _proximityDrainRadius: 6
   _maxDrainRate: 20
@@ -203,6 +207,7 @@ MonoBehaviour:
   ShowNavMeshPath: 1
   ShowDrainAura: 1
   ShowStateBadge: 1
+  ShowEscapeRaycasts: 1
   OnlyWhenSelected: 0
   ConeTransparency: 0.18
   EnableDynamicPulsing: 1

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
@@ -8,16 +9,78 @@ using UnityEditor;
 #endif
 
 /// <summary>
+/// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and metaphysical lightning visuals.
+/// Context: Acts as the Single Source of Truth (SSOT) for item upgrades, perks, and gameplay balancing.
+/// </summary>
+[System.Serializable]
+public class MouthVacuumStats
+{
+    [Header("Suction Cone Upgradable Stats")]
+    [Tooltip("Base distance along cone axis Z reached by the mouth vacuum.")]
+    public float BaseConeLength = 5.5f;
+
+    [Tooltip("Multiplier applied by items/perks to cone reach and volume.")]
+    public float ConeSizeMultiplier = 1.0f;
+
+    [Header("Ectoplasm Drain Stats")]
+    [Tooltip("Base ectoplasm health drained per second from captured phantoms.")]
+    public float BaseDrainRate = 10.0f;
+
+    [Tooltip("Multiplier applied by items/perks to ectoplasm drain rate.")]
+    public float DrainMultiplier = 1.0f;
+
+    [Header("Suction Pull Acceleration")]
+    [Tooltip("Multiplier applied to the physical pull velocity dragging phantoms towards the nozzle.")]
+    public float SuctionPullMultiplier = 1.0f;
+
+    [Header("Metaphysical Lightning Tethers")]
+    [Tooltip("Maximum simultaneous electric tethers.")]
+    public int MaxLightningTethers = 4;
+
+    [Tooltip("Number of tessellated points per filament arc.")]
+    public int TetherPoints = 24;
+
+    [Tooltip("Base width of the hot central crackling core spine.")]
+    public float BaseCoreWidth = 0.012f;
+
+    [Tooltip("Base width of the swirling ethereal aura shroud.")]
+    public float BaseAuraWidth = 0.026f;
+
+    [Tooltip("Multiplier applied by items/perks to lightning filament width.")]
+    public float LightningWidthMultiplier = 1.0f;
+
+    [Header("Metaphysical Dynamics & Animation")]
+    [Tooltip("Duration in seconds for a newly struck tether to stretch from nozzle to ghost.")]
+    public float TetherBirthDuration = 0.20f;
+
+    [Tooltip("Duration in seconds for a severed tether to dissolve and fade away.")]
+    public float TetherDeathDuration = 0.32f;
+
+    [Tooltip("Lateral micro-displacement jitter for electric arcs.")]
+    public float LightningJitter = 0.12f;
+
+    [Tooltip("Frequency of lightning arc restructuring per second.")]
+    public float CrackleFrequency = 24.0f;
+
+    [Tooltip("Speed of ethereal plasma waves traveling backward along the tether into the mouth.")]
+    public float EnergyFlowSpeed = 4.5f;
+}
+
+/// <summary>
 /// Description: Dedicated mouth vacuum controller for absorbing spectral entities (Phantoms) via dual-click (IsVacuuming).
 /// Context: Attached to Player_V2. Activates only when both left and right clicks are held simultaneously.
 /// Justification: Decouples phantom capture from arm-based item/dust collection, keeping the mechanics clean, SSOT, and optimized.
 /// Uses PhantomBase.ActivePhantoms registry for O(1) query performance without continuous Physics.OverlapSphere allocations.
+/// Features dual-filament metaphysical lightning tethers with progressive birth/death animations and backward energy suction flow.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
 [RequireComponent(typeof(PlayerV2_Controller))]
 public class PlayerMouthVacuum : NetworkBehaviour
 {
-    [Header("Mouth Suction Parameters")]
+    [Header("Centralized Mouth Vacuum Stats (SSOT)")]
+    [SerializeField] private MouthVacuumStats _stats = new MouthVacuumStats();
+
+    [Header("Mouth Suction Parameters (Legacy Serialization Overrides)")]
     [Tooltip("Role: Maximum distance along cone axis Z that the mouth vacuum reaches.")]
     [SerializeField] private float _coneLength = 5.5f;
 
@@ -33,18 +96,6 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [Header("Subliminal Lightning Tethers")]
     [Tooltip("Role: Additive electric material for the subliminal vortex lightning arcs.")]
     [SerializeField] private Material _lightningMaterial;
-
-    [Tooltip("Role: Maximum number of simultaneous electric tethers.")]
-    [SerializeField] private int _maxLightningTethers = 4;
-
-    [Tooltip("Role: Number of points per lightning arc.")]
-    [SerializeField] private int _tetherPoints = 12;
-
-    [Tooltip("Role: Maximum lateral zig-zag offset of lightning arcs in meters.")]
-    [SerializeField] private float _lightningJitter = 0.16f;
-
-    [Tooltip("Role: Width of the lightning arc lines.")]
-    [SerializeField] private float _lightningLineWidth = 0.045f;
 
     [Header("Suction Visuals")]
     [Tooltip("Role: Renderer of the 3D suction cone displaying the distortion material.")]
@@ -77,17 +128,120 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private Color _initialTint = Color.cyan;
     private float _currentTransition = 0f;
 
+    private Vector3 _initialConeScale = Vector3.one;
+    private Vector3[] _initialAdditionalConeScales;
+
     private static readonly int PropVortexSpeed = Shader.PropertyToID("_VortexSpeed");
     private static readonly int PropVacuumTint = Shader.PropertyToID("_VacuumTint");
     private static readonly int PropDistortionStrength = Shader.PropertyToID("_DistortionStrength");
 
-    private LineRenderer[] _lightningLines;
+    /// <summary>
+    /// Description: Internal wrapper representing a dual-filament metaphysical lightning tether.
+    /// Manages progressive strike (birth) and dissolve (death) animations with zero GC allocations per frame.
+    /// </summary>
+    private class MetaphysicalLightningTether
+    {
+        public GameObject RootObject;
+        public LineRenderer CoreLine;
+        public LineRenderer AuraLine;
+
+        public PhantomBase BoundPhantom;
+        public Vector3 LastKnownTargetPos;
+
+        // ManifestProgress: 0f = fully inactive, 1f = fully struck/manifested
+        public float ManifestProgress;
+        public float PhaseOffset;
+
+        public Vector3[] CoreBuffer;
+        public Vector3[] AuraBuffer;
+
+        public Gradient CoreGradient = new Gradient();
+        public Gradient AuraGradient = new Gradient();
+
+        public GradientColorKey[] CoreColorKeys;
+        public GradientAlphaKey[] CoreAlphaKeys;
+        public GradientColorKey[] AuraColorKeys;
+        public GradientAlphaKey[] AuraAlphaKeys;
+    }
+
+    private MetaphysicalLightningTether[] _tethers;
     private readonly List<PhantomBase> _activeCapturedPhantoms = new List<PhantomBase>();
+
+    #region Public Upgrade & Inspection API
+
+    public MouthVacuumStats Stats => _stats;
+    public float EffectiveDrainRate => _stats.BaseDrainRate * _stats.DrainMultiplier;
+    public float EffectiveConeLength => _stats.BaseConeLength * _stats.ConeSizeMultiplier;
+    public float EffectivePullMultiplier => _stats.SuctionPullMultiplier;
+
+    /// <summary>
+    /// Description: Multiplies cone reach and radius. Updates visual 3D cone scale instantly.
+    /// Fails loudly if multiplier is negative or zero.
+    /// </summary>
+    public void SetConeSizeMultiplier(float multiplier)
+    {
+        if (multiplier <= 0.01f)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] Invalid ConeSizeMultiplier: {multiplier}. Value must be > 0.01.", this);
+            return;
+        }
+
+        _stats.ConeSizeMultiplier = multiplier;
+        UpdateConeVisualScale();
+    }
+
+    /// <summary>
+    /// Description: Multiplies ectoplasmic drain rate.
+    /// </summary>
+    public void SetDrainMultiplier(float multiplier)
+    {
+        if (multiplier < 0f)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] Invalid DrainMultiplier: {multiplier}. Value must be >= 0.", this);
+            return;
+        }
+
+        _stats.DrainMultiplier = multiplier;
+    }
+
+    /// <summary>
+    /// Description: Multiplies suction physical pull acceleration dragging phantoms towards nozzle.
+    /// </summary>
+    public void SetSuctionPullMultiplier(float multiplier)
+    {
+        if (multiplier < 0.1f)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] Invalid SuctionPullMultiplier: {multiplier}. Value must be >= 0.1.", this);
+            return;
+        }
+
+        _stats.SuctionPullMultiplier = multiplier;
+    }
+
+    /// <summary>
+    /// Description: Multiplies width of metaphysical lightning filaments.
+    /// </summary>
+    public void SetLightningWidthMultiplier(float multiplier)
+    {
+        if (multiplier < 0.1f)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] Invalid LightningWidthMultiplier: {multiplier}. Value must be >= 0.1.", this);
+            return;
+        }
+
+        _stats.LightningWidthMultiplier = multiplier;
+    }
+
+    #endregion
 
     private void Awake()
     {
         _input = GetComponent<PlayerInputHandler>();
         _controller = GetComponent<PlayerV2_Controller>();
+
+        // Synchronize legacy inspector values into centralized stats
+        if (_coneLength > 0f) _stats.BaseConeLength = _coneLength;
+        if (_drainRatePerSecond > 0f) _stats.BaseDrainRate = _drainRatePerSecond;
 
         if (_coneRadiusProfile == null || _coneRadiusProfile.length == 0)
         {
@@ -133,6 +287,22 @@ public class PlayerMouthVacuum : NetworkBehaviour
             return;
         }
 
+        _initialConeScale = _suctionConeRenderer.transform.localScale;
+
+        if (_additionalConeRenderers != null && _additionalConeRenderers.Length > 0)
+        {
+            _initialAdditionalConeScales = new Vector3[_additionalConeRenderers.Length];
+            for (int i = 0; i < _additionalConeRenderers.Length; i++)
+            {
+                if (_additionalConeRenderers[i] != null)
+                {
+                    _initialAdditionalConeScales[i] = _additionalConeRenderers[i].transform.localScale;
+                }
+            }
+        }
+
+        UpdateConeVisualScale();
+
         Material mat = _suctionConeRenderer.sharedMaterial;
         if (mat != null)
         {
@@ -175,6 +345,25 @@ public class PlayerMouthVacuum : NetworkBehaviour
         ApplyVisualProperties(0f);
     }
 
+    private void UpdateConeVisualScale()
+    {
+        if (_suctionConeRenderer != null)
+        {
+            _suctionConeRenderer.transform.localScale = _initialConeScale * _stats.ConeSizeMultiplier;
+        }
+
+        if (_additionalConeRenderers != null && _initialAdditionalConeScales != null)
+        {
+            for (int i = 0; i < _additionalConeRenderers.Length; i++)
+            {
+                if (_additionalConeRenderers[i] != null && i < _initialAdditionalConeScales.Length)
+                {
+                    _additionalConeRenderers[i].transform.localScale = _initialAdditionalConeScales[i] * _stats.ConeSizeMultiplier;
+                }
+            }
+        }
+    }
+
     private void SetConeRenderersEnabled(bool isEnabled)
     {
         if (_suctionConeRenderer != null)
@@ -208,9 +397,15 @@ public class PlayerMouthVacuum : NetworkBehaviour
             CmdSetVacuumingVisual(isVacuuming);
         }
 
-        if (!isVacuuming) return;
-
-        ProcessMouthSuction();
+        if (isVacuuming)
+        {
+            ProcessMouthSuction();
+        }
+        else
+        {
+            _activeCapturedPhantoms.Clear();
+            UpdateLightningTethers();
+        }
     }
 
     /// <summary>
@@ -250,7 +445,6 @@ public class PlayerMouthVacuum : NetworkBehaviour
             {
                 SetConeRenderersEnabled(false);
             }
-            UpdateLightningTethers();
             return;
         }
 
@@ -278,11 +472,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
         _mpb.SetFloat(PropDistortionStrength, Mathf.Lerp(0f, _initialDistortionStrength, transition));
 
         // Smooth tint color ramp:
-        // Transition alpha from 0 to initial start alpha
         float currentAlpha = Mathf.Lerp(0f, _initialTint.a, transition);
-
-        // For multiplicative shading (SceneColor * Tint), pure neutral/untinted is White (1,1,1).
-        // We lerp RGB from neutral White (1,1,1) to _initialTint.rgb, and Alpha from 0 to _initialTint.a:
         Color neutralTint = new Color(1f, 1f, 1f, 0f);
         Color currentTint = Color.Lerp(neutralTint, _initialTint, transition);
         currentTint.a = currentAlpha;
@@ -309,54 +499,132 @@ public class PlayerMouthVacuum : NetworkBehaviour
         _isVacuumingNetworked = active;
     }
 
+    /// <summary>
+    /// Description: Initializes dual-filament metaphysical lightning tether units.
+    /// Each unit contains a hot-crackling Core spine and a soft-swirling Ethereal Aura shroud.
+    /// Fails loudly if electric material cannot be loaded.
+    /// </summary>
     private void InitLightningTethers()
     {
         if (_lightningMaterial == null)
         {
             _lightningMaterial = Resources.Load<Material>("Mat_SuctionLightning");
+#if UNITY_EDITOR
             if (_lightningMaterial == null)
             {
-                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                if (shader != null)
-                {
-                    _lightningMaterial = new Material(shader)
-                    {
-                        name = "Runtime_LightningMat"
-                    };
-                    _lightningMaterial.SetFloat("_Surface", 1);
-                    _lightningMaterial.SetFloat("_Blend", 1);
-                    _lightningMaterial.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
-                    _lightningMaterial.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
-                    _lightningMaterial.SetColor("_BaseColor", new Color(0.25f, 0.85f, 1f, 1f));
-                }
+                _lightningMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/4_Graphics/Shader/Player/Mat_SuctionLightning.mat");
             }
+#endif
+        }
+
+        if (_lightningMaterial == null)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] '_lightningMaterial' could not be found or loaded! Assign Mat_SuctionLightning in the inspector on '{gameObject.name}'.", this);
+            return;
         }
 
         Transform root = _suctionConeRenderer != null ? _suctionConeRenderer.transform : transform;
-        _lightningLines = new LineRenderer[_maxLightningTethers];
+        int count = Mathf.Max(1, _stats.MaxLightningTethers);
+        int points = Mathf.Max(4, _stats.TetherPoints);
 
-        for (int i = 0; i < _maxLightningTethers; i++)
+        _tethers = new MetaphysicalLightningTether[count];
+
+        AnimationCurve coreWidthCurve = new AnimationCurve(
+            new Keyframe(0.0f, 0.45f, 0f, 1.5f),
+            new Keyframe(0.5f, 1.0f, 0f, 0f),
+            new Keyframe(1.0f, 0.60f, -1.2f, 0f)
+        );
+
+        AnimationCurve auraWidthCurve = new AnimationCurve(
+            new Keyframe(0.0f, 0.35f, 0f, 1.8f),
+            new Keyframe(0.45f, 1.0f, 0f, 0f),
+            new Keyframe(1.0f, 0.50f, -1.5f, 0f)
+        );
+
+        for (int i = 0; i < count; i++)
         {
-            GameObject lineObj = new GameObject($"LightningTether_{i}");
-            lineObj.transform.SetParent(root, false);
+            GameObject tetherRoot = new GameObject($"MetaphysicalTether_{i}");
+            tetherRoot.transform.SetParent(root, false);
 
-            LineRenderer lr = lineObj.AddComponent<LineRenderer>();
-            lr.positionCount = _tetherPoints;
-            lr.startWidth = _lightningLineWidth;
-            lr.endWidth = _lightningLineWidth * 0.5f;
-            lr.material = _lightningMaterial;
-            lr.useWorldSpace = true;
-            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            lr.receiveShadows = false;
-            lr.enabled = false;
+            // 1. Hot crackling core spine
+            GameObject coreObj = new GameObject("CoreSpine");
+            coreObj.transform.SetParent(tetherRoot.transform, false);
+            LineRenderer coreLr = coreObj.AddComponent<LineRenderer>();
+            coreLr.positionCount = points;
+            coreLr.widthCurve = coreWidthCurve;
+            coreLr.widthMultiplier = _stats.BaseCoreWidth;
+            coreLr.material = _lightningMaterial;
+            coreLr.useWorldSpace = true;
+            coreLr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            coreLr.receiveShadows = false;
+            coreLr.enabled = false;
 
-            _lightningLines[i] = lr;
+            // 2. Soft ethereal swirling aura shroud
+            GameObject auraObj = new GameObject("EtherealAura");
+            auraObj.transform.SetParent(tetherRoot.transform, false);
+            LineRenderer auraLr = auraObj.AddComponent<LineRenderer>();
+            auraLr.positionCount = points;
+            auraLr.widthCurve = auraWidthCurve;
+            auraLr.widthMultiplier = _stats.BaseAuraWidth;
+            auraLr.material = _lightningMaterial;
+            auraLr.useWorldSpace = true;
+            auraLr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            auraLr.receiveShadows = false;
+            auraLr.enabled = false;
+
+            MetaphysicalLightningTether tether = new MetaphysicalLightningTether
+            {
+                RootObject = tetherRoot,
+                CoreLine = coreLr,
+                AuraLine = auraLr,
+                CoreBuffer = new Vector3[points],
+                AuraBuffer = new Vector3[points],
+                PhaseOffset = i * (Mathf.PI * 2f / count),
+                ManifestProgress = 0f,
+                BoundPhantom = null,
+                LastKnownTargetPos = Vector3.zero,
+                CoreColorKeys = new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(0.4f, 0.9f, 1f), 0.0f),
+                    new GradientColorKey(Color.white, 0.25f),
+                    new GradientColorKey(Color.white, 0.75f),
+                    new GradientColorKey(new Color(0.35f, 0.85f, 1f), 1.0f)
+                },
+                CoreAlphaKeys = new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(0.0f, 0.0f),
+                    new GradientAlphaKey(1.0f, 0.08f),
+                    new GradientAlphaKey(1.0f, 0.92f),
+                    new GradientAlphaKey(0.5f, 1.0f)
+                },
+                AuraColorKeys = new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(0.1f, 0.65f, 1f), 0.0f),
+                    new GradientColorKey(new Color(0.2f, 0.85f, 1f), 0.5f),
+                    new GradientColorKey(new Color(0.5f, 0.3f, 1f), 1.0f)
+                },
+                AuraAlphaKeys = new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(0.0f, 0.0f),
+                    new GradientAlphaKey(0.40f, 0.20f),
+                    new GradientAlphaKey(0.40f, 0.80f),
+                    new GradientAlphaKey(0.15f, 1.0f)
+                }
+            };
+
+            tether.CoreGradient.SetKeys(tether.CoreColorKeys, tether.CoreAlphaKeys);
+            tether.AuraGradient.SetKeys(tether.AuraColorKeys, tether.AuraAlphaKeys);
+
+            coreLr.colorGradient = tether.CoreGradient;
+            auraLr.colorGradient = tether.AuraGradient;
+
+            _tethers[i] = tether;
         }
     }
 
     /// <summary>
-    /// Description: Tests whether a world-space point is inside the largest suction cone mesh (VacuumCone1).
-    /// Returns local cone position for centripetal and depth calculations.
+    /// Description: Tests whether a world-space point is inside the suction cone mesh.
+    /// Accounts for upgradable ConeSizeMultiplier.
     /// </summary>
     public bool IsInsideSuctionCone(Vector3 worldPoint, out Vector3 localConePos)
     {
@@ -366,8 +634,9 @@ public class PlayerMouthVacuum : NetworkBehaviour
         Transform coneT = _suctionConeRenderer.transform;
         localConePos = coneT.InverseTransformPoint(worldPoint);
 
-        // Distance along cone forward axis Z (from mouth nozzle Z=0 to _coneLength)
-        if (localConePos.z < 0f || localConePos.z > _coneLength)
+        // Distance along cone forward axis Z (from mouth nozzle Z=0 to BaseConeLength)
+        // Since coneT localScale is scaled by ConeSizeMultiplier, localConePos is in base unscaled space.
+        if (localConePos.z < 0f || localConePos.z > _stats.BaseConeLength)
         {
             return false;
         }
@@ -394,6 +663,9 @@ public class PlayerMouthVacuum : NetworkBehaviour
         Vector3 coneUp = coneT.up;
         Vector3 coneRight = coneT.right;
 
+        float effectiveDrain = _stats.BaseDrainRate * _stats.DrainMultiplier;
+        float effectivePull = _stats.SuctionPullMultiplier;
+
         IReadOnlyList<PhantomBase> phantoms = PhantomBase.ActivePhantoms;
         if (phantoms != null && phantoms.Count > 0)
         {
@@ -404,7 +676,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
                 Vector3 phantomTargetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
 
-                // 1. Precise volumetric containment check inside VacuumCone1
+                // 1. Volumetric containment check inside suction cone
                 if (!IsInsideSuctionCone(phantomTargetPos, out _))
                 {
                     continue;
@@ -419,7 +691,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
                     {
                         if (!hit.transform.IsChildOf(phantom.transform))
                         {
-                            // Obstructed by a wall!
+                            // Obstructed by a wall
                             continue;
                         }
                     }
@@ -428,8 +700,8 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 _activeCapturedPhantoms.Add(phantom);
 
                 // Apply instant client-side prediction and authoritative server command
-                phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
-                CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, _drainRatePerSecond);
+                phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
+                CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
             }
         }
 
@@ -437,95 +709,176 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     [Command]
-    private void CmdApplyMouthSuction(GameObject phantomObj, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainRate)
+    private void CmdApplyMouthSuction(GameObject phantomObj, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainRate, float pullMultiplier)
     {
         if (phantomObj == null) return;
         PhantomBase phantom = phantomObj.GetComponent<PhantomBase>();
         if (phantom != null)
         {
-            phantom.OnMouthSuctionApplied(netId, nozzlePos, coneForward, coneUp, coneRight, drainRate);
+            phantom.OnMouthSuctionApplied(netId, nozzlePos, coneForward, coneUp, coneRight, drainRate, pullMultiplier);
         }
     }
 
     /// <summary>
-    /// Description: Updates subliminal lightning arcs connecting the mouth nozzle to each captured phantom.
+    /// Description: Updates subliminal lightning arcs connecting the mouth nozzle to captured phantoms.
+    /// Manages progressive strike (birth) and dissolve (death) animations with zero GC allocations.
+    /// Features discrete stepped crackle for the core spine and continuous backward helical flow for the ethereal aura.
     /// </summary>
     private void UpdateLightningTethers()
     {
-        if (_lightningLines == null || _lightningLines.Length == 0) return;
+        if (_tethers == null || _tethers.Length == 0 || _suctionConeRenderer == null) return;
 
-        bool isVacuuming = isLocalPlayer
-            ? (_input != null && _input.IsVacuuming)
-            : _isVacuumingNetworked;
+        Transform coneT = _suctionConeRenderer.transform;
+        Vector3 nozzlePos = coneT.position;
+        Vector3 coneForward = coneT.forward;
+        Vector3 coneUp = coneT.up;
+        Vector3 coneRight = coneT.right;
 
-        if (!isVacuuming || _activeCapturedPhantoms.Count == 0 || _suctionConeRenderer == null)
+        // 1. Tether assignment & tracking
+        // Mark currently active targets
+        for (int i = 0; i < _tethers.Length; i++)
         {
-            for (int i = 0; i < _lightningLines.Length; i++)
+            MetaphysicalLightningTether tether = _tethers[i];
+            if (tether == null) continue;
+
+            if (tether.BoundPhantom != null)
             {
-                if (_lightningLines[i] != null && _lightningLines[i].enabled)
+                if (!_activeCapturedPhantoms.Contains(tether.BoundPhantom) || !tether.BoundPhantom.gameObject.activeInHierarchy)
                 {
-                    _lightningLines[i].enabled = false;
+                    // Target lost or escaped: begin progressive dissolution
+                    tether.BoundPhantom = null;
                 }
             }
-            return;
         }
 
-        Vector3 nozzlePos = _suctionConeRenderer.transform.position;
-        Vector3 coneForward = _suctionConeRenderer.transform.forward;
-
-        for (int i = 0; i < _lightningLines.Length; i++)
+        // Assign unassigned captured phantoms to available tether slots
+        for (int p = 0; p < _activeCapturedPhantoms.Count; p++)
         {
-            LineRenderer lr = _lightningLines[i];
-            if (lr == null) continue;
+            PhantomBase phantom = _activeCapturedPhantoms[p];
+            if (phantom == null) continue;
 
-            if (i < _activeCapturedPhantoms.Count)
+            bool alreadyBound = false;
+            for (int i = 0; i < _tethers.Length; i++)
             {
-                PhantomBase phantom = _activeCapturedPhantoms[i];
-                if (phantom == null || !phantom.gameObject.activeInHierarchy)
+                if (_tethers[i] != null && _tethers[i].BoundPhantom == phantom)
                 {
-                    lr.enabled = false;
-                    continue;
+                    alreadyBound = true;
+                    break;
                 }
+            }
 
-                // Subliminal strobe: rapid flicker for intense electric energy
-                bool subliminalFlicker = (Time.frameCount % 2 == 0) || (Random.value > 0.15f);
-                lr.enabled = subliminalFlicker;
-
-                if (!subliminalFlicker) continue;
-
-                Vector3 targetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
-
-                // Animate dynamic line width with high-voltage pulse
-                float widthPulse = _lightningLineWidth * Random.Range(0.8f, 1.4f);
-                lr.startWidth = widthPulse;
-                lr.endWidth = widthPulse * 0.6f;
-
-                // Calculate curved fractal arc points from nozzle to target
-                for (int p = 0; p < _tetherPoints; p++)
+            if (!alreadyBound)
+            {
+                // Find best slot: first unassigned slot, prioritizing lowest ManifestProgress
+                MetaphysicalLightningTether bestSlot = null;
+                float lowestProgress = float.MaxValue;
+                for (int i = 0; i < _tethers.Length; i++)
                 {
-                    float t = (float)p / (_tetherPoints - 1);
-                    Vector3 basePt = Vector3.Lerp(nozzlePos, targetPos, t);
-
-                    // Pull slightly towards the vortex central axis along the way
-                    float axialDist = Vector3.Dot(basePt - nozzlePos, coneForward);
-                    Vector3 axisPt = nozzlePos + coneForward * axialDist;
-                    basePt = Vector3.Lerp(axisPt, basePt, Mathf.SmoothStep(0f, 1f, t));
-
-                    // Add erratic high-voltage zig-zag noise on intermediate points
-                    if (p > 0 && p < _tetherPoints - 1)
+                    MetaphysicalLightningTether t = _tethers[i];
+                    if (t != null && t.BoundPhantom == null && t.ManifestProgress < lowestProgress)
                     {
-                        float jitterScale = Mathf.Sin(t * Mathf.PI) * _lightningJitter;
-                        Vector3 randJitter = Random.insideUnitSphere * jitterScale;
-                        basePt += randJitter;
+                        lowestProgress = t.ManifestProgress;
+                        bestSlot = t;
                     }
-
-                    lr.SetPosition(p, basePt);
                 }
+
+                if (bestSlot != null)
+                {
+                    bestSlot.BoundPhantom = phantom;
+                    Vector3 targetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
+                    bestSlot.LastKnownTargetPos = targetPos;
+                }
+            }
+        }
+
+        // 2. Animate and tessellate each tether
+        float steppedTime = Mathf.Floor(Time.time * _stats.CrackleFrequency);
+        float timeFlow = Time.time * _stats.EnergyFlowSpeed;
+
+        for (int i = 0; i < _tethers.Length; i++)
+        {
+            MetaphysicalLightningTether tether = _tethers[i];
+            if (tether == null) continue;
+
+            // Progressive Birth or Dissolve animation step
+            if (tether.BoundPhantom != null)
+            {
+                float birthStep = Time.deltaTime / Mathf.Max(0.01f, _stats.TetherBirthDuration);
+                tether.ManifestProgress = Mathf.MoveTowards(tether.ManifestProgress, 1f, birthStep);
+
+                Vector3 targetPos = tether.BoundPhantom.LookAtPoint != null
+                    ? tether.BoundPhantom.LookAtPoint.position
+                    : tether.BoundPhantom.transform.position;
+                tether.LastKnownTargetPos = targetPos;
             }
             else
             {
-                if (lr.enabled) lr.enabled = false;
+                float deathStep = Time.deltaTime / Mathf.Max(0.01f, _stats.TetherDeathDuration);
+                tether.ManifestProgress = Mathf.MoveTowards(tether.ManifestProgress, 0f, deathStep);
             }
+
+            if (tether.ManifestProgress <= 0.0001f)
+            {
+                if (tether.CoreLine.enabled) tether.CoreLine.enabled = false;
+                if (tether.AuraLine.enabled) tether.AuraLine.enabled = false;
+                continue;
+            }
+
+            if (!tether.CoreLine.enabled) tether.CoreLine.enabled = true;
+            if (!tether.AuraLine.enabled) tether.AuraLine.enabled = true;
+
+            // Progressive strike reach (bolt extends from nozzle towards ghost on birth)
+            float strikeReach = Mathf.Clamp01(tether.ManifestProgress * 1.5f);
+            Vector3 currentHeadPos = Vector3.Lerp(nozzlePos, tether.LastKnownTargetPos, strikeReach);
+
+            // Dynamic width scaling with manifest progress and item multiplier
+            float effectiveCoreWidth = _stats.BaseCoreWidth * _stats.LightningWidthMultiplier * Mathf.SmoothStep(0.2f, 1f, tether.ManifestProgress);
+            float effectiveAuraWidth = _stats.BaseAuraWidth * _stats.LightningWidthMultiplier * Mathf.SmoothStep(0.1f, 1f, tether.ManifestProgress);
+
+            tether.CoreLine.widthMultiplier = effectiveCoreWidth;
+            tether.AuraLine.widthMultiplier = effectiveAuraWidth;
+
+            // Update alpha gradient keys
+            tether.CoreAlphaKeys[1].alpha = 1.0f * tether.ManifestProgress;
+            tether.CoreAlphaKeys[2].alpha = 1.0f * tether.ManifestProgress;
+            tether.CoreAlphaKeys[3].alpha = 0.5f * tether.ManifestProgress;
+            tether.CoreGradient.SetKeys(tether.CoreColorKeys, tether.CoreAlphaKeys);
+            tether.CoreLine.colorGradient = tether.CoreGradient;
+
+            tether.AuraAlphaKeys[1].alpha = 0.40f * tether.ManifestProgress;
+            tether.AuraAlphaKeys[2].alpha = 0.40f * tether.ManifestProgress;
+            tether.AuraAlphaKeys[3].alpha = 0.15f * tether.ManifestProgress;
+            tether.AuraGradient.SetKeys(tether.AuraColorKeys, tether.AuraAlphaKeys);
+            tether.AuraLine.colorGradient = tether.AuraGradient;
+
+            int points = tether.CoreBuffer.Length;
+            for (int p = 0; p < points; p++)
+            {
+                float t = (float)p / (points - 1);
+                Vector3 basePt = Vector3.Lerp(nozzlePos, currentHeadPos, t);
+
+                // Vortex centripetal pull towards central cone axis
+                float axialDist = Vector3.Dot(basePt - nozzlePos, coneForward);
+                Vector3 axisPt = nozzlePos + coneForward * axialDist;
+                basePt = Vector3.Lerp(axisPt, basePt, Mathf.SmoothStep(0.15f, 1f, t));
+
+                // Hot core stepped high-voltage crackle
+                float envelope = Mathf.Sin(t * Mathf.PI);
+                float crackleSeed = steppedTime * 19.37f + p * 7.19f + i * 41.53f;
+                Vector3 crackleOffset = (coneRight * Mathf.Sin(crackleSeed) + coneUp * Mathf.Cos(crackleSeed * 1.37f)) * (_stats.LightningJitter * envelope);
+                Vector3 corePt = basePt + crackleOffset;
+                tether.CoreBuffer[p] = corePt;
+
+                // Ethereal aura continuous backward helical suction flow
+                // Minus sign (- timeFlow) causes energy waves to travel backwards towards the mouth nozzle
+                float auraPhase = t * 6.0f * Mathf.PI - timeFlow + tether.PhaseOffset;
+                float auraRadius = 0.065f * envelope * _stats.LightningWidthMultiplier;
+                Vector3 auraOffset = (coneRight * Mathf.Cos(auraPhase) + coneUp * Mathf.Sin(auraPhase)) * auraRadius;
+                tether.AuraBuffer[p] = corePt + auraOffset;
+            }
+
+            tether.CoreLine.SetPositions(tether.CoreBuffer);
+            tether.AuraLine.SetPositions(tether.AuraBuffer);
         }
     }
 
@@ -544,15 +897,17 @@ public class PlayerMouthVacuum : NetworkBehaviour
         Handles.color = wireColor;
         Gizmos.color = wireColor;
 
-        // Draw cross-section rings along VacuumCone1 length
-        float[] ringDistances = new float[] { 0.1f, 1.0f, 2.5f, 4.0f, _coneLength };
+        float effectiveLength = _stats.BaseConeLength * _stats.ConeSizeMultiplier;
+        float[] ringDistances = new float[] { 0.1f, 1.0f * _stats.ConeSizeMultiplier, 2.5f * _stats.ConeSizeMultiplier, 4.0f * _stats.ConeSizeMultiplier, effectiveLength };
         Vector3[] prevPoints = new Vector3[16];
 
         for (int r = 0; r < ringDistances.Length; r++)
         {
             float z = ringDistances[r];
-            float radius = _coneRadiusProfile != null ? _coneRadiusProfile.Evaluate(z) : 2.5f;
-            Vector3 ringCenter = coneT.TransformPoint(new Vector3(0, 0, z));
+            float unscaledZ = _stats.ConeSizeMultiplier > 0.001f ? (z / _stats.ConeSizeMultiplier) : z;
+            float baseRadius = _coneRadiusProfile != null ? _coneRadiusProfile.Evaluate(unscaledZ) : 2.5f;
+            float radius = baseRadius * _stats.ConeSizeMultiplier;
+            Vector3 ringCenter = coneT.position + coneT.forward * z;
 
             Handles.DrawWireDisc(ringCenter, coneT.forward, radius);
 
@@ -560,8 +915,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
             for (int i = 0; i < 16; i++)
             {
                 float angle = i * Mathf.PI * 2f / 16f;
-                Vector3 localHullPoint = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, z);
-                Vector3 worldHullPoint = coneT.TransformPoint(localHullPoint);
+                Vector3 worldHullPoint = ringCenter + (coneT.right * Mathf.Cos(angle) + coneT.up * Mathf.Sin(angle)) * radius;
 
                 if (r > 0)
                 {

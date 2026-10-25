@@ -45,6 +45,7 @@ namespace Gameplay.Phantoms
         public Vector3 ConeUp;
         public Vector3 ConeRight;
         public float DrainRate;
+        public float PullMultiplier;
         public float LastUpdateTime;
     }
 
@@ -863,9 +864,16 @@ namespace Gameplay.Phantoms
             {
                 Vector3 toNozzleNorm = toNozzleDir.normalized;
 
-                // Suction pull speed (scales slightly when multiple players vacuum together)
+                // Suction pull speed (scales with stream count and upgradable pull multiplier)
                 float streamBonus = 1.0f + 0.35f * Mathf.Max(0, _activeSuctionStreams.Count - 1);
-                pullVel = toNozzleNorm * (_suctionPullSpeed * streamBonus * (1f - _struggleResistance * 0.3f));
+                float avgPullMultiplier = 0f;
+                for (int i = 0; i < _activeSuctionStreams.Count; i++)
+                {
+                    avgPullMultiplier += _activeSuctionStreams[i].PullMultiplier;
+                }
+                avgPullMultiplier /= Mathf.Max(1, _activeSuctionStreams.Count);
+
+                pullVel = toNozzleNorm * (_suctionPullSpeed * streamBonus * avgPullMultiplier * (1f - _struggleResistance * 0.3f));
 
                 // Luigi's Mansion Resistance:
                 // Ghost actively pulls backward away from the nozzle (-toNozzleNorm).
@@ -1008,9 +1016,9 @@ namespace Gameplay.Phantoms
 
         /// <summary>
         /// Description: Hook called when a player actively vacuums this phantom with the mouth.
-        /// Passes player netId, nozzle position, cone orientation, and drain rate for multiplayer stacking and struggle physics.
+        /// Passes player netId, nozzle position, cone orientation, drain rate, and pull multiplier for multiplayer stacking and struggle physics.
         /// </summary>
-        public virtual void OnMouthSuctionApplied(uint sourceNetId, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount)
+        public virtual void OnMouthSuctionApplied(uint sourceNetId, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount, float pullMultiplier = 1.0f)
         {
             _lastMouthSuctionTime = Time.time;
 
@@ -1032,6 +1040,7 @@ namespace Gameplay.Phantoms
                 ConeUp = coneUp,
                 ConeRight = coneRight,
                 DrainRate = drainAmount,
+                PullMultiplier = Mathf.Max(0.1f, pullMultiplier),
                 LastUpdateTime = Time.time
             };
 
@@ -1054,6 +1063,14 @@ namespace Gameplay.Phantoms
             {
                 TransitionToState(PhantomState.BeingVacuumed);
             }
+        }
+
+        /// <summary>
+        /// Description: Backward compatible overload for mouth suction application with netId.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(uint sourceNetId, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount)
+        {
+            OnMouthSuctionApplied(sourceNetId, nozzlePos, coneForward, coneUp, coneRight, drainAmount, 1.0f);
         }
 
         /// <summary>
