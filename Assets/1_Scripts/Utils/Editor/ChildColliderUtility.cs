@@ -74,7 +74,7 @@ namespace Utils.Editor
             return Selection.gameObjects != null && Selection.gameObjects.Length > 0;
         }
 
-        [MenuItem("GameObject/Colliders/Set Layer on Children > Ground", false, 35)]
+        [MenuItem("GameObject/Colliders/Set Layer/Ground", false, 35)]
         public static void QuickSetLayerGround()
         {
             int groundLayer = LayerMask.NameToLayer("Ground");
@@ -82,13 +82,13 @@ namespace Utils.Editor
             SetLayerOnSelectedChildren(groundLayer);
         }
 
-        [MenuItem("GameObject/Colliders/Set Layer on Children > Ground", true)]
+        [MenuItem("GameObject/Colliders/Set Layer/Ground", true)]
         private static bool ValidateQuickSetLayerGround()
         {
             return Selection.gameObjects != null && Selection.gameObjects.Length > 0;
         }
 
-        [MenuItem("GameObject/Colliders/Set Layer on Children > Obstacle", false, 36)]
+        [MenuItem("GameObject/Colliders/Set Layer/Obstacle", false, 36)]
         public static void QuickSetLayerObstacle()
         {
             int obstacleLayer = LayerMask.NameToLayer("Obstacle");
@@ -96,7 +96,7 @@ namespace Utils.Editor
             SetLayerOnSelectedChildren(obstacleLayer);
         }
 
-        [MenuItem("GameObject/Colliders/Set Layer on Children > Obstacle", true)]
+        [MenuItem("GameObject/Colliders/Set Layer/Obstacle", true)]
         private static bool ValidateQuickSetLayerObstacle()
         {
             return Selection.gameObjects != null && Selection.gameObjects.Length > 0;
