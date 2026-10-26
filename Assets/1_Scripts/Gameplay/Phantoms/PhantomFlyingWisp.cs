@@ -299,18 +299,38 @@ namespace Gameplay.Phantoms
                 Vector3 candidate = transform.position + randomOffset;
 
                 // Raycast downward from candidate to ensure it's not below ground or outside map
-                if (Physics.Raycast(candidate + Vector3.up * 3f, Vector3.down, out RaycastHit groundHit, 8f, _groundLayer, QueryTriggerInteraction.Ignore))
+                RaycastHit[] groundHits = Physics.RaycastAll(candidate + Vector3.up * 3f, Vector3.down, 8f, _groundLayer, QueryTriggerInteraction.Ignore);
+                if (groundHits != null && groundHits.Length > 0)
                 {
-                    candidate.y = groundHit.point.y + Random.Range(_minHoverAltitude, _maxHoverAltitude);
-
-                    // Check if candidate point is obstructed by a solid wall
-                    Vector3 travelRay = candidate - transform.position;
-                    if (!Physics.Raycast(transform.position, travelRay.normalized, travelRay.magnitude, _obstacleLayer, QueryTriggerInteraction.Ignore))
+                    System.Array.Sort(groundHits, (a, b) => a.distance.CompareTo(b.distance));
+                    for (int g = 0; g < groundHits.Length; g++)
                     {
-                        bestCandidate = candidate;
-                        candidateFound = true;
-                        break;
+                        if (groundHits[g].collider != null && !groundHits[g].collider.transform.IsChildOf(transform))
+                        {
+                            candidate.y = groundHits[g].point.y + Random.Range(_minHoverAltitude, _maxHoverAltitude);
+
+                            // Check if candidate point is obstructed by a solid wall
+                            Vector3 travelRay = candidate - transform.position;
+                            RaycastHit[] wallHits = Physics.RaycastAll(transform.position, travelRay.normalized, travelRay.magnitude, _obstacleLayer, QueryTriggerInteraction.Ignore);
+                            bool hasObstacle = false;
+                            for (int w = 0; w < wallHits.Length; w++)
+                            {
+                                if (wallHits[w].collider != null && !wallHits[w].collider.transform.IsChildOf(transform))
+                                {
+                                    hasObstacle = true;
+                                    break;
+                                }
+                            }
+
+                            if (!hasObstacle)
+                            {
+                                bestCandidate = candidate;
+                                candidateFound = true;
+                            }
+                            break;
+                        }
                     }
+                    if (candidateFound) break;
                 }
             }
 
@@ -494,9 +514,17 @@ namespace Gameplay.Phantoms
         /// </summary>
         private float CalculateTargetHeight()
         {
-            if (Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 10f, _groundLayer, QueryTriggerInteraction.Ignore))
+            RaycastHit[] hits = Physics.RaycastAll(transform.position + Vector3.up * 0.5f, Vector3.down, 10f, _groundLayer, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
             {
-                return hit.point.y + _targetHoverAltitude;
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    if (hits[i].collider != null && !hits[i].collider.transform.IsChildOf(transform))
+                    {
+                        return hits[i].point.y + _targetHoverAltitude;
+                    }
+                }
             }
 
             // If no ground detected immediately below, maintain current Y
@@ -527,10 +555,19 @@ namespace Gameplay.Phantoms
             for (int i = 0; i < feelerDirs.Length; i++)
             {
                 Vector3 dir = feelerDirs[i];
-                if (Physics.Raycast(transform.position, dir, out RaycastHit hit, _wallAvoidanceDistance, _obstacleLayer, QueryTriggerInteraction.Ignore))
+                RaycastHit[] hits = Physics.RaycastAll(transform.position, dir, _wallAvoidanceDistance, _obstacleLayer, QueryTriggerInteraction.Ignore);
+                if (hits != null && hits.Length > 0)
                 {
-                    float factor = 1.0f - (hit.distance / _wallAvoidanceDistance);
-                    avoidanceForce += hit.normal * factor;
+                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                    for (int h = 0; h < hits.Length; h++)
+                    {
+                        RaycastHit hit = hits[h];
+                        if (hit.collider == null || hit.collider.transform.IsChildOf(transform)) continue;
+
+                        float factor = 1.0f - (hit.distance / _wallAvoidanceDistance);
+                        avoidanceForce += hit.normal * factor;
+                        break;
+                    }
                 }
             }
 

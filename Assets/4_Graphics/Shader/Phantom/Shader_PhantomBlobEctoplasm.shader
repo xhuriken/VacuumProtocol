@@ -4,9 +4,9 @@ Shader "VacuumProtocol/PhantomBlobEctoplasm"
     {
         [Header(Gelatinous Blob Vertex Displacement)]
         _BlobAmplitude ("Wobble Amplitude", Range(0.0, 0.4)) = 0.07
-        _BlobFrequency ("Wobble Spatial Scale", Range(0.1, 10.0)) = 2.5
+        _BlobFrequency ("Wobble Spatial Scale", Range(0.1, 50.0)) = 2.5
         _BlobSpeed ("Wobble Speed", Range(0.0, 10.0)) = 2.2
-        _BlobSecondaryScale ("Micro Ripple Scale", Range(0.1, 25.0)) = 6.0
+        _BlobSecondaryScale ("Micro Ripple Scale", Range(0.1, 50.0)) = 6.0
         _BlobSecondaryAmp ("Micro Ripple Amplitude", Range(0.0, 0.15)) = 0.02
 
         [Header(Strong Fresnel Glow)]
@@ -17,7 +17,7 @@ Shader "VacuumProtocol/PhantomBlobEctoplasm"
 
         [Header(Interior 3D Voronoi Cellular Noise)]
         [HDR] _VoronoiColor ("Voronoi Cell Color (HDR)", Color) = (0.1, 0.5, 0.9, 1.0)
-        _VoronoiScale ("Voronoi Scale", Range(0.5, 20.0)) = 4.5
+        _VoronoiScale ("Voronoi Scale", Range(0.5, 2000.0)) = 4.5
         _VoronoiSpeed ("Voronoi Flow Speed", Range(0.0, 5.0)) = 0.7
         _VoronoiPower ("Voronoi Cell Contrast", Range(0.2, 5.0)) = 2.0
         _VoronoiInnerOpacity ("Voronoi Core Opacity", Range(0.0, 1.0)) = 0.45

@@ -395,13 +395,20 @@ namespace Gameplay.Phantoms
             float angle = Vector3.Angle(transform.forward, directionToPlayer.normalized);
             if (angle > _fieldOfViewAngle / 2f) return false;
 
-            // Line-of-sight raycast against obstacle layer
-            if (Physics.Raycast(eyeOrigin, directionToPlayer.normalized, out RaycastHit hit, distance, _obstacleLayer, QueryTriggerInteraction.Ignore))
+            // Line-of-sight raycast against obstacle layer (ignoring own body)
+            RaycastHit[] hits = Physics.RaycastAll(eyeOrigin, directionToPlayer.normalized, distance, _obstacleLayer, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
             {
-                // If the ray hit the player or their child colliders, it's not an obstruction
-                if (!hit.transform.IsChildOf(player.transform))
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                for (int i = 0; i < hits.Length; i++)
                 {
-                    // Blocked by an obstacle/wall!
+                    RaycastHit hit = hits[i];
+                    if (hit.transform == null) continue;
+                    if (hit.transform.IsChildOf(transform)) continue; // Ignore own colliders!
+                    if (hit.transform.IsChildOf(player.transform)) break; // Reached target player without obstacles!
+
+                    // Blocked by a real obstacle/wall between phantom and player
                     return false;
                 }
             }
@@ -1113,9 +1120,25 @@ namespace Gameplay.Phantoms
             {
                 Vector3 dir = candidateDirs[i];
 
-                bool hit = Physics.Raycast(origin, dir, out RaycastHit hitInfo, _escapeRayDistance, _obstacleLayer, QueryTriggerInteraction.Ignore);
-                float distance = hit ? hitInfo.distance : _escapeRayDistance;
-                Vector3 hitPoint = hit ? hitInfo.point : (origin + dir * _escapeRayDistance);
+                RaycastHit[] hits = Physics.RaycastAll(origin, dir, _escapeRayDistance, _obstacleLayer, QueryTriggerInteraction.Ignore);
+                bool hit = false;
+                float distance = _escapeRayDistance;
+                Vector3 hitPoint = origin + dir * _escapeRayDistance;
+
+                if (hits != null && hits.Length > 0)
+                {
+                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                    for (int h = 0; h < hits.Length; h++)
+                    {
+                        if (hits[h].transform != null && !hits[h].transform.IsChildOf(transform))
+                        {
+                            hit = true;
+                            distance = hits[h].distance;
+                            hitPoint = hits[h].point;
+                            break;
+                        }
+                    }
+                }
 
                 // Scoring formulation:
                 // 1. Base score = distance clearance (more open space = better)

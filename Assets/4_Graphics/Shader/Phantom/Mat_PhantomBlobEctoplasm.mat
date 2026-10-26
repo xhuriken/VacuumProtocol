@@ -41,23 +41,23 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.85
-    - _BlobAmplitude: 0.07
-    - _BlobFrequency: 2.5
-    - _BlobSecondaryAmp: 0.02
-    - _BlobSecondaryScale: 6
-    - _BlobSpeed: 2.2
+    - _Alpha: 1
+    - _BlobAmplitude: 0.0001
+    - _BlobFrequency: 50
+    - _BlobSecondaryAmp: 0.0005
+    - _BlobSecondaryScale: 50
+    - _BlobSpeed: 2
     - _Cull: 2
-    - _FresnelBias: 0.02
-    - _FresnelIntensity: 3
-    - _FresnelPower: 2.2
-    - _VoronoiInnerOpacity: 0.45
-    - _VoronoiPower: 2
-    - _VoronoiScale: 4.5
-    - _VoronoiSpeed: 0.7
+    - _FresnelBias: 0.014
+    - _FresnelIntensity: 2.8
+    - _FresnelPower: 0.9
+    - _VoronoiInnerOpacity: 0.39
+    - _VoronoiPower: 1.22
+    - _VoronoiScale: 814
+    - _VoronoiSpeed: 3.19
     m_Colors:
-    - _BaseColor: {r: 0.12, g: 0.45, b: 0.75, a: 0.35}
-    - _FresnelColor: {r: 0.3, g: 0.95, b: 1, a: 1}
+    - _BaseColor: {r: 2.327571, g: 0, b: 0, a: 0}
+    - _FresnelColor: {r: 0.97735846, g: 0.5071414, b: 0.020284778, a: 1}
     - _VoronoiColor: {r: 0.1, g: 0.5, b: 0.9, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
