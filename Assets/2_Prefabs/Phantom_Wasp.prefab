@@ -71,6 +71,7 @@ MonoBehaviour:
   _entityName: Phantom Wasp
   _priorityLevel: 3
   _lookAtPoint: {fileID: 2001000000000000010}
+  _visualMeshFilter: {fileID: 2001000000000000011}
   _fieldOfViewAngle: 135
   _detectionRadius: 12
   _loseTargetRadius: 18

@@ -94,6 +94,7 @@ MonoBehaviour:
   _entityName: Phantom
   _priorityLevel: 3
   _lookAtPoint: {fileID: 1531702295604455979}
+  _visualMeshFilter: {fileID: 8552447045329923954}
   _fieldOfViewAngle: 110
   _detectionRadius: 15
   _loseTargetRadius: 22

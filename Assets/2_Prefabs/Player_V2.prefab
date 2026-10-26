@@ -26617,16 +26617,13 @@ MonoBehaviour:
     BaseDrainRate: 10
     DrainMultiplier: 1
     SuctionPullMultiplier: 1
-    MaxLightningTethers: 4
-    TetherPoints: 24
-    BaseCoreWidth: 0.012
-    BaseAuraWidth: 0.026
-    LightningWidthMultiplier: 1
-    TetherBirthDuration: 0.2
-    TetherDeathDuration: 0.32
-    LightningJitter: 0.12
-    CrackleFrequency: 24
-    EnergyFlowSpeed: 4.5
+    EchoSpawnInterval: 0.055
+    EchoLifetime: 0.45
+    EchoPullSpeed: 7.5
+    EchoMinScaleRatio: 0.15
+    EchoFresnelPower: 2.5
+    EchoColor: {r: 0.25, g: 0.85, b: 1, a: 0.85}
+    MaxEchoPoolSize: 48
   _coneLength: 5.5
   _coneRadiusProfile:
     serializedVersion: 2
@@ -26683,7 +26680,7 @@ MonoBehaviour:
   _obstacleLayer:
     serializedVersion: 2
     m_Bits: 265
-  _lightningMaterial: {fileID: 2100000, guid: a0b1c850d2ec488e9e2ee7ee016e348f, type: 2}
+  _echoMaterial: {fileID: 2100000, guid: e1f8b449195b4528bc43f07a48d2fa91, type: 2}
   _suctionConeRenderer: {fileID: 6426735813776031197}
   _additionalConeRenderers:
   - {fileID: 3492194764150479775}

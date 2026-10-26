@@ -9,7 +9,7 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and metaphysical lightning visuals.
+/// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and ghost echo trail visuals.
 /// Context: Acts as the Single Source of Truth (SSOT) for item upgrades, perks, and gameplay balancing.
 /// </summary>
 [System.Serializable]
@@ -33,45 +33,36 @@ public class MouthVacuumStats
     [Tooltip("Multiplier applied to the physical pull velocity dragging phantoms towards the nozzle.")]
     public float SuctionPullMultiplier = 1.0f;
 
-    [Header("Metaphysical Lightning Tethers")]
-    [Tooltip("Maximum simultaneous electric tethers.")]
-    public int MaxLightningTethers = 4;
+    [Header("Phantom Suction Ghost Echoes (SSOT)")]
+    [Tooltip("Interval in seconds between ghost snapshots emitted per captured phantom.")]
+    public float EchoSpawnInterval = 0.055f;
 
-    [Tooltip("Number of tessellated points per filament arc.")]
-    public int TetherPoints = 24;
+    [Tooltip("Maximum lifetime in seconds for an individual ghost echo before despawning.")]
+    public float EchoLifetime = 0.45f;
 
-    [Tooltip("Base width of the hot central crackling core spine.")]
-    public float BaseCoreWidth = 0.012f;
+    [Tooltip("Velocity in meters per second pulling ghost echoes towards the mouth nozzle.")]
+    public float EchoPullSpeed = 7.5f;
 
-    [Tooltip("Base width of the swirling ethereal aura shroud.")]
-    public float BaseAuraWidth = 0.026f;
+    [Tooltip("Scale ratio when an echo reaches the mouth nozzle (e.g. 0.15 = shrinks down to 15% original scale).")]
+    [Range(0.01f, 0.5f)]
+    public float EchoMinScaleRatio = 0.15f;
 
-    [Tooltip("Multiplier applied by items/perks to lightning filament width.")]
-    public float LightningWidthMultiplier = 1.0f;
+    [Tooltip("Fresnel rim power for the ectoplasm ghost shader.")]
+    public float EchoFresnelPower = 2.5f;
 
-    [Header("Metaphysical Dynamics & Animation")]
-    [Tooltip("Duration in seconds for a newly struck tether to stretch from nozzle to ghost.")]
-    public float TetherBirthDuration = 0.20f;
+    [Tooltip("Base HDR tint color for the ectoplasmic suction echoes.")]
+    public Color EchoColor = new Color(0.25f, 0.85f, 1.0f, 0.85f);
 
-    [Tooltip("Duration in seconds for a severed tether to dissolve and fade away.")]
-    public float TetherDeathDuration = 0.32f;
-
-    [Tooltip("Lateral micro-displacement jitter for electric arcs.")]
-    public float LightningJitter = 0.12f;
-
-    [Tooltip("Frequency of lightning arc restructuring per second.")]
-    public float CrackleFrequency = 24.0f;
-
-    [Tooltip("Speed of ethereal plasma waves traveling backward along the tether into the mouth.")]
-    public float EnergyFlowSpeed = 4.5f;
+    [Tooltip("Maximum number of pre-allocated ghost echo objects in the pool.")]
+    public int MaxEchoPoolSize = 48;
 }
 
 /// <summary>
 /// Description: Dedicated mouth vacuum controller for absorbing spectral entities (Phantoms) via dual-click (IsVacuuming).
 /// Context: Attached to Player_V2. Activates only when both left and right clicks are held simultaneously.
-/// Justification: Decouples phantom capture from arm-based item/dust collection, keeping the mechanics clean, SSOT, and optimized.
+/// Justification: Decouples phantom capture from arm-based item/dust collection, keeping mechanics clean, SSOT, and optimized.
 /// Uses PhantomBase.ActivePhantoms registry for O(1) query performance without continuous Physics.OverlapSphere allocations.
-/// Features dual-filament metaphysical lightning tethers with progressive birth/death animations and backward energy suction flow.
+/// Features high-performance pooled ghost afterimages (Fresnel echoes) that stream into the mouth nozzle while shrinking and dissolving.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
 [RequireComponent(typeof(PlayerV2_Controller))]
@@ -93,9 +84,9 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [Tooltip("Role: Layers that block mouth line-of-sight (walls, obstacles, ground).")]
     [SerializeField] private LayerMask _obstacleLayer;
 
-    [Header("Subliminal Lightning Tethers")]
-    [Tooltip("Role: Additive electric material for the subliminal vortex lightning arcs.")]
-    [SerializeField] private Material _lightningMaterial;
+    [Header("Phantom Ghost Echoes Visuals")]
+    [Tooltip("Role: Additive Fresnel material used for phantom ghost snapshots.")]
+    [SerializeField] private Material _echoMaterial;
 
     [Header("Suction Visuals")]
     [Tooltip("Role: Renderer of the 3D suction cone displaying the distortion material.")]
@@ -135,36 +126,32 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private static readonly int PropVacuumTint = Shader.PropertyToID("_VacuumTint");
     private static readonly int PropDistortionStrength = Shader.PropertyToID("_DistortionStrength");
 
+    private static readonly int PropEchoAlpha = Shader.PropertyToID("_Alpha");
+    private static readonly int PropEchoColor = Shader.PropertyToID("_Color");
+    private static readonly int PropEchoFresnel = Shader.PropertyToID("_FresnelPower");
+
     /// <summary>
-    /// Description: Internal wrapper representing a dual-filament metaphysical lightning tether.
-    /// Manages progressive strike (birth) and dissolve (death) animations with zero GC allocations per frame.
+    /// Description: Internal pooled entity representing a phantom snapshot afterimage streaming towards the nozzle.
+    /// Operates with zero per-frame GC allocations through shared MeshFilter reassignment and MaterialPropertyBlocks.
     /// </summary>
-    private class MetaphysicalLightningTether
+    private class PhantomSuctionEcho
     {
-        public GameObject RootObject;
-        public LineRenderer CoreLine;
-        public LineRenderer AuraLine;
-
-        public PhantomBase BoundPhantom;
-        public Vector3 LastKnownTargetPos;
-
-        // ManifestProgress: 0f = fully inactive, 1f = fully struck/manifested
-        public float ManifestProgress;
-        public float PhaseOffset;
-
-        public Vector3[] CoreBuffer;
-        public Vector3[] AuraBuffer;
-
-        public Gradient CoreGradient = new Gradient();
-        public Gradient AuraGradient = new Gradient();
-
-        public GradientColorKey[] CoreColorKeys;
-        public GradientAlphaKey[] CoreAlphaKeys;
-        public GradientColorKey[] AuraColorKeys;
-        public GradientAlphaKey[] AuraAlphaKeys;
+        public GameObject GameObject;
+        public Transform Transform;
+        public MeshFilter MeshFilter;
+        public MeshRenderer Renderer;
+        public bool IsActive;
+        public float Age;
+        public float MaxLifetime;
+        public Vector3 InitialScale;
+        public float InitialDistanceToNozzle;
     }
 
-    private MetaphysicalLightningTether[] _tethers;
+    private GameObject _echoPoolRoot;
+    private PhantomSuctionEcho[] _echoPool;
+    private int _nextEchoPoolIndex = 0;
+    private MaterialPropertyBlock _echoMpb;
+    private readonly Dictionary<PhantomBase, float> _phantomEchoTimers = new Dictionary<PhantomBase, float>();
     private readonly List<PhantomBase> _activeCapturedPhantoms = new List<PhantomBase>();
 
     #region Public Upgrade & Inspection API
@@ -219,17 +206,31 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Multiplies width of metaphysical lightning filaments.
+    /// Description: Updates snapshot spawn frequency per captured phantom.
     /// </summary>
-    public void SetLightningWidthMultiplier(float multiplier)
+    public void SetEchoSpawnInterval(float interval)
     {
-        if (multiplier < 0.1f)
+        if (interval < 0.01f)
         {
-            Debug.LogError($"[PlayerMouthVacuum] Invalid LightningWidthMultiplier: {multiplier}. Value must be >= 0.1.", this);
+            Debug.LogError($"[PlayerMouthVacuum] Invalid EchoSpawnInterval: {interval}. Value must be >= 0.01.", this);
             return;
         }
 
-        _stats.LightningWidthMultiplier = multiplier;
+        _stats.EchoSpawnInterval = interval;
+    }
+
+    /// <summary>
+    /// Description: Updates velocity dragging ghost snapshots into the mouth nozzle.
+    /// </summary>
+    public void SetEchoPullSpeed(float speed)
+    {
+        if (speed < 0.1f)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] Invalid EchoPullSpeed: {speed}. Value must be >= 0.1.", this);
+            return;
+        }
+
+        _stats.EchoPullSpeed = speed;
     }
 
     #endregion
@@ -264,7 +265,16 @@ public class PlayerMouthVacuum : NetworkBehaviour
         }
 
         InitSuctionVisuals();
-        InitLightningTethers();
+        InitEchoPool();
+    }
+
+    private void OnDestroy()
+    {
+        if (_echoPoolRoot != null)
+        {
+            Destroy(_echoPoolRoot);
+            _echoPoolRoot = null;
+        }
     }
 
     /// <summary>
@@ -345,6 +355,66 @@ public class PlayerMouthVacuum : NetworkBehaviour
         ApplyVisualProperties(0f);
     }
 
+    /// <summary>
+    /// Description: Pre-allocates and initializes the pool of ghost echo entities with zero runtime allocations.
+    /// Fails loudly if ghost echo material cannot be resolved.
+    /// </summary>
+    private void InitEchoPool()
+    {
+        if (_echoMaterial == null)
+        {
+            _echoMaterial = Resources.Load<Material>("Mat_PhantomSuctionEcho");
+#if UNITY_EDITOR
+            if (_echoMaterial == null)
+            {
+                _echoMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/4_Graphics/Shader/Player/Mat_PhantomSuctionEcho.mat");
+            }
+#endif
+        }
+
+        if (_echoMaterial == null)
+        {
+            Debug.LogError($"[PlayerMouthVacuum] '_echoMaterial' could not be found or loaded! Assign Mat_PhantomSuctionEcho on '{gameObject.name}'. Fail loudly per workspace rules.", this);
+            return;
+        }
+
+        _echoMpb = new MaterialPropertyBlock();
+        int poolSize = Mathf.Max(8, _stats.MaxEchoPoolSize);
+        _echoPool = new PhantomSuctionEcho[poolSize];
+
+        // Root kept in world space so snapshots maintain accurate spatial orientations independent of camera/player rotation
+        _echoPoolRoot = new GameObject($"SuctionEchoPool_{gameObject.name}");
+
+        for (int i = 0; i < poolSize; i++)
+        {
+            GameObject echoObj = new GameObject($"GhostEcho_{i}");
+            echoObj.transform.SetParent(_echoPoolRoot.transform, false);
+
+            MeshFilter mf = echoObj.AddComponent<MeshFilter>();
+            MeshRenderer mr = echoObj.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = _echoMaterial;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+            echoObj.SetActive(false);
+
+            _echoPool[i] = new PhantomSuctionEcho
+            {
+                GameObject = echoObj,
+                Transform = echoObj.transform,
+                MeshFilter = mf,
+                Renderer = mr,
+                IsActive = false,
+                Age = 0f,
+                MaxLifetime = _stats.EchoLifetime,
+                InitialScale = Vector3.one,
+                InitialDistanceToNozzle = 1f
+            };
+        }
+    }
+
     private void UpdateConeVisualScale()
     {
         if (_suctionConeRenderer != null)
@@ -386,6 +456,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private void Update()
     {
         UpdateVisuals();
+        UpdateSuctionEchoes();
 
         if (!isLocalPlayer || _input == null) return;
 
@@ -403,8 +474,14 @@ public class PlayerMouthVacuum : NetworkBehaviour
         }
         else
         {
-            _activeCapturedPhantoms.Clear();
-            UpdateLightningTethers();
+            if (_activeCapturedPhantoms.Count > 0)
+            {
+                _activeCapturedPhantoms.Clear();
+            }
+            if (_phantomEchoTimers.Count > 0)
+            {
+                _phantomEchoTimers.Clear();
+            }
         }
     }
 
@@ -500,129 +577,6 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Initializes dual-filament metaphysical lightning tether units.
-    /// Each unit contains a hot-crackling Core spine and a soft-swirling Ethereal Aura shroud.
-    /// Fails loudly if electric material cannot be loaded.
-    /// </summary>
-    private void InitLightningTethers()
-    {
-        if (_lightningMaterial == null)
-        {
-            _lightningMaterial = Resources.Load<Material>("Mat_SuctionLightning");
-#if UNITY_EDITOR
-            if (_lightningMaterial == null)
-            {
-                _lightningMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/4_Graphics/Shader/Player/Mat_SuctionLightning.mat");
-            }
-#endif
-        }
-
-        if (_lightningMaterial == null)
-        {
-            Debug.LogError($"[PlayerMouthVacuum] '_lightningMaterial' could not be found or loaded! Assign Mat_SuctionLightning in the inspector on '{gameObject.name}'.", this);
-            return;
-        }
-
-        Transform root = _suctionConeRenderer != null ? _suctionConeRenderer.transform : transform;
-        int count = Mathf.Max(1, _stats.MaxLightningTethers);
-        int points = Mathf.Max(4, _stats.TetherPoints);
-
-        _tethers = new MetaphysicalLightningTether[count];
-
-        AnimationCurve coreWidthCurve = new AnimationCurve(
-            new Keyframe(0.0f, 0.45f, 0f, 1.5f),
-            new Keyframe(0.5f, 1.0f, 0f, 0f),
-            new Keyframe(1.0f, 0.60f, -1.2f, 0f)
-        );
-
-        AnimationCurve auraWidthCurve = new AnimationCurve(
-            new Keyframe(0.0f, 0.35f, 0f, 1.8f),
-            new Keyframe(0.45f, 1.0f, 0f, 0f),
-            new Keyframe(1.0f, 0.50f, -1.5f, 0f)
-        );
-
-        for (int i = 0; i < count; i++)
-        {
-            GameObject tetherRoot = new GameObject($"MetaphysicalTether_{i}");
-            tetherRoot.transform.SetParent(root, false);
-
-            // 1. Hot crackling core spine
-            GameObject coreObj = new GameObject("CoreSpine");
-            coreObj.transform.SetParent(tetherRoot.transform, false);
-            LineRenderer coreLr = coreObj.AddComponent<LineRenderer>();
-            coreLr.positionCount = points;
-            coreLr.widthCurve = coreWidthCurve;
-            coreLr.widthMultiplier = _stats.BaseCoreWidth;
-            coreLr.material = _lightningMaterial;
-            coreLr.useWorldSpace = true;
-            coreLr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            coreLr.receiveShadows = false;
-            coreLr.enabled = false;
-
-            // 2. Soft ethereal swirling aura shroud
-            GameObject auraObj = new GameObject("EtherealAura");
-            auraObj.transform.SetParent(tetherRoot.transform, false);
-            LineRenderer auraLr = auraObj.AddComponent<LineRenderer>();
-            auraLr.positionCount = points;
-            auraLr.widthCurve = auraWidthCurve;
-            auraLr.widthMultiplier = _stats.BaseAuraWidth;
-            auraLr.material = _lightningMaterial;
-            auraLr.useWorldSpace = true;
-            auraLr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            auraLr.receiveShadows = false;
-            auraLr.enabled = false;
-
-            MetaphysicalLightningTether tether = new MetaphysicalLightningTether
-            {
-                RootObject = tetherRoot,
-                CoreLine = coreLr,
-                AuraLine = auraLr,
-                CoreBuffer = new Vector3[points],
-                AuraBuffer = new Vector3[points],
-                PhaseOffset = i * (Mathf.PI * 2f / count),
-                ManifestProgress = 0f,
-                BoundPhantom = null,
-                LastKnownTargetPos = Vector3.zero,
-                CoreColorKeys = new GradientColorKey[]
-                {
-                    new GradientColorKey(new Color(0.4f, 0.9f, 1f), 0.0f),
-                    new GradientColorKey(Color.white, 0.25f),
-                    new GradientColorKey(Color.white, 0.75f),
-                    new GradientColorKey(new Color(0.35f, 0.85f, 1f), 1.0f)
-                },
-                CoreAlphaKeys = new GradientAlphaKey[]
-                {
-                    new GradientAlphaKey(0.0f, 0.0f),
-                    new GradientAlphaKey(1.0f, 0.08f),
-                    new GradientAlphaKey(1.0f, 0.92f),
-                    new GradientAlphaKey(0.5f, 1.0f)
-                },
-                AuraColorKeys = new GradientColorKey[]
-                {
-                    new GradientColorKey(new Color(0.1f, 0.65f, 1f), 0.0f),
-                    new GradientColorKey(new Color(0.2f, 0.85f, 1f), 0.5f),
-                    new GradientColorKey(new Color(0.5f, 0.3f, 1f), 1.0f)
-                },
-                AuraAlphaKeys = new GradientAlphaKey[]
-                {
-                    new GradientAlphaKey(0.0f, 0.0f),
-                    new GradientAlphaKey(0.40f, 0.20f),
-                    new GradientAlphaKey(0.40f, 0.80f),
-                    new GradientAlphaKey(0.15f, 1.0f)
-                }
-            };
-
-            tether.CoreGradient.SetKeys(tether.CoreColorKeys, tether.CoreAlphaKeys);
-            tether.AuraGradient.SetKeys(tether.AuraColorKeys, tether.AuraAlphaKeys);
-
-            coreLr.colorGradient = tether.CoreGradient;
-            auraLr.colorGradient = tether.AuraGradient;
-
-            _tethers[i] = tether;
-        }
-    }
-
-    /// <summary>
     /// Description: Tests whether a world-space point is inside the suction cone mesh.
     /// Accounts for upgradable ConeSizeMultiplier.
     /// </summary>
@@ -650,6 +604,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     /// <summary>
     /// Description: Scans all active phantoms and applies suction and drain to those within the mouth cone.
+    /// Emits ghost snapshots for captured phantoms based on EchoSpawnInterval.
     /// </summary>
     private void ProcessMouthSuction()
     {
@@ -702,10 +657,15 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 // Apply instant client-side prediction and authoritative server command
                 phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
                 CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
+
+                // 3. Emit phantom suction ghost snapshots (Fresnel echo trail)
+                if (!_phantomEchoTimers.TryGetValue(phantom, out float nextEchoTime) || Time.time >= nextEchoTime)
+                {
+                    SpawnEchoSnapshot(phantom, nozzleOrigin);
+                    _phantomEchoTimers[phantom] = Time.time + _stats.EchoSpawnInterval;
+                }
             }
         }
-
-        UpdateLightningTethers();
     }
 
     [Command]
@@ -720,165 +680,120 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Updates subliminal lightning arcs connecting the mouth nozzle to captured phantoms.
-    /// Manages progressive strike (birth) and dissolve (death) animations with zero GC allocations.
-    /// Features discrete stepped crackle for the core spine and continuous backward helical flow for the ethereal aura.
+    /// Description: Spawns an animated snapshot clone of the captured phantom using its exact mesh and transform.
+    /// Reuses pooled items with zero runtime instantiate/destroy calls.
     /// </summary>
-    private void UpdateLightningTethers()
+    private void SpawnEchoSnapshot(PhantomBase phantom, Vector3 nozzlePos)
     {
-        if (_tethers == null || _tethers.Length == 0 || _suctionConeRenderer == null) return;
+        if (_echoPool == null || _echoPool.Length == 0 || phantom == null) return;
 
-        Transform coneT = _suctionConeRenderer.transform;
-        Vector3 nozzlePos = coneT.position;
-        Vector3 coneForward = coneT.forward;
-        Vector3 coneUp = coneT.up;
-        Vector3 coneRight = coneT.right;
-
-        // 1. Tether assignment & tracking
-        // Mark currently active targets
-        for (int i = 0; i < _tethers.Length; i++)
+        MeshFilter pMeshFilter = phantom.VisualMeshFilter;
+        if (pMeshFilter == null || pMeshFilter.sharedMesh == null)
         {
-            MetaphysicalLightningTether tether = _tethers[i];
-            if (tether == null) continue;
+            Debug.LogError($"[PlayerMouthVacuum] Cannot spawn ghost echo: Phantom '{phantom.name}' has no valid VisualMeshFilter or sharedMesh! Fail loudly per workspace rules.", phantom);
+            return;
+        }
 
-            if (tether.BoundPhantom != null)
+        // Find next available slot or recycle oldest via circular index
+        PhantomSuctionEcho echo = null;
+        int poolSize = _echoPool.Length;
+        for (int i = 0; i < poolSize; i++)
+        {
+            int index = (_nextEchoPoolIndex + i) % poolSize;
+            if (!_echoPool[index].IsActive)
             {
-                if (!_activeCapturedPhantoms.Contains(tether.BoundPhantom) || !tether.BoundPhantom.gameObject.activeInHierarchy)
-                {
-                    // Target lost or escaped: begin progressive dissolution
-                    tether.BoundPhantom = null;
-                }
+                echo = _echoPool[index];
+                _nextEchoPoolIndex = (index + 1) % poolSize;
+                break;
             }
         }
 
-        // Assign unassigned captured phantoms to available tether slots
-        for (int p = 0; p < _activeCapturedPhantoms.Count; p++)
+        if (echo == null)
         {
-            PhantomBase phantom = _activeCapturedPhantoms[p];
-            if (phantom == null) continue;
-
-            bool alreadyBound = false;
-            for (int i = 0; i < _tethers.Length; i++)
-            {
-                if (_tethers[i] != null && _tethers[i].BoundPhantom == phantom)
-                {
-                    alreadyBound = true;
-                    break;
-                }
-            }
-
-            if (!alreadyBound)
-            {
-                // Find best slot: first unassigned slot, prioritizing lowest ManifestProgress
-                MetaphysicalLightningTether bestSlot = null;
-                float lowestProgress = float.MaxValue;
-                for (int i = 0; i < _tethers.Length; i++)
-                {
-                    MetaphysicalLightningTether t = _tethers[i];
-                    if (t != null && t.BoundPhantom == null && t.ManifestProgress < lowestProgress)
-                    {
-                        lowestProgress = t.ManifestProgress;
-                        bestSlot = t;
-                    }
-                }
-
-                if (bestSlot != null)
-                {
-                    bestSlot.BoundPhantom = phantom;
-                    Vector3 targetPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
-                    bestSlot.LastKnownTargetPos = targetPos;
-                }
-            }
+            echo = _echoPool[_nextEchoPoolIndex];
+            _nextEchoPoolIndex = (_nextEchoPoolIndex + 1) % poolSize;
         }
 
-        // 2. Animate and tessellate each tether
-        float steppedTime = Mathf.Floor(Time.time * _stats.CrackleFrequency);
-        float timeFlow = Time.time * _stats.EnergyFlowSpeed;
+        Transform pT = pMeshFilter.transform;
+        echo.MeshFilter.sharedMesh = pMeshFilter.sharedMesh;
+        echo.Transform.position = pT.position;
+        echo.Transform.rotation = pT.rotation;
+        echo.Transform.localScale = pT.lossyScale;
 
-        for (int i = 0; i < _tethers.Length; i++)
+        echo.InitialScale = pT.lossyScale;
+        echo.InitialDistanceToNozzle = Mathf.Max(0.2f, Vector3.Distance(pT.position, nozzlePos));
+        echo.Age = 0f;
+        echo.MaxLifetime = _stats.EchoLifetime;
+        echo.IsActive = true;
+
+        // Initialize MaterialPropertyBlock
+        echo.Renderer.GetPropertyBlock(_echoMpb);
+        _echoMpb.SetFloat(PropEchoAlpha, 1.0f);
+        _echoMpb.SetColor(PropEchoColor, _stats.EchoColor);
+        _echoMpb.SetFloat(PropEchoFresnel, _stats.EchoFresnelPower);
+        echo.Renderer.SetPropertyBlock(_echoMpb);
+
+        if (!echo.GameObject.activeSelf)
         {
-            MetaphysicalLightningTether tether = _tethers[i];
-            if (tether == null) continue;
+            echo.GameObject.SetActive(true);
+        }
+    }
 
-            // Progressive Birth or Dissolve animation step
-            if (tether.BoundPhantom != null)
-            {
-                float birthStep = Time.deltaTime / Mathf.Max(0.01f, _stats.TetherBirthDuration);
-                tether.ManifestProgress = Mathf.MoveTowards(tether.ManifestProgress, 1f, birthStep);
+    /// <summary>
+    /// Description: Updates all active ghost afterimages, animating their movement towards the mouth nozzle,
+    /// progressively shrinking their scale and dissolving their alpha.
+    /// </summary>
+    private void UpdateSuctionEchoes()
+    {
+        if (_echoPool == null || _echoPool.Length == 0 || _suctionConeRenderer == null) return;
 
-                Vector3 targetPos = tether.BoundPhantom.LookAtPoint != null
-                    ? tether.BoundPhantom.LookAtPoint.position
-                    : tether.BoundPhantom.transform.position;
-                tether.LastKnownTargetPos = targetPos;
-            }
-            else
-            {
-                float deathStep = Time.deltaTime / Mathf.Max(0.01f, _stats.TetherDeathDuration);
-                tether.ManifestProgress = Mathf.MoveTowards(tether.ManifestProgress, 0f, deathStep);
-            }
+        Vector3 nozzlePos = _suctionConeRenderer.transform.position;
+        float dt = Time.deltaTime;
 
-            if (tether.ManifestProgress <= 0.0001f)
+        for (int i = 0; i < _echoPool.Length; i++)
+        {
+            PhantomSuctionEcho echo = _echoPool[i];
+            if (echo == null || !echo.IsActive) continue;
+
+            echo.Age += dt;
+            float lifeProgress = Mathf.Clamp01(echo.Age / Mathf.Max(0.01f, echo.MaxLifetime));
+
+            // Pull towards the mouth nozzle
+            echo.Transform.position = Vector3.MoveTowards(echo.Transform.position, nozzlePos, _stats.EchoPullSpeed * dt);
+            float currentDist = Vector3.Distance(echo.Transform.position, nozzlePos);
+
+            // Reached nozzle or lifetime expired -> recycle to pool
+            if (currentDist <= 0.15f || echo.Age >= echo.MaxLifetime)
             {
-                if (tether.CoreLine.enabled) tether.CoreLine.enabled = false;
-                if (tether.AuraLine.enabled) tether.AuraLine.enabled = false;
+                DespawnEcho(echo);
                 continue;
             }
 
-            if (!tether.CoreLine.enabled) tether.CoreLine.enabled = true;
-            if (!tether.AuraLine.enabled) tether.AuraLine.enabled = true;
+            // Progression along the suction path into the mouth
+            float distProgress = 1f - Mathf.Clamp01(currentDist / Mathf.Max(0.01f, echo.InitialDistanceToNozzle));
+            float shrinkProgress = Mathf.Max(distProgress, lifeProgress);
 
-            // Progressive strike reach (bolt extends from nozzle towards ghost on birth)
-            float strikeReach = Mathf.Clamp01(tether.ManifestProgress * 1.5f);
-            Vector3 currentHeadPos = Vector3.Lerp(nozzlePos, tether.LastKnownTargetPos, strikeReach);
+            // Animate scale shrinking as it gets closer to the nozzle
+            echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, shrinkProgress);
 
-            // Dynamic width scaling with manifest progress and item multiplier
-            float effectiveCoreWidth = _stats.BaseCoreWidth * _stats.LightningWidthMultiplier * Mathf.SmoothStep(0.2f, 1f, tether.ManifestProgress);
-            float effectiveAuraWidth = _stats.BaseAuraWidth * _stats.LightningWidthMultiplier * Mathf.SmoothStep(0.1f, 1f, tether.ManifestProgress);
+            // Animate progressive alpha dissolve closer to the mouth nozzle
+            float alpha = (1f - distProgress) * (1f - lifeProgress);
 
-            tether.CoreLine.widthMultiplier = effectiveCoreWidth;
-            tether.AuraLine.widthMultiplier = effectiveAuraWidth;
+            echo.Renderer.GetPropertyBlock(_echoMpb);
+            _echoMpb.SetFloat(PropEchoAlpha, alpha);
+            _echoMpb.SetColor(PropEchoColor, _stats.EchoColor);
+            _echoMpb.SetFloat(PropEchoFresnel, _stats.EchoFresnelPower);
+            echo.Renderer.SetPropertyBlock(_echoMpb);
+        }
+    }
 
-            // Update alpha gradient keys
-            tether.CoreAlphaKeys[1].alpha = 1.0f * tether.ManifestProgress;
-            tether.CoreAlphaKeys[2].alpha = 1.0f * tether.ManifestProgress;
-            tether.CoreAlphaKeys[3].alpha = 0.5f * tether.ManifestProgress;
-            tether.CoreGradient.SetKeys(tether.CoreColorKeys, tether.CoreAlphaKeys);
-            tether.CoreLine.colorGradient = tether.CoreGradient;
-
-            tether.AuraAlphaKeys[1].alpha = 0.40f * tether.ManifestProgress;
-            tether.AuraAlphaKeys[2].alpha = 0.40f * tether.ManifestProgress;
-            tether.AuraAlphaKeys[3].alpha = 0.15f * tether.ManifestProgress;
-            tether.AuraGradient.SetKeys(tether.AuraColorKeys, tether.AuraAlphaKeys);
-            tether.AuraLine.colorGradient = tether.AuraGradient;
-
-            int points = tether.CoreBuffer.Length;
-            for (int p = 0; p < points; p++)
-            {
-                float t = (float)p / (points - 1);
-                Vector3 basePt = Vector3.Lerp(nozzlePos, currentHeadPos, t);
-
-                // Vortex centripetal pull towards central cone axis
-                float axialDist = Vector3.Dot(basePt - nozzlePos, coneForward);
-                Vector3 axisPt = nozzlePos + coneForward * axialDist;
-                basePt = Vector3.Lerp(axisPt, basePt, Mathf.SmoothStep(0.15f, 1f, t));
-
-                // Hot core stepped high-voltage crackle
-                float envelope = Mathf.Sin(t * Mathf.PI);
-                float crackleSeed = steppedTime * 19.37f + p * 7.19f + i * 41.53f;
-                Vector3 crackleOffset = (coneRight * Mathf.Sin(crackleSeed) + coneUp * Mathf.Cos(crackleSeed * 1.37f)) * (_stats.LightningJitter * envelope);
-                Vector3 corePt = basePt + crackleOffset;
-                tether.CoreBuffer[p] = corePt;
-
-                // Ethereal aura continuous backward helical suction flow
-                // Minus sign (- timeFlow) causes energy waves to travel backwards towards the mouth nozzle
-                float auraPhase = t * 6.0f * Mathf.PI - timeFlow + tether.PhaseOffset;
-                float auraRadius = 0.065f * envelope * _stats.LightningWidthMultiplier;
-                Vector3 auraOffset = (coneRight * Mathf.Cos(auraPhase) + coneUp * Mathf.Sin(auraPhase)) * auraRadius;
-                tether.AuraBuffer[p] = corePt + auraOffset;
-            }
-
-            tether.CoreLine.SetPositions(tether.CoreBuffer);
-            tether.AuraLine.SetPositions(tether.AuraBuffer);
+    private void DespawnEcho(PhantomSuctionEcho echo)
+    {
+        if (echo == null) return;
+        echo.IsActive = false;
+        if (echo.GameObject.activeSelf)
+        {
+            echo.GameObject.SetActive(false);
         }
     }
 

@@ -85,6 +85,24 @@ namespace Gameplay.Phantoms
         public Transform LookAtPoint => _lookAtPoint != null ? _lookAtPoint : transform;
         #endregion
 
+        #region Visual Mesh Settings
+        [Header("Visual Mesh Settings")]
+        [Tooltip("Role: The primary visual MeshFilter used for rendering and suction ghost echoes.\nUse Case: Captured by mouth vacuum to spawn Fresnel afterimage clones.\nJustification: Fast SSOT reference avoiding runtime GetComponent searches during high-speed vacuum gameplay.")]
+        [SerializeField] private MeshFilter _visualMeshFilter;
+
+        public MeshFilter VisualMeshFilter
+        {
+            get
+            {
+                if (_visualMeshFilter == null)
+                {
+                    _visualMeshFilter = GetComponentInChildren<MeshFilter>();
+                }
+                return _visualMeshFilter;
+            }
+        }
+        #endregion
+
         #region Vision & Detection Settings
         [Header("Vision & Field of View")]
         [Tooltip("Role: Horizontal field of view angle in degrees.\nUse Case: Players outside this cone cannot be seen.")]
@@ -309,6 +327,11 @@ namespace Gameplay.Phantoms
             if (_lookAtPoint == null)
             {
                 Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' is missing a '_lookAtPoint' assignment! Please set it on the prefab to satisfy IEntity requirements. Fail loudly per workspace rules.");
+            }
+
+            if (VisualMeshFilter == null)
+            {
+                Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' has no MeshFilter in children for suction ghost echoes! Fail loudly per workspace rules.", this);
             }
 
             // Default obstacle layer mask if unassigned in inspector
