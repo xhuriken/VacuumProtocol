@@ -9,7 +9,7 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and ghost echo trail visuals.
+/// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and ghost echo stream visuals.
 /// Context: Acts as the Single Source of Truth (SSOT) for item upgrades, perks, and gameplay balancing.
 /// </summary>
 [System.Serializable]
@@ -33,28 +33,29 @@ public class MouthVacuumStats
     [Tooltip("Multiplier applied to the physical pull velocity dragging phantoms towards the nozzle.")]
     public float SuctionPullMultiplier = 1.0f;
 
-    [Header("Phantom Suction Ghost Echoes (SSOT)")]
-    [Tooltip("Interval in seconds between ghost snapshots emitted per captured phantom.")]
-    public float EchoSpawnInterval = 0.055f;
+    [Header("Phantom Suction Ghost Echoes Stream (SSOT)")]
+    [Tooltip("Interval in seconds between ghost snapshots emitted along the stream per captured phantom.")]
+    public float EchoSpawnInterval = 0.032f;
 
-    [Tooltip("Maximum lifetime in seconds for an individual ghost echo before despawning.")]
-    public float EchoLifetime = 0.45f;
+    [Tooltip("Speed in meters per second at which ghost echoes flow along the stream into the mouth nozzle.")]
+    public float EchoFlowSpeed = 8.5f;
 
-    [Tooltip("Velocity in meters per second pulling ghost echoes towards the mouth nozzle.")]
-    public float EchoPullSpeed = 7.5f;
-
-    [Tooltip("Scale ratio when an echo reaches the mouth nozzle (e.g. 0.15 = shrinks down to 15% original scale).")]
+    [Tooltip("Scale ratio when an echo reaches the mouth nozzle (e.g. 0.12 = shrinks down to 12% original scale).")]
     [Range(0.01f, 0.5f)]
-    public float EchoMinScaleRatio = 0.15f;
+    public float EchoMinScaleRatio = 0.12f;
+
+    [Tooltip("Curvature pull factor bending the stream towards the central cone vortex axis (0 = straight line, 0.5 = curved).")]
+    [Range(0f, 0.8f)]
+    public float EchoCenteringInfluence = 0.22f;
 
     [Tooltip("Fresnel rim power for the ectoplasm ghost shader.")]
-    public float EchoFresnelPower = 2.5f;
+    public float EchoFresnelPower = 2.2f;
 
     [Tooltip("Base HDR tint color for the ectoplasmic suction echoes.")]
-    public Color EchoColor = new Color(0.25f, 0.85f, 1.0f, 0.85f);
+    public Color EchoColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
 
     [Tooltip("Maximum number of pre-allocated ghost echo objects in the pool.")]
-    public int MaxEchoPoolSize = 48;
+    public int MaxEchoPoolSize = 64;
 }
 
 /// <summary>
@@ -62,7 +63,8 @@ public class MouthVacuumStats
 /// Context: Attached to Player_V2. Activates only when both left and right clicks are held simultaneously.
 /// Justification: Decouples phantom capture from arm-based item/dust collection, keeping mechanics clean, SSOT, and optimized.
 /// Uses PhantomBase.ActivePhantoms registry for O(1) query performance without continuous Physics.OverlapSphere allocations.
-/// Features high-performance pooled ghost afterimages (Fresnel echoes) that stream into the mouth nozzle while shrinking and dissolving.
+/// Features high-performance pooled ghost afterimages (Fresnel echoes) that stream in a tight single-file procession ("file indienne")
+/// between the captured phantom and the mouth nozzle, shrinking and dissolving as they enter the nozzle.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
 [RequireComponent(typeof(PlayerV2_Controller))]
@@ -131,7 +133,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private static readonly int PropEchoFresnel = Shader.PropertyToID("_FresnelPower");
 
     /// <summary>
-    /// Description: Internal pooled entity representing a phantom snapshot afterimage streaming towards the nozzle.
+    /// Description: Internal pooled entity representing a phantom snapshot afterimage streaming along the suction cord.
     /// Operates with zero per-frame GC allocations through shared MeshFilter reassignment and MaterialPropertyBlocks.
     /// </summary>
     private class PhantomSuctionEcho
@@ -141,10 +143,12 @@ public class PlayerMouthVacuum : NetworkBehaviour
         public MeshFilter MeshFilter;
         public MeshRenderer Renderer;
         public bool IsActive;
-        public float Age;
-        public float MaxLifetime;
+
+        public PhantomBase BoundPhantom;
+        public Vector3 LastKnownPhantomPos;
+        public Quaternion InitialRotation;
         public Vector3 InitialScale;
-        public float InitialDistanceToNozzle;
+        public float Progress; // Normalized progress along stream: 0 at phantom -> 1 at mouth nozzle
     }
 
     private GameObject _echoPoolRoot;
@@ -220,17 +224,17 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Updates velocity dragging ghost snapshots into the mouth nozzle.
+    /// Description: Updates speed of ghost snapshots flowing along the stream into the mouth nozzle.
     /// </summary>
-    public void SetEchoPullSpeed(float speed)
+    public void SetEchoFlowSpeed(float speed)
     {
         if (speed < 0.1f)
         {
-            Debug.LogError($"[PlayerMouthVacuum] Invalid EchoPullSpeed: {speed}. Value must be >= 0.1.", this);
+            Debug.LogError($"[PlayerMouthVacuum] Invalid EchoFlowSpeed: {speed}. Value must be >= 0.1.", this);
             return;
         }
 
-        _stats.EchoPullSpeed = speed;
+        _stats.EchoFlowSpeed = speed;
     }
 
     #endregion
@@ -407,10 +411,11 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 MeshFilter = mf,
                 Renderer = mr,
                 IsActive = false,
-                Age = 0f,
-                MaxLifetime = _stats.EchoLifetime,
+                BoundPhantom = null,
+                LastKnownPhantomPos = Vector3.zero,
+                InitialRotation = Quaternion.identity,
                 InitialScale = Vector3.one,
-                InitialDistanceToNozzle = 1f
+                Progress = 0f
             };
         }
     }
@@ -604,7 +609,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     /// <summary>
     /// Description: Scans all active phantoms and applies suction and drain to those within the mouth cone.
-    /// Emits ghost snapshots for captured phantoms based on EchoSpawnInterval.
+    /// Emits ghost snapshots forming a continuous "file indienne" between the phantom and the mouth nozzle.
     /// </summary>
     private void ProcessMouthSuction()
     {
@@ -658,10 +663,23 @@ public class PlayerMouthVacuum : NetworkBehaviour
                 phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
                 CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
 
-                // 3. Emit phantom suction ghost snapshots (Fresnel echo trail)
-                if (!_phantomEchoTimers.TryGetValue(phantom, out float nextEchoTime) || Time.time >= nextEchoTime)
+                // 3. Emit / Maintain the stream chain of ghost clones between phantom and nozzle
+                if (!_phantomEchoTimers.TryGetValue(phantom, out float nextEchoTime))
                 {
-                    SpawnEchoSnapshot(phantom, nozzleOrigin);
+                    // Instant pre-seed: immediately fill the "file indienne" along the stream
+                    int initialSteps = Mathf.Clamp(Mathf.RoundToInt(distance / 0.28f), 4, 18);
+                    for (int s = 1; s < initialSteps; s++)
+                    {
+                        float prog = (float)s / initialSteps;
+                        SpawnEchoSnapshot(phantom, nozzleOrigin, prog);
+                    }
+
+                    SpawnEchoSnapshot(phantom, nozzleOrigin, 0f);
+                    _phantomEchoTimers[phantom] = Time.time + _stats.EchoSpawnInterval;
+                }
+                else if (Time.time >= nextEchoTime)
+                {
+                    SpawnEchoSnapshot(phantom, nozzleOrigin, 0f);
                     _phantomEchoTimers[phantom] = Time.time + _stats.EchoSpawnInterval;
                 }
             }
@@ -680,10 +698,10 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Spawns an animated snapshot clone of the captured phantom using its exact mesh and transform.
+    /// Description: Spawns an animated snapshot clone along the streamline connecting the captured phantom to the mouth nozzle.
     /// Reuses pooled items with zero runtime instantiate/destroy calls.
     /// </summary>
-    private void SpawnEchoSnapshot(PhantomBase phantom, Vector3 nozzlePos)
+    private void SpawnEchoSnapshot(PhantomBase phantom, Vector3 nozzlePos, float initialProgress)
     {
         if (_echoPool == null || _echoPool.Length == 0 || phantom == null) return;
 
@@ -715,20 +733,26 @@ public class PlayerMouthVacuum : NetworkBehaviour
         }
 
         Transform pT = pMeshFilter.transform;
-        echo.MeshFilter.sharedMesh = pMeshFilter.sharedMesh;
-        echo.Transform.position = pT.position;
-        echo.Transform.rotation = pT.rotation;
-        echo.Transform.localScale = pT.lossyScale;
+        Vector3 phantomPos = phantom.LookAtPoint != null ? phantom.LookAtPoint.position : phantom.transform.position;
 
+        echo.MeshFilter.sharedMesh = pMeshFilter.sharedMesh;
+        echo.BoundPhantom = phantom;
+        echo.LastKnownPhantomPos = phantomPos;
+        echo.InitialRotation = pT.rotation;
         echo.InitialScale = pT.lossyScale;
-        echo.InitialDistanceToNozzle = Mathf.Max(0.2f, Vector3.Distance(pT.position, nozzlePos));
-        echo.Age = 0f;
-        echo.MaxLifetime = _stats.EchoLifetime;
+        echo.Progress = Mathf.Clamp01(initialProgress);
         echo.IsActive = true;
 
-        // Initialize MaterialPropertyBlock
+        // Position along the streamline at initialProgress
+        Vector3 streamPos = Vector3.Lerp(phantomPos, nozzlePos, echo.Progress);
+        echo.Transform.position = streamPos;
+        echo.Transform.rotation = echo.InitialRotation;
+        echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, echo.Progress);
+
+        float alpha = (1f - (echo.Progress * echo.Progress)) * _stats.EchoColor.a;
+
         echo.Renderer.GetPropertyBlock(_echoMpb);
-        _echoMpb.SetFloat(PropEchoAlpha, 1.0f);
+        _echoMpb.SetFloat(PropEchoAlpha, alpha);
         _echoMpb.SetColor(PropEchoColor, _stats.EchoColor);
         _echoMpb.SetFloat(PropEchoFresnel, _stats.EchoFresnelPower);
         echo.Renderer.SetPropertyBlock(_echoMpb);
@@ -740,14 +764,16 @@ public class PlayerMouthVacuum : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Updates all active ghost afterimages, animating their movement towards the mouth nozzle,
-    /// progressively shrinking their scale and dissolving their alpha.
+    /// Description: Updates all active ghost afterimages along the streamline connecting the phantom to the nozzle.
+    /// Drives the "file indienne" procession into the mouth nozzle, shrinking scale and dissolving alpha as they approach.
     /// </summary>
     private void UpdateSuctionEchoes()
     {
         if (_echoPool == null || _echoPool.Length == 0 || _suctionConeRenderer == null) return;
 
-        Vector3 nozzlePos = _suctionConeRenderer.transform.position;
+        Transform coneT = _suctionConeRenderer.transform;
+        Vector3 nozzlePos = coneT.position;
+        Vector3 coneForward = coneT.forward;
         float dt = Time.deltaTime;
 
         for (int i = 0; i < _echoPool.Length; i++)
@@ -755,29 +781,50 @@ public class PlayerMouthVacuum : NetworkBehaviour
             PhantomSuctionEcho echo = _echoPool[i];
             if (echo == null || !echo.IsActive) continue;
 
-            echo.Age += dt;
-            float lifeProgress = Mathf.Clamp01(echo.Age / Mathf.Max(0.01f, echo.MaxLifetime));
+            // Resolve phantom position (actively tracked or frozen departure pos when escaped/ended)
+            Vector3 phantomPos;
+            if (echo.BoundPhantom != null && echo.BoundPhantom.gameObject.activeInHierarchy && _activeCapturedPhantoms.Contains(echo.BoundPhantom))
+            {
+                phantomPos = echo.BoundPhantom.LookAtPoint != null ? echo.BoundPhantom.LookAtPoint.position : echo.BoundPhantom.transform.position;
+                echo.LastKnownPhantomPos = phantomPos;
+            }
+            else
+            {
+                phantomPos = echo.LastKnownPhantomPos;
+            }
 
-            // Pull towards the mouth nozzle
-            echo.Transform.position = Vector3.MoveTowards(echo.Transform.position, nozzlePos, _stats.EchoPullSpeed * dt);
-            float currentDist = Vector3.Distance(echo.Transform.position, nozzlePos);
+            float currentDistance = Vector3.Distance(phantomPos, nozzlePos);
 
-            // Reached nozzle or lifetime expired -> recycle to pool
-            if (currentDist <= 0.15f || echo.Age >= echo.MaxLifetime)
+            // Advance progress along the stream
+            float deltaProgress = (_stats.EchoFlowSpeed * dt) / Mathf.Max(0.35f, currentDistance);
+            echo.Progress += deltaProgress;
+
+            if (echo.Progress >= 1.0f)
             {
                 DespawnEcho(echo);
                 continue;
             }
 
-            // Progression along the suction path into the mouth
-            float distProgress = 1f - Mathf.Clamp01(currentDist / Mathf.Max(0.01f, echo.InitialDistanceToNozzle));
-            float shrinkProgress = Mathf.Max(distProgress, lifeProgress);
+            // Streamline position linking the phantom to the mouth nozzle
+            Vector3 streamPos = Vector3.Lerp(phantomPos, nozzlePos, echo.Progress);
 
-            // Animate scale shrinking as it gets closer to the nozzle
-            echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, shrinkProgress);
+            // Subtle aerodynamic centering towards the cone central vortex axis
+            if (_stats.EchoCenteringInfluence > 0.001f)
+            {
+                float axialDist = Vector3.Dot(streamPos - nozzlePos, coneForward);
+                Vector3 axisPos = nozzlePos + coneForward * Mathf.Max(0f, axialDist);
+                float funnelEnvelope = Mathf.Sin(echo.Progress * Mathf.PI);
+                streamPos = Vector3.Lerp(streamPos, axisPos, funnelEnvelope * _stats.EchoCenteringInfluence);
+            }
 
-            // Animate progressive alpha dissolve closer to the mouth nozzle
-            float alpha = (1f - distProgress) * (1f - lifeProgress);
+            echo.Transform.position = streamPos;
+            echo.Transform.rotation = echo.InitialRotation;
+
+            // Progressive shrink towards nozzle
+            echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, echo.Progress);
+
+            // Progressive dissolve (quadratic fade towards mouth nozzle)
+            float alpha = (1f - (echo.Progress * echo.Progress)) * _stats.EchoColor.a;
 
             echo.Renderer.GetPropertyBlock(_echoMpb);
             _echoMpb.SetFloat(PropEchoAlpha, alpha);
@@ -791,6 +838,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     {
         if (echo == null) return;
         echo.IsActive = false;
+        echo.BoundPhantom = null;
         if (echo.GameObject.activeSelf)
         {
             echo.GameObject.SetActive(false);

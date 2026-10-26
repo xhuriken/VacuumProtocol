@@ -26617,13 +26617,13 @@ MonoBehaviour:
     BaseDrainRate: 10
     DrainMultiplier: 1
     SuctionPullMultiplier: 1
-    EchoSpawnInterval: 0.055
-    EchoLifetime: 0.45
-    EchoPullSpeed: 7.5
-    EchoMinScaleRatio: 0.15
-    EchoFresnelPower: 2.5
-    EchoColor: {r: 0.25, g: 0.85, b: 1, a: 0.85}
-    MaxEchoPoolSize: 48
+    EchoSpawnInterval: 0.032
+    EchoFlowSpeed: 8.5
+    EchoMinScaleRatio: 0.12
+    EchoCenteringInfluence: 0.22
+    EchoFresnelPower: 2.2
+    EchoColor: {r: 0.3, g: 0.9, b: 1, a: 0.85}
+    MaxEchoPoolSize: 64
   _coneLength: 5.5
   _coneRadiusProfile:
     serializedVersion: 2
