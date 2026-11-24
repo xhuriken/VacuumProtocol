@@ -1,7 +1,7 @@
 # VacuumProtocol
 
 Jeu coop multijoueur Unity 6 (6000.3.10f1, URP 17.3). Robots-aspirateurs physiques, phantoms IA à aspirer.
-Langue du projet : français (docs, commits, DEVELOPMENT_LOG).
+Langue : français pour les docs `documentation/`, les commits et `DEVELOPMENT_LOG.md`. **Anglais pour tout le code** : commentaires, `/// <summary>` (Description / Context / Justification), `[Tooltip("Role: ...")]`, messages de log.
 
 @.agents/AGENTS.md
 
@@ -27,4 +27,5 @@ Skill `unity:using-unity` (plugin officiel) pour les bonnes pratiques Unity.
 - Chaque nouvel asset a son `.meta` : ne jamais le supprimer ni le régénérer à la main.
 - Ne pas modifier les packages tiers (`Assets/Mirror`, `Assets/Plugins`, `Assets/Shapes`, `Assets/ParrelSync`...).
 - Après une feature : entrée dans `DEVELOPMENT_LOG.md` (format Goal / Changes / Justification) et doc dans `documentation/` si système nouveau.
-- Commits : conventional commits (`feat(scope): ...`, `fix(scope): ...`), comme l'historique.
+- Commits : conventional commits (`feat(scope): ...`, `fix(scope): ...`) avec un simple `git commit -m "..."`. Aucune ligne `Co-Authored-By` ni mention d'IA.
+- Branches : une branche par sujet (`feat/...`, `fix/...`, `refactor/...`, `chore/...`), mergée ensuite dans la branche parente.
