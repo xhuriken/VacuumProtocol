@@ -24,3 +24,6 @@
 - [ ] Création du Prefab Phantom dans Unity et configuration sur le NetworkManager.
 - [ ] Bake du NavMeshSurface sur la map de jeu (ex: AmongUsMap.fbx).
 - [ ] Implémentation des variantes futures (Téléportation, Traversée de surfaces).
+
+## Dette technique (à corriger)
+- [ ] **Double synchro réseau du pitch (PlayerV2_Look / PlayerV2_Head)** : `PlayerV2_Look.SyncPitch` + `CmdSetPitch` (seuil 1°) et `PlayerV2_Head.CurrentTargetPitch` + `CmdSetPitch` (seuil 0.5°) envoient chacun un Command + SyncVar pour quasi la même valeur (Head = pitch Look × `PitchMultiplier`, ou 0 accroupi). Identifier lequel pose problème (caméra / tête distante) puis faire une source unique (SSOT) : un seul pitch synchronisé, l'autre dérivé localement.

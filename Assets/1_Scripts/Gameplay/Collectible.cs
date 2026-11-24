@@ -134,8 +134,14 @@ public class Collectible : MonoBehaviour, IEntity, IVacuumable
     }
 
     #region IVacuumable Implementation
+    /// <summary>
+    /// Rigidbody driven by the vacuum forces.
+    /// </summary>
     public Rigidbody Rigidbody => _rb;
 
+    /// <summary>
+    /// Applies the attraction force towards the nozzle, scaled by resistance, distance and visibility.
+    /// </summary>
     public void OnSuctionPulled(Vector3 nozzlePosition, Vector3 suctionDirection, float pullForce, float visibilityFactor)
     {
         if (_rb == null) return;
@@ -153,16 +159,25 @@ public class Collectible : MonoBehaviour, IEntity, IVacuumable
         _rb.AddForce(attractionForce, ForceMode.Force);
     }
 
+    /// <summary>
+    /// No-op: physical items have nothing to drain.
+    /// </summary>
     public void OnSuctionDrained(float drainAmount, Mirror.NetworkConnectionToClient playerConnection)
     {
         // Physical items don't have drainable fluid/dirt
     }
 
+    /// <summary>
+    /// Returns true when the item is within the nozzle absorb threshold.
+    /// </summary>
     public bool CanBeAbsorbed(float distanceToNozzle, float absorbThreshold)
     {
         return distanceToNozzle <= absorbThreshold;
     }
 
+    /// <summary>
+    /// Hands the item to the local player's vacuum inventory.
+    /// </summary>
     public void OnAbsorbed(PlayerVacuumController playerVacuum)
     {
         if (playerVacuum != null && playerVacuum.isLocalPlayer)

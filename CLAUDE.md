@@ -19,7 +19,7 @@ L'Editor doit être ouvert. Préférer la CLI au MCP (moins de tokens).
 - `unity list` / `unity command` : outils exposés par l'Editor (console, scène, play mode, capture...).
 - `unity test` : tests EditMode/PlayMode.
 - `unity docs <Classe>` : doc Unity à la bonne version.
-Skill `unity:using-unity` (plugin officiel) pour les bonnes pratiques Unity.
+Skills : `unity:unity-cli` (plugin officiel) pour piloter l'Editor ; `vacuum-code-standards` (projet) avant d'écrire, relire, documenter ou supprimer du code.
 
 ## Règles
 - Mirror : logique d'autorité côté serveur (`[Server]`, `[Command]`), visuels côté client. Vérifier `isServer` / `isLocalPlayer` / `isOwned` avant d'agir. Les SyncVar ne changent que côté serveur.

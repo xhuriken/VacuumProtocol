@@ -30,6 +30,7 @@ public class PlayerVolumeSlider : MonoBehaviour
     [SerializeField] private Slider _volumeSlider;
 
     [Header("Debug")]
+    [Tooltip("Role: Enables debug logs for slider binding and volume changes.")]
     [SerializeField] private bool _showDebugLogs = false;
 
     private bool _isBound = false;

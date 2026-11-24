@@ -8,6 +8,7 @@ namespace Gameplay.Phantoms
     /// <summary>
     /// Description: Defines the possible behavioral states for Phantom AI entities.
     /// Context: Used by PhantomBase and derived phantom controllers to drive state-machine decisions.
+    /// Justification: A single shared enum keeps the state machine, gizmos and network debug tools in agreement.
     /// </summary>
     public enum PhantomState
     {
@@ -22,30 +23,45 @@ namespace Gameplay.Phantoms
     /// <summary>
     /// Description: Data record for escape raycast evaluations during mouth vacuum struggle.
     /// Context: Used by PhantomBase AI to select the optimal dash vector and visualized by PhantomGizmos.
+    /// Justification: Caching each ray result lets the gizmos display exactly what the AI evaluated.
     /// </summary>
     [System.Serializable]
     public struct EscapeRaycastData
     {
+        [Tooltip("Role: Normalized world direction of the escape feeler ray.")]
         public Vector3 Direction;
+        [Tooltip("Role: Clear distance travelled by the ray before hitting an obstacle (or max distance).")]
         public float Distance;
+        [Tooltip("Role: True if the ray hit an obstacle before reaching its max distance.")]
         public bool HitObstacle;
+        [Tooltip("Role: World position where the ray stopped (hit point or max-distance end point).")]
         public Vector3 HitPoint;
+        [Tooltip("Role: Desirability score of this direction; the highest score is chosen for the escape dash.")]
         public float Score;
     }
 
     /// <summary>
     /// Description: Tracks an individual player's suction stream applied to this phantom.
     /// Context: Enables multiple players to vacuum the same phantom simultaneously with stacked drain rates.
+    /// Justification: Keying streams by source netId lets each player's suction be added, refreshed and expired independently.
     /// </summary>
     public struct SuctionStreamData
     {
+        [Tooltip("Role: Network id of the player whose vacuum produces this stream.")]
         public uint SourceNetId;
+        [Tooltip("Role: World position of the suction nozzle.")]
         public Vector3 NozzlePos;
+        [Tooltip("Role: Forward axis of the suction cone.")]
         public Vector3 ConeForward;
+        [Tooltip("Role: Up axis of the suction cone.")]
         public Vector3 ConeUp;
+        [Tooltip("Role: Right axis of the suction cone.")]
         public Vector3 ConeRight;
+        [Tooltip("Role: Ectoplasm drained per second by this stream.")]
         public float DrainRate;
+        [Tooltip("Role: Multiplier applied to the pull force of this stream.")]
         public float PullMultiplier;
+        [Tooltip("Role: Time of the last refresh; used to expire streams that stopped updating.")]
         public float LastUpdateTime;
     }
 
@@ -70,18 +86,27 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: The focal transform target for eye tracking and vision origin.\nUse Case: Where player heads/cameras focus, and raycast origin point for the phantom's vision.\nJustification: Required by IEntity interface. Must be assigned in prefab.")]
         [SerializeField] private Transform _lookAtPoint;
 
+        /// <summary>
+        /// Display name of this phantom (IEntity).
+        /// </summary>
         public string Name
         {
             get => _entityName;
             set => _entityName = value;
         }
 
+        /// <summary>
+        /// Visual detection priority of this phantom (IEntity).
+        /// </summary>
         public int PriorityLevel
         {
             get => _priorityLevel;
             set => _priorityLevel = value;
         }
 
+        /// <summary>
+        /// Focal transform for eye tracking and vision origin; falls back to this transform when unassigned (IEntity).
+        /// </summary>
         public Transform LookAtPoint => _lookAtPoint != null ? _lookAtPoint : transform;
         #endregion
 
@@ -90,6 +115,9 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: The primary visual MeshFilter used for rendering and suction ghost echoes.\nUse Case: Captured by mouth vacuum to spawn Fresnel afterimage clones.\nJustification: Fast SSOT reference avoiding runtime GetComponent searches during high-speed vacuum gameplay.")]
         [SerializeField] private MeshFilter _visualMeshFilter;
 
+        /// <summary>
+        /// Primary visual MeshFilter, resolved lazily from children when not assigned.
+        /// </summary>
         public MeshFilter VisualMeshFilter
         {
             get
@@ -148,6 +176,7 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Maximum ectoplasm / capture threshold of the phantom.\nUse Case: Depleted by mouth dual-click suction.")]
         [SerializeField] protected float _maxEctoplasm = 150f;
 
+        [Tooltip("Role: Current ectoplasm (capture health), synchronized to clients.\nUse Case: Drained by suction; the phantom is swallowed once it drops below the swallow threshold.")]
         [SyncVar(hook = nameof(OnEctoplasmChanged))]
         [SerializeField] protected float _currentEctoplasm = 150f;
 
@@ -238,7 +267,9 @@ namespace Gameplay.Phantoms
 
         #region State Machine Variables
         [Header("Current State (Debug)")]
+        [Tooltip("Role: Current AI state (exposed for debugging, driven at runtime by the server).")]
         [SerializeField] protected PhantomState _currentState = PhantomState.Idle;
+        [Tooltip("Role: Player currently targeted by this phantom (exposed for debugging, driven at runtime by the server).")]
         [SerializeField] protected PlayerV2_Controller _currentTarget;
 
         protected float _stateTimer = 0f;
@@ -277,27 +308,49 @@ namespace Gameplay.Phantoms
         #endregion
 
         #region Public Accessors (for Gizmos and Debug Tools)
+        /// <summary>Current AI state.</summary>
         public PhantomState CurrentState => _currentState;
+        /// <summary>Player currently targeted, or null.</summary>
         public PlayerV2_Controller CurrentTarget => _currentTarget;
+        /// <summary>Horizontal field of view angle in degrees.</summary>
         public float FieldOfViewAngle => _fieldOfViewAngle;
+        /// <summary>Maximum vision distance.</summary>
         public float DetectionRadius => _detectionRadius;
+        /// <summary>Distance beyond which the current target is lost.</summary>
         public float LoseTargetRadius => _loseTargetRadius;
+        /// <summary>Last position where the target was seen.</summary>
         public Vector3 LastKnownPosition => _lastKnownPosition;
+        /// <summary>True if a last known target position is stored.</summary>
         public bool HasLastKnownPosition => _hasLastKnownPosition;
+        /// <summary>Layers that block line of sight.</summary>
         public LayerMask ObstacleLayer => _obstacleLayer;
+        /// <summary>Current ectoplasm (capture health).</summary>
         public float CurrentEctoplasm => _currentEctoplasm;
+        /// <summary>Maximum ectoplasm (capture threshold).</summary>
         public float MaxEctoplasm => _maxEctoplasm;
+        /// <summary>Speed ratio applied while caught in the mouth vacuum.</summary>
         public float SuctionSlowdownRatio => _suctionSlowdownRatio;
+        /// <summary>Radius of the terror drain aura.</summary>
         public float ProximityDrainRadius => _proximityDrainRadius;
+        /// <summary>Maximum drain rate at point-blank range.</summary>
         public float MaxDrainRate => _maxDrainRate;
+        /// <summary>True if the proximity drain aura is enabled.</summary>
         public bool EnableProximityDrain => _enableProximityDrain;
+        /// <summary>Direct attack damage.</summary>
         public float AttackDamage => _attackDamage;
+        /// <summary>Escape feeler rays from the latest evaluation (debug).</summary>
         public IReadOnlyList<EscapeRaycastData> LastEscapeRays => _lastEscapeRays;
+        /// <summary>Escape direction chosen by the latest evaluation (debug).</summary>
         public Vector3 ChosenEscapeDirection => _chosenEscapeDirection;
+        /// <summary>Time of the latest escape evaluation (debug).</summary>
         public float LastEscapeEvaluationTime => _lastEscapeEvaluationTime;
+        /// <summary>Number of player suction streams currently applied.</summary>
         public int ActiveSuctionStreamCount => _activeSuctionStreams.Count;
+        /// <summary>True while an escape dash impulse is active.</summary>
         public bool IsDashing => _isDashing;
+        /// <summary>True during the dash wind-up telegraph.</summary>
         public bool IsTelegraphingDash => _isTelegraphingDash;
+        /// <summary>True once the phantom is being swallowed into the nozzle.</summary>
         public bool IsBeingSwallowed => _isBeingSwallowed;
 
         private static readonly int PropFresnelColor = Shader.PropertyToID("_FresnelColor");

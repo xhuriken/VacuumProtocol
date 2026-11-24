@@ -137,38 +137,6 @@ public class InputSettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Description: Starts interactive rebind procedure for a specific action.
-    /// Context: Called by UI rebinding scripts.
-    /// Justification: Uses the Unity Input System's built-in interactive rebinding flow, safely blocking mouse clicks from accidentally being mapped as keyboard keys.
-    /// </summary>
-    /// <param name="actionToRebind">The InputAction to remap.</param>
-    /// <param name="bindingIndex">The binding slot index.</param>
-    public void RebindAction(InputAction actionToRebind, int bindingIndex)
-    {
-        if (actionToRebind == null) return;
-
-        actionToRebind.Disable();
-
-        var operation = actionToRebind.PerformInteractiveRebinding(bindingIndex)
-            .WithControlsExcluding("Mouse") // Avoid accidental mouse clicks remapping keys
-            .OnComplete(op =>
-            {
-                actionToRebind.Enable();
-                op.Dispose();
-
-                // Save overrides back into SettingsManager
-                string overridesJson = _inputActions.SaveBindingOverridesAsJson();
-                SettingsManager.Instance.UpdateSettings(data =>
-                {
-                    data.ControlBindingsOverrideJson = overridesJson;
-                });
-                
-                Debug.Log($"[InputSettingsConsumer] Successfully remapped action '{actionToRebind.name}' index {bindingIndex}.");
-            })
-            .Start();
-    }
-
-    /// <summary>
     /// Description: Finds an InputAction within the asset by name or path.
     /// Context: Internal helper.
     /// Justification: Centralizes action retrieval and logging for safety.

@@ -16,6 +16,8 @@ namespace Gameplay.Phantoms
 {
     /// <summary>
     /// Description: Method used to choose which PhantomSpawnPoint to activate during a spawn event.
+    /// Context: Selected per room on PhantomRoomSpawner.
+    /// Justification: Lets designers tune encounter feel (variety, even distribution, or spawning out of sight).
     /// </summary>
     public enum SpawnPointSelectionMode
     {
@@ -71,8 +73,11 @@ namespace Gameplay.Phantoms
         [SerializeField] private SpawnPointSelectionMode _selectionMode = SpawnPointSelectionMode.Random;
 
         [Title("Gizmos & Diagnostics")]
+        [Tooltip("Role: Draws the room bounds gizmo in the Scene view.")]
         [SerializeField] private bool _drawGizmos = true;
+        [Tooltip("Role: Gizmo color of the room bounds when no player is inside.")]
         [SerializeField] private Color _roomEmptyColor = new Color(0.2f, 0.8f, 0.4f, 0.15f);
+        [Tooltip("Role: Gizmo color of the room bounds when at least one player is inside.")]
         [SerializeField] private Color _roomOccupiedColor = new Color(1f, 0.2f, 0.2f, 0.25f);
         #endregion
 
@@ -97,11 +102,17 @@ namespace Gameplay.Phantoms
         #endregion
 
         #region Public Properties
+        /// <summary>True if at least one player is inside the room bounds.</summary>
         public bool HasPlayersInRoom => _hasPlayersInRoom;
+        /// <summary>Number of phantoms from this room currently alive.</summary>
         public int ActiveCount => _activeRoomPhantoms.Count;
+        /// <summary>Maximum number of concurrent phantoms allowed.</summary>
         public int MaxConcurrent => _maxConcurrentPhantoms;
+        /// <summary>Total number of phantoms spawned by this room so far.</summary>
         public int TotalSpawned => _totalSpawnedCount;
+        /// <summary>Total spawn budget of this room (-1 = infinite).</summary>
         public int TotalBudget => _totalRoomBudget;
+        /// <summary>True once a finite budget has been fully spent.</summary>
         public bool IsDepleted => _totalRoomBudget >= 0 && _totalSpawnedCount >= _totalRoomBudget;
         #endregion
 
@@ -136,6 +147,9 @@ namespace Gameplay.Phantoms
             }
         }
 
+        /// <summary>
+        /// Server start: arms the spawn timer with the first-entry delay.
+        /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();

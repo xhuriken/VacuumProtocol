@@ -37,10 +37,6 @@ public class CustomTextButton : UICustomButtonBase
     [SerializeField]
     private float _hoverDuration = 0.3f;
 
-    [Tooltip("Role: Duration of click flash/shimmer transitions.\nUse Case: Animation pacing.\nJustification: Standardizes how fast the elements react to click.")]
-    [SerializeField]
-    private float _clickDuration = 0.25f;
-
     #endregion
 
     #region Private Fields (State Caching & Tween Control)

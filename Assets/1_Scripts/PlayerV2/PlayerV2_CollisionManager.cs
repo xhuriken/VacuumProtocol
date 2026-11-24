@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Description: Centralized manager for handling all player-internal collision ignoring rules (SSOT) pour le joueur V2.
+/// Description: Centralized manager for handling all player-internal collision ignoring rules (SSOT) for the V2 player.
 /// Context: Attached to the player prefab root.
 /// Justification: Centralizes physics collision exemptions in a single place instead of dispersing them across arms/head scripts.
 /// Allows the designer to edit, add, or delete collision ignore rules directly in the Unity Inspector.
@@ -11,6 +11,8 @@ public class PlayerV2_CollisionManager : MonoBehaviour
 {
     /// <summary>
     /// Description: Defines the different types of collider groups on the player.
+    /// Context: Referenced by CollisionIgnoreRule entries edited in the Inspector.
+    /// Justification: Lets rules target whole body parts instead of individual colliders.
     /// </summary>
     public enum ColliderGroupType
     {
@@ -24,46 +26,51 @@ public class PlayerV2_CollisionManager : MonoBehaviour
         OtherBody
     }
 
+    /// <summary>
+    /// Description: A pair of collider groups whose colliders must ignore each other.
+    /// Context: Serialized in the _ignoreRules list and applied once at Start.
+    /// Justification: Keeps collision exemptions data-driven and editable by designers.
+    /// </summary>
     [System.Serializable]
     public struct CollisionIgnoreRule
     {
-        [Tooltip("The first group of colliders.")]
+        [Tooltip("Role: The first group of colliders.")]
         public ColliderGroupType GroupA;
 
-        [Tooltip("The second group of colliders to ignore.")]
+        [Tooltip("Role: The second group of colliders to ignore.")]
         public ColliderGroupType GroupB;
     }
 
     [Header("Torso Colliders")]
-    [Tooltip("Torso Collider A: Ignores both wheels and arm colliders.")]
+    [Tooltip("Role: Torso collider A. Ignores both wheels and arm colliders.")]
     [SerializeField] private Collider _torsoColliderA;
 
-    [Tooltip("Torso Collider B: Ignores wheels, but collides (interacts physically) with the arms.")]
+    [Tooltip("Role: Torso collider B. Ignores wheels, but collides (interacts physically) with the arms.")]
     [SerializeField] private Collider _torsoColliderB;
 
     [Header("Hierarchy Roots")]
-    [Tooltip("The root transform of the wheels chassis hierarchy to automatically discover wheel colliders.")]
+    [Tooltip("Role: The root transform of the wheels chassis hierarchy to automatically discover wheel colliders.")]
     [SerializeField] private Transform _wheelsRoot;
 
-    [Tooltip("The root transform of the left arm bone hierarchy.")]
+    [Tooltip("Role: The root transform of the left arm bone hierarchy.")]
     [SerializeField] private Transform _leftArmRoot;
 
-    [Tooltip("The root transform of the right arm bone hierarchy.")]
+    [Tooltip("Role: The root transform of the right arm bone hierarchy.")]
     [SerializeField] private Transform _rightArmRoot;
 
-    [Tooltip("The root transform of the neck/head bone hierarchy.")]
+    [Tooltip("Role: The root transform of the neck/head bone hierarchy.")]
     [SerializeField] private Transform _neckRootTransform;
 
     [Header("Explicit Wheel Override")]
-    [Tooltip("Explicitly assigned wheel colliders (fallback if wheels root is not used).")]
+    [Tooltip("Role: Explicitly assigned wheel colliders (fallback if wheels root is not used).")]
     [SerializeField] private List<Collider> _wheelsColliders = new List<Collider>();
 
     [Header("Custom Collision Ignore Rules")]
-    [Tooltip("List of collision ignore rules between groups. Pre-populated with defaults, editable in the Inspector.")]
+    [Tooltip("Role: List of collision ignore rules between groups. Pre-populated with defaults, editable in the Inspector.")]
     [SerializeField] private List<CollisionIgnoreRule> _ignoreRules = new List<CollisionIgnoreRule>();
 
     [Header("Debug")]
-    [Tooltip("Enable verbose logging for collision setup diagnostic checks.")]
+    [Tooltip("Role: Enables verbose logging for collision setup diagnostic checks.")]
     [SerializeField] private bool _enableDebugLogs = false;
 
     private readonly List<Collider> _leftArmColliders = new List<Collider>();
@@ -211,7 +218,7 @@ public class PlayerV2_CollisionManager : MonoBehaviour
         // Apply standard internal rules (like self-collision ignore within arms and wheels to prevent joint lockups)
         IgnoreSelfCollisions(_leftArmColliders, ref ignoredPairs);
         IgnoreSelfCollisions(_rightArmColliders, ref ignoredPairs);
-        IgnoreSelfCollisions(_neckColliders, ref ignoredPairs); // ADDED: Ignore self collisions inside neck!
+        IgnoreSelfCollisions(_neckColliders, ref ignoredPairs); // Ignore self collisions inside the neck chain
         IgnoreSelfCollisions(_wheelsColliders, ref ignoredPairs);
 
         // Apply custom ignore rules configured in the inspector

@@ -2,16 +2,16 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Description: Hub principal pour le joueur V2 (Multi-Body).
-/// Context: Attaché à la racine du Prefab Player_V2.
-/// Justification: Centralise les références critiques pour éviter que les sous-scripts fassent des GetComponent redondants ou complexes.
+/// Description: Main hub for the V2 (multi-body) player.
+/// Context: Attached to the root of the Player_V2 prefab.
+/// Justification: Centralizes critical references so sub-scripts avoid redundant or complex GetComponent calls.
 /// </summary>
 public class PlayerV2_Controller : NetworkBehaviour, IEntity
 {
 
     #region Entity
     [Header("Entity Settings")]
-    [Tooltip("Role: The display name of the collectible.\nUse Case: UI Label rendering.\nJustification: Gives the player readable text when looking at the object.")]
+    [Tooltip("Role: The display name of this player entity.\nUse Case: UI Label rendering.\nJustification: Gives other players readable text when looking at this player.")]
     [SerializeField]
     private string _name = "PlayerName";
 
@@ -75,9 +75,11 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     [SyncVar] public int ConnectionId = -1;
 
     [Header("Network States")]
+    [Tooltip("Role: Crouch state, synchronized from the server.\nUse Case: Drives head height offset and arm retraction on every client.")]
     [SyncVar(hook = nameof(OnCrouchStateChanged))] 
     public bool IsCrouching;
 
+    /// <summary>Asks the server to set the synchronized crouch state.</summary>
     [Command]
     public void CmdSetCrouching(bool crouchState)
     {
@@ -106,10 +108,10 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     }
 
     [Header("Physics Bodies")]
-    [Tooltip("Role: Rigidbody de la base (mouvement).\nUse Case: Déplacement et attache des roues.")]
+    [Tooltip("Role: Rigidbody of the base (movement).\nUse Case: Locomotion and wheel attachment.")]
     public Rigidbody HipsRigidbody;
 
-    [Tooltip("Role: Rigidbody de la tourelle (vue).\nUse Case: Rotation infinie libre de la caméra.")]
+    [Tooltip("Role: Rigidbody of the turret (view).\nUse Case: Free, unlimited camera rotation.")]
     public Rigidbody TorsoRigidbody;
 
     /// <summary>
@@ -120,26 +122,26 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     public Vector3 WorldPosition => HipsRigidbody != null ? HipsRigidbody.position : transform.position;
 
     [Header("Camera & Visuals")]
-    [Tooltip("Role: La caméra du joueur.\nUse Case: Assignée au script de Look.")]
+    [Tooltip("Role: The player camera.\nUse Case: Assigned to the Look script.")]
     public Transform CameraTransform;
 
-    [Tooltip("Role: Contrôleur de la tête et du cou.\nUse Case: Transmission du pitch calculé par le Look.")]
+    [Tooltip("Role: Head and neck controller.\nUse Case: Receives the pitch computed by the Look script.")]
     public PlayerV2_Head HeadController;
 
     [Header("Arms System")]
-    [Tooltip("Role: Racine physique du bras gauche.\nUse Case: Traversal et distance max.")]
+    [Tooltip("Role: Physical root of the left arm.\nUse Case: Hierarchy traversal and max reach distance.")]
     public Transform LeftArmRoot;
 
-    [Tooltip("Role: Racine physique du bras droit.\nUse Case: Traversal et distance max.")]
+    [Tooltip("Role: Physical root of the right arm.\nUse Case: Hierarchy traversal and max reach distance.")]
     public Transform RightArmRoot;
 
-    [Tooltip("Role: Épaule gauche visuelle/physique.\nUse Case: Rotation à 90° en extension.")]
+    [Tooltip("Role: Left shoulder (visual/physical).\nUse Case: Rotates to 90 degrees when extended.")]
     public Transform LeftShoulder;
 
-    [Tooltip("Role: Épaule droite visuelle/physique.\nUse Case: Rotation à -90° en extension.")]
+    [Tooltip("Role: Right shoulder (visual/physical).\nUse Case: Rotates to -90 degrees when extended.")]
     public Transform RightShoulder;
 
-    [Tooltip("Role: Contrôleur physique des bras.\nUse Case: Référence centralisée pour d'autres systèmes.")]
+    [Tooltip("Role: Physical arms controller.\nUse Case: Centralized reference for other systems.")]
     public PlayerV2_Arms ArmsController;
 
     /// <summary>
@@ -166,10 +168,10 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
     {
         if (HipsRigidbody == null || TorsoRigidbody == null)
         {
-            Debug.LogError("[PlayerV2_Controller] HipsRigidbody ou TorsoRigidbody manquants ! Assignez-les dans l'inspecteur.");
+            Debug.LogError("[PlayerV2_Controller] HipsRigidbody or TorsoRigidbody is missing! Assign them in the Inspector.");
         }
 
-        // Désactiver la caméra et l'AudioListener pour les joueurs distants
+        // Disable the camera and AudioListener for remote players
         if (!isOwned && CameraTransform != null)
         {
             Camera cam = CameraTransform.GetComponent<Camera>();

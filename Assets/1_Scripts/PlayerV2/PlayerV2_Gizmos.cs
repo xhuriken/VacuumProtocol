@@ -2,20 +2,27 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
-/// Description: Outil de débogage visuel (Gizmos) pour le système V2.
-/// Context: Attaché au Player_V2.
-/// Justification: Permet aux designers de visualiser les cibles invisibles (ressorts de bras, raycasts de suspension, etc.) directement dans l'éditeur.
+/// Description: Visual debugging tool (Gizmos) for the V2 player system.
+/// Context: Attached to Player_V2.
+/// Justification: Lets designers see invisible targets (arm springs, suspension raycasts, etc.) directly in the Editor.
 /// </summary>
 [RequireComponent(typeof(PlayerV2_Controller))]
 public class PlayerV2_Gizmos : MonoBehaviour
 {
     [Header("Gizmo Toggles")]
+    [Tooltip("Role: Toggles view range gizmos (currently not drawn by this component).")]
     [BoxGroup("Modules")] public bool ShowViewRangeGizmos = true;
+    [Tooltip("Role: Draws both arms (root, hand, and reach target while extended).")]
     [BoxGroup("Modules")] public bool ShowVacuumArmGizmos = true;
+    [Tooltip("Role: Toggles shooter arm gizmos (currently not drawn by this component).")]
     [BoxGroup("Modules")] public bool ShowShooterArmGizmos = true;
+    [Tooltip("Role: Draws neck joints and the target vs actual head direction.")]
     [BoxGroup("Modules")] public bool ShowHeadAnglesGizmos = true;
+    [Tooltip("Role: Draws eye and pupil forward directions.")]
     [BoxGroup("Modules")] public bool ShowEyesGizmos = true;
+    [Tooltip("Role: Draws the camera forward direction.")]
     [BoxGroup("Modules")] public bool ShowCameraGizmos = true;
+    [Tooltip("Role: Draws wheel joint positions and their link to the chassis.")]
     [BoxGroup("Modules")] public bool ShowSuspensionGizmos = true;
 
     private PlayerV2_Controller _controller;
@@ -118,13 +125,13 @@ public class PlayerV2_Gizmos : MonoBehaviour
             Rigidbody headRb = head.NeckJoints[head.NeckJoints.Length - 1].GetComponent<Rigidbody>();
             if (headRb != null && _controller.TorsoRigidbody != null)
             {
-                // 1. Envie de la Tête (70% Pitch) - JAUNE
+                // 1. Head target (70% pitch) - YELLOW
                 Quaternion targetRot = _controller.TorsoRigidbody.rotation * Quaternion.Euler(head.CurrentTargetPitch, 0f, 0f);
                 Vector3 targetForward = targetRot * Vector3.forward;
                 Gizmos.color = Color.yellow;
                 Gizmos.DrawRay(headRb.position, targetForward * 1.5f);
 
-                // 2. Tête Actuelle Physique - ROUGE
+                // 2. Actual physical head - RED
                 Gizmos.color = Color.red;
                 Gizmos.DrawRay(headRb.position, headRb.transform.forward * 1.5f);
             }
@@ -133,14 +140,14 @@ public class PlayerV2_Gizmos : MonoBehaviour
 
     private void DrawCameraGizmos()
     {
-        // 3. Caméra (100% Pitch / Input) - CYAN
+        // 3. Camera (100% pitch / input) - CYAN
         Gizmos.color = Color.cyan;
         Gizmos.DrawRay(_controller.CameraTransform.position, _controller.CameraTransform.forward * 2f);
     }
 
     private void DrawEyesGizmos()
     {
-        // 4 & 5. Yeux (75%) et Pupilles (100%) - MAGENTA & VERT
+        // 4 & 5. Eyes (75%) and pupils (100%) - MAGENTA & GREEN
         Eye[] eyes = GetComponentsInChildren<Eye>();
         foreach (var eye in eyes)
         {
@@ -168,11 +175,11 @@ public class PlayerV2_Gizmos : MonoBehaviour
             {
                 if (joint != null)
                 {
-                    // Affiche la position de la roue
+                    // Wheel position
                     Gizmos.color = Color.green;
                     Gizmos.DrawWireSphere(joint.transform.position, 0.2f);
 
-                    // Si le joint a un parent (le chassis), on dessine une ligne
+                    // If the joint has a parent (the chassis), draw a line to it
                     if (joint.transform.parent != null)
                     {
                         Gizmos.color = Color.gray;

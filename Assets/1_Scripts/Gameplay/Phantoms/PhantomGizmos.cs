@@ -20,27 +20,35 @@ namespace Gameplay.Phantoms
     public class PhantomGizmos : MonoBehaviour
     {
         [Header("Gizmo Modules")]
+        [Tooltip("Role: Draws the field of view cone.")]
         [BoxGroup("Modules")] public bool ShowVisionCone = true;
+        [Tooltip("Role: Draws sightlines from the phantom to each player (clear or blocked).")]
         [BoxGroup("Modules")] public bool ShowPlayerSightlines = true;
+        [Tooltip("Role: Marks the points where sightlines are blocked by obstacles.")]
         [BoxGroup("Modules")] public bool ShowObstacleHitPoints = true;
+        [Tooltip("Role: Draws the last known target position used for investigation.")]
         [BoxGroup("Modules")] public bool ShowLastKnownPosition = true;
+        [Tooltip("Role: Draws the current NavMesh path.")]
         [BoxGroup("Modules")] public bool ShowNavMeshPath = true;
+        [Tooltip("Role: Draws the proximity terror drain aura.")]
         [BoxGroup("Modules")] public bool ShowDrainAura = true;
+        [Tooltip("Role: Draws the current AI state badge above the phantom.")]
         [BoxGroup("Modules")] public bool ShowStateBadge = true;
+        [Tooltip("Role: Draws the escape feeler rays and the chosen escape direction.")]
         [BoxGroup("Modules")] public bool ShowEscapeRaycasts = true;
 
         [Header("Display Settings")]
         [BoxGroup("Display")]
-        [Tooltip("When true, gizmos only draw when the phantom is selected in the hierarchy. When false, draws continuously.")]
+        [Tooltip("Role: When true, gizmos only draw when the phantom is selected in the hierarchy. When false, draws continuously.")]
         public bool OnlyWhenSelected = false;
 
         [BoxGroup("Display")]
         [Range(0.05f, 0.6f)]
-        [Tooltip("Transparency multiplier for the solid vision cone.")]
+        [Tooltip("Role: Transparency multiplier for the solid vision cone.")]
         public float ConeTransparency = 0.18f;
 
         [BoxGroup("Display")]
-        [Tooltip("Enables pulsation in chase and investigation states.")]
+        [Tooltip("Role: Enables pulsation in chase and investigation states.")]
         public bool EnableDynamicPulsing = true;
 
         private PhantomBase _phantom;

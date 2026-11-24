@@ -4,7 +4,9 @@ namespace Gameplay.Phantoms
 {
     /// <summary>
     /// Description: Client-side visual representation of an electric ectoplasm needle fired by a phantom wasp.
-    /// Features high-speed streak rendering via local-space LineRenderer, incandescent gradient, and automatic timeout cleanup.
+    /// Context: Spawned locally on each client when a PhantomFlyingWisp fires; damage is resolved separately on the server.
+    /// Justification: High-speed streak rendering via local-space LineRenderer, incandescent gradient, and automatic timeout cleanup,
+    /// without the cost of a networked object per needle.
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
     public class PhantomNeedleVisual : MonoBehaviour

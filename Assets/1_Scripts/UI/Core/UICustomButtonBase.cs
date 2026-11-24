@@ -14,6 +14,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// Context: Invoked on PointerClick.
     /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
+    [Tooltip("Role: Invoked when the button is clicked.")]
     public Button.ButtonClickedEvent onClick = new Button.ButtonClickedEvent();
 
     /// <summary>
@@ -21,6 +22,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// Context: Invoked on PointerEnter.
     /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
+    [Tooltip("Role: Invoked when the pointer enters the button.")]
     public Button.ButtonClickedEvent onPointerEnter = new Button.ButtonClickedEvent();
 
     /// <summary>
@@ -28,6 +30,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// Context: Invoked on PointerExit.
     /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
+    [Tooltip("Role: Invoked when the pointer leaves the button.")]
     public Button.ButtonClickedEvent onPointerExit = new Button.ButtonClickedEvent();
 
     /// <summary>
@@ -35,6 +38,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// Context: Invoked on PointerDown.
     /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
+    [Tooltip("Role: Invoked when the pointer is pressed on the button.")]
     public Button.ButtonClickedEvent onPointerDown = new Button.ButtonClickedEvent();
 
     /// <summary>
@@ -42,6 +46,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     /// Context: Invoked on PointerUp.
     /// Justification: Allows binding actions via the Unity Inspector.
     /// </summary>
+    [Tooltip("Role: Invoked when the pointer is released.")]
     public Button.ButtonClickedEvent onPointerUp = new Button.ButtonClickedEvent();
 
     [Header("Interactable State")]
@@ -102,10 +107,6 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
     {
         // Custom transitions can be defined by subclasses
     }
-
-    [Header("Awake Setup")]
-    [Tooltip("Role: Safety image raycast setup.")]
-    private bool _unusedPlaceholder;
 
     /// <summary>
     /// Description: Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.

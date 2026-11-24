@@ -8,10 +8,17 @@ using UnityEngine.UI;
 /// </summary>
 public class CustomizationMenuTabs : MonoBehaviour
 {
+    /// <summary>
+    /// Description: Pairs a tab button with the panel it opens.
+    /// Context: Configured in the Inspector through the Tabs array.
+    /// Justification: Keeps each button and its panel together so indices can never drift apart.
+    /// </summary>
     [System.Serializable]
     public struct Tab
     {
+        [Tooltip("Role: Button that opens this tab.")]
         public UICustomButtonBase TabButton;
+        [Tooltip("Role: Panel shown while this tab is active.")]
         public GameObject TabPanel;
     }
 
@@ -40,6 +47,9 @@ public class CustomizationMenuTabs : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the panel at the given index, hides the others and disables the active tab's button.
+    /// </summary>
     public void OpenTab(int index)
     {
         for (int i = 0; i < Tabs.Length; i++)

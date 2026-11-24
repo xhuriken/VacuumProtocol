@@ -2,40 +2,43 @@ using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// Description: Gère les paramètres de suspension des roues.
-/// Context: Attaché au Player_V2.
-/// Justification: Permet de régler facilement les ressorts et limites des ConfigurableJoints des roues depuis l'inspecteur.
+/// Description: Manages the wheel suspension settings, jump retraction and landing absorption.
+/// Context: Attached to Player_V2.
+/// Justification: Makes it easy to tune the springs and limits of the wheel ConfigurableJoints from the Inspector.
 /// </summary>
 public class PlayerV2_Suspension : MonoBehaviour
 {
     [Header("Wheels Configuration")]
-    [Tooltip("Les ConfigurableJoints des 4 roues.")]
+    [Tooltip("Role: ConfigurableJoints of the 4 wheels.")]
     public ConfigurableJoint[] WheelJoints;
 
     [Header("Suspension Settings")]
+    [Tooltip("Role: Suspension spring force on the wheel Y drive.")]
     public float SpringForce = 500f;
+    [Tooltip("Role: Base suspension damper on the wheel Y drive.")]
     public float Damper = 50f;
+    [Tooltip("Role: Linear limit of the wheel Y slide (suspension travel).")]
     public float SuspensionTravel = 0.5f;
 
-    [Tooltip("La distance à laquelle le ressort repousse la roue (doit être négatif pour repousser vers le bas).")]
+    [Tooltip("Role: Distance the spring pushes the wheel to (must be negative to push downward).")]
     public float TargetExtension = -0.4f;
 
     [Header("Jump Animation Settings")]
-    [Tooltip("Position cible du ressort quand la roue se rétracte en l'air (ex: 0.1 pour remonter au dessus des hanches).")]
+    [Tooltip("Role: Spring target position when the wheel retracts in the air (e.g. 0.1 to rise above the hips).")]
     public float RetractedExtension = 0.1f;
-    [Tooltip("Damper forcé sur la roue pendant l'animation de saut. Garantit une belle animation visqueuse même si le Damper principal (pour rouler) est très bas.")]
+    [Tooltip("Role: Damper forced on the wheel during the jump animation. Guarantees a nice viscous animation even when the main (driving) Damper is very low.")]
     public float RetractionDamper = 50f;
-    [Tooltip("Délai maximum aléatoire avant que la roue ne se rétracte (crée l'effet désynchronisé).")]
+    [Tooltip("Role: Maximum random delay before the wheel retracts (creates the desynchronized effect).")]
     public float MaxRandomRetractionDelay = 0.15f;
-    [Tooltip("Durée pendant laquelle la roue reste rétractée avant de se relâcher.")]
+    [Tooltip("Role: Time the wheel stays retracted before relaxing.")]
     public float RetractionHoldDuration = 0.15f;
-    [Tooltip("Vitesse de relâchement vers l'extension normale.")]
+    [Tooltip("Role: Relaxation speed back to the normal extension.")]
     public float RelaxationSpeed = 4f;
 
     [Header("Landing Absorption")]
-    [Tooltip("Amorti supplémentaire appliqué lors d'un atterrissage violent pour éviter le rebond (multiplicateur du Damper de base).")]
+    [Tooltip("Role: Extra damping applied on a hard landing to prevent bouncing (multiplier of the base Damper).")]
     public float HardLandingDamperMultiplier = 5f;
-    [Tooltip("Temps nécessaire pour que l'amorti revienne à la normale après un atterrissage (en secondes).")]
+    [Tooltip("Role: Time for the damping to return to normal after a landing (in seconds).")]
     public float LandingDamperRecoveryTime = 0.25f;
 
     private Coroutine[] _retractionCoroutines;
@@ -56,7 +59,7 @@ public class PlayerV2_Suspension : MonoBehaviour
 
     private void Update()
     {
-        // Récupération progressive du Damper après un atterrissage lourd
+        // Gradual Damper recovery after a hard landing
         if (_currentDamper > Damper)
         {
             _currentDamper = Mathf.SmoothDamp(_currentDamper, Damper, ref _damperRecoveryVelocity, LandingDamperRecoveryTime);
@@ -80,27 +83,27 @@ public class PlayerV2_Suspension : MonoBehaviour
         {
             if (joint == null) continue;
 
-            // Configurer la limite de mouvement Y (coulissement)
+            // Y motion limit (slide)
             SoftJointLimit limit = new SoftJointLimit();
             limit.limit = SuspensionTravel;
             joint.linearLimit = limit;
 
-            // Configurer le ressort (Drive) sur l'axe Y
+            // Spring (drive) on the Y axis
             JointDrive drive = new JointDrive();
             drive.positionSpring = SpringForce;
             drive.positionDamper = _currentDamper;
             drive.maximumForce = Mathf.Infinity;
 
-            // Unity utilise le XDrive, YDrive, ZDrive pour les ConfigurableJoints
-            // Dans le repère local du joint, le coulissement est généralement sur l'axe Y ou Z selon la configuration.
-            // Si l'axe est Y (0,1,0), c'est le yDrive.
+            // Unity uses XDrive, YDrive, ZDrive for ConfigurableJoints.
+            // In the joint local frame, the slide is usually on the Y or Z axis depending on the setup.
+            // If the axis is Y (0,1,0), it is the yDrive.
 
             joint.yDrive = drive;
             
-            // Forcer l'extension du ressort
+            // Force the spring extension
             joint.targetPosition = new Vector3(0, TargetExtension, 0);
 
-            // Assurons-nous que le reste est bien bloqué
+            // Make sure everything else is locked
             joint.xMotion = ConfigurableJointMotion.Locked;
             joint.zMotion = ConfigurableJointMotion.Locked;
             joint.yMotion = ConfigurableJointMotion.Limited;
@@ -110,14 +113,14 @@ public class PlayerV2_Suspension : MonoBehaviour
             joint.angularZMotion = ConfigurableJointMotion.Locked;
 
             // FIX: Projection for multiplayer
-            // Forcer le moteur physique à "téléporter" la roue sous le robot si elle commence à traîner (décalage horizontal)
-            // à cause du NetworkTransform qui déplace le parent de manière non-physique (téléportation/interpolation).
+            // Force the physics engine to "teleport" the wheel back under the robot if it starts to lag behind (horizontal offset)
+            // because the NetworkTransform moves the parent non-physically (teleport/interpolation).
             joint.projectionMode = JointProjectionMode.PositionAndRotation;
-            joint.projectionDistance = 0.02f; // Tolérance de 2cm avant le snap
+            joint.projectionDistance = 0.02f; // 2 cm tolerance before snapping
             joint.projectionAngle = 180f;
 
-            // IMPORTANT : Pour éviter les explosions physiques (le robot expulsé en l'air) et les vrilles,
-            // il FAUT que les roues glissent parfaitement, sinon la friction fait levier et détruit le joint.
+            // IMPORTANT: to avoid physics explosions (robot launched into the air) and spins,
+            // the wheels MUST slide perfectly, otherwise friction acts as a lever and breaks the joint.
             Collider wheelCollider = joint.GetComponent<Collider>();
             if (wheelCollider != null)
             {
@@ -132,6 +135,9 @@ public class PlayerV2_Suspension : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Starts the jump retraction animation on every wheel (each with a small random delay).
+    /// </summary>
     public void TriggerJumpRetraction()
     {
         if (WheelJoints == null) return;
@@ -152,25 +158,25 @@ public class PlayerV2_Suspension : MonoBehaviour
     {
         ConfigurableJoint joint = WheelJoints[wheelIndex];
 
-        // Mini delay aléatoire pour un effet asynchrone organique
+        // Small random delay for an organic, asynchronous effect
         float delay = Random.Range(0.01f, MaxRandomRetractionDelay);
         yield return new WaitForSeconds(delay);
 
         _isWheelRetracting[wheelIndex] = true;
 
-        // Force le damper à une valeur idéale (ex: 50) pour avoir la même belle animation "visqueuse" 
-        // même si le joueur a mis le damper global à 10 pour la conduite.
+        // Force the damper to an ideal value (e.g. 50) to keep the same nice "viscous" animation
+        // even if the global damper is set to 10 for driving.
         JointDrive drive = joint.yDrive;
         drive.positionDamper = RetractionDamper;
         joint.yDrive = drive;
 
-        // PAF Fonce vers le haut
+        // Snap upward
         joint.targetPosition = new Vector3(0, RetractedExtension, 0);
 
-        // Reste contracté
+        // Stay retracted
         yield return new WaitForSeconds(RetractionHoldDuration);
 
-        // Se relâche doucement vers l'extension normale
+        // Relax smoothly back to the normal extension
         float t = 0;
         while (t < 1f)
         {
@@ -182,13 +188,16 @@ public class PlayerV2_Suspension : MonoBehaviour
 
         joint.targetPosition = new Vector3(0, TargetExtension, 0);
 
-        // Restaure le damper global géré par la suspension
+        // Restore the global damper managed by the suspension
         _isWheelRetracting[wheelIndex] = false;
         drive = joint.yDrive;
         drive.positionDamper = _currentDamper;
         joint.yDrive = drive;
     }
 
+    /// <summary>
+    /// Applies a damper value to every wheel Y drive, skipping wheels currently playing the jump retraction.
+    /// </summary>
     public void ApplyDamper(float damperValue)
     {
         if (WheelJoints == null) return;
@@ -201,9 +210,12 @@ public class PlayerV2_Suspension : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Raises the damper to Damper * HardLandingDamperMultiplier to absorb a hard landing; it then recovers over LandingDamperRecoveryTime.
+    /// </summary>
     public void OnHardLanding(float impactSpeed)
     {
-        // Calcul d'un Damper cible basé sur la violence du choc
+        // Target damper for the impact (impactSpeed is not used yet: the boost is a fixed multiplier)
         float targetDamper = Damper * HardLandingDamperMultiplier;
         _currentDamper = Mathf.Max(_currentDamper, targetDamper);
         ApplyDamper(_currentDamper);

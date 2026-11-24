@@ -37,6 +37,9 @@ namespace Gameplay.Phantoms
         private int _currentSpawnIndex = 0;
 
         #region Unity Lifecycle
+        /// <summary>
+        /// Server start: validates the prefab and spawns the initial batch of phantoms.
+        /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
