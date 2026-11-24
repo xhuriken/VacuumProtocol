@@ -16,18 +16,22 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
     private void Start()
     {
         // Look up the global Volume only once at startup to avoid wasting performance
-        _globalVolume = FindObjectOfType<Volume>();
-
-        if (_globalVolume != null && _globalVolume.profile != null)
+        _globalVolume = FindFirstObjectByType<Volume>();
+        if (_globalVolume == null || _globalVolume.profile == null)
         {
-            _globalVolume.profile.TryGet(out _motionBlur);
+            Debug.LogError($"[GameplaySettingsConsumer] '{gameObject.name}': no Volume with a profile in the scene, motion blur settings cannot be applied.", this);
+        }
+        else if (!_globalVolume.profile.TryGet(out _motionBlur))
+        {
+            Debug.LogWarning($"[GameplaySettingsConsumer] '{gameObject.name}': Volume profile '{_globalVolume.profile.name}' has no MotionBlur override, motion blur settings are ignored.", this);
         }
 
-        // Register with the SettingsManager
-        if (SettingsManager.HasInstance)
+        if (!SettingsManager.HasInstance)
         {
-            SettingsManager.Instance.RegisterConsumer(this);
+            Debug.LogError($"[GameplaySettingsConsumer] '{gameObject.name}': no SettingsManager instance, gameplay settings will never be applied.", this);
+            return;
         }
+        SettingsManager.Instance.RegisterConsumer(this);
     }
 
     private void OnDestroy()
@@ -52,6 +56,8 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void ApplyFieldOfView(float fov)
     {
+        bool applied = false;
+
         // Apply to the local player's camera first
         if (PlayerV2_Controller.LocalInstance != null && PlayerV2_Controller.LocalInstance.CameraTransform != null)
         {
@@ -59,6 +65,7 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
             if (playerCam != null)
             {
                 playerCam.fieldOfView = fov;
+                applied = true;
             }
         }
 
@@ -67,26 +74,21 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
         if (_mainCamera != null)
         {
             _mainCamera.fieldOfView = fov;
+            applied = true;
+        }
+
+        if (!applied)
+        {
+            Debug.LogWarning($"[GameplaySettingsConsumer] '{gameObject.name}': no local player camera and no Camera.main, FOV {fov} not applied.", this);
         }
     }
 
     private void ApplyMotionBlur(float intensity)
     {
-        if (_globalVolume == null)
+        // Missing Volume / override was already reported in Start.
+        if (_motionBlur != null)
         {
-            _globalVolume = FindFirstObjectByType<Volume>();
-        }
-
-        if (_globalVolume != null && _globalVolume.profile != null)
-        {
-            if (_motionBlur == null)
-            {
-                _globalVolume.profile.TryGet(out _motionBlur);
-            }
-            if (_motionBlur != null)
-            {
-                _motionBlur.intensity.value = intensity;
-            }
+            _motionBlur.intensity.value = intensity;
         }
     }
 
