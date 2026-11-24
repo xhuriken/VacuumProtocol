@@ -2083,3 +2083,12 @@ ull. Cons�quence : la rustine critique joint.connectedMassScale = 0.00001f n'�ta
 
 ### Code Modified/Added
 - [MODIFY] [Eye.cs](file:///c:/Users/celestin/Unity%20Games/VacuumProtocol/Assets/1_Scripts/Player/Visuals/Eye.cs) (Re-targeted scaling from _pupilBone to 	ransform and renamed sync vars).
+
+## [2026-11-24] - Écran de Vie CRT Contaminé par l'Ectoplasme (PlayerHealthScreen)
+**Goal:** Afficher la vie du joueur sur l'écran du torse du robot avec un rendu propre au jeu, qui fonctionne aussi bien pour le drain continu de l'aura de terreur que pour un coup sec.
+**Changes:**
+- **`Shader_PlayerHealthScreen.shader` [NEW]**: Shader HLSL URP. Phosphore CRT pour la vie restante, ectoplasme Voronoi (distance exacte au bord) qui ronge la vie perdue, front lumineux, morsures de cellules et glitch à l'impact, pulse en vie basse, flash au soin.
+- **`Mat_PlayerHealthScreen.mat` [NEW]**: Matériau de l'écran (sens de remplissage inversé pour ce mesh).
+- **`PlayerHealthScreen.cs` [NEW]**: Écoute `PlayerHealth.OnHealthChanged`, lisse le front, accumule une énergie d'impact proportionnelle à la vie perdue et pousse `_Health` / `_Impact` / `_HealFlash` via un `MaterialPropertyBlock` sur le slot 3.
+- **`Player_V2.prefab` [MODIFIED]**: Slot `M_HP` de `SKM_Robot` remplacé par `Mat_PlayerHealthScreen`, composant `PlayerHealthScreen` ajouté sur la racine.
+**Justification:** La logique de vie reste dans `PlayerHealth` (serveur). Le visuel tourne sur chaque client grâce au hook SyncVar existant. Une seule énergie d'impact proportionnelle à la vie perdue unifie drain et coup sec, au lieu d'un effet par événement qui se relancerait à chaque frame pendant le drain.
