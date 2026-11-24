@@ -121,27 +121,40 @@ namespace Player.Mechanics
         {
             if (!_isDead) return;
 
-            _isDead = false;
+            // Health first so listeners of OnPlayerRevived already read the restored value.
             _currentHealth = Mathf.Clamp(_maxHealth * healthPercent, 1f, _maxHealth);
-
-            PlayerV2_Controller controller = GetComponent<PlayerV2_Controller>();
-            OnPlayerRevived?.Invoke(controller);
-            RpcOnRevived();
-
-            Debug.Log($"<color=green>[PlayerHealth]</color> Player '{gameObject.name}' was revived with {_currentHealth:F1} PV!");
+            SetDeadState(false, "Revive");
         }
 
         [Server]
         private void Die(string killerSource)
         {
-            _isDead = true;
             _currentHealth = 0f;
+            SetDeadState(true, killerSource);
+        }
 
-            PlayerV2_Controller controller = GetComponent<PlayerV2_Controller>();
-            Debug.LogWarning($"<color=red>[PlayerHealth]</color> Player '{gameObject.name}' DIED! Killed by: {killerSource}");
+        /// <summary>
+        /// Description: Single server entry point for death/revive state changes.
+        /// Justification: The SyncVar hook raises OnPlayerDied / OnPlayerRevived on every client (host included).
+        /// A dedicated server never runs hooks, so it raises the event itself; this keeps exactly one event per peer.
+        /// </summary>
+        [Server]
+        private void SetDeadState(bool dead, string reason)
+        {
+            _isDead = dead;
+            if (!isClient)
+            {
+                RaiseDeathStateEvent(dead);
+            }
 
-            OnPlayerDied?.Invoke(controller);
-            RpcOnDied();
+            if (dead)
+            {
+                Debug.LogWarning($"<color=red>[PlayerHealth]</color> Player '{gameObject.name}' DIED! Killed by: {reason}");
+            }
+            else
+            {
+                Debug.Log($"<color=green>[PlayerHealth]</color> Player '{gameObject.name}' was revived with {_currentHealth:F1} PV!");
+            }
         }
         #endregion
 
@@ -153,36 +166,26 @@ namespace Player.Mechanics
 
         private void OnDeathStateChanged(bool oldDead, bool newDead)
         {
-            if (newDead)
+            if (oldDead == newDead) return;
+            RaiseDeathStateEvent(newDead);
+        }
+
+        private void RaiseDeathStateEvent(bool dead)
+        {
+            PlayerV2_Controller controller = GetComponent<PlayerV2_Controller>();
+            if (controller == null)
             {
-                PlayerV2_Controller controller = GetComponent<PlayerV2_Controller>();
-                OnPlayerDied?.Invoke(controller);
+                Debug.LogError($"[PlayerHealth] '{gameObject.name}' has no PlayerV2_Controller: death/revive listeners receive null.", this);
             }
+
+            if (dead) OnPlayerDied?.Invoke(controller);
+            else OnPlayerRevived?.Invoke(controller);
         }
 
         [ClientRpc]
         private void RpcOnDamageFeedback(float amount, string source)
         {
             OnDamageReceived?.Invoke(amount, source);
-        }
-
-        [ClientRpc]
-        private void RpcOnDied()
-        {
-            // Local client audio/visual trigger hook
-            if (isLocalPlayer)
-            {
-                Debug.Log("<color=red>[PlayerHealth]</color> Local player succumbed to the entities!");
-            }
-        }
-
-        [ClientRpc]
-        private void RpcOnRevived()
-        {
-            if (isLocalPlayer)
-            {
-                Debug.Log("<color=green>[PlayerHealth]</color> Local player revived!");
-            }
         }
         #endregion
 
@@ -214,6 +217,23 @@ namespace Player.Mechanics
             {
                 Debug.LogWarning("[PlayerHealth] Debug heal can only be executed on the Server/Host.");
             }
+        }
+
+        [Button("Revive (Full Health)", ButtonSizes.Medium)]
+        [GUIColor(0.4f, 0.9f, 1f)]
+        public void DebugRevive()
+        {
+            if (!isServer)
+            {
+                Debug.LogWarning("[PlayerHealth] Debug revive can only be executed on the Server/Host.");
+                return;
+            }
+            if (!_isDead)
+            {
+                Debug.LogWarning($"[PlayerHealth] Debug revive ignored: '{gameObject.name}' is not dead.");
+                return;
+            }
+            Revive(1f);
         }
 
         [Button("Kill Immediately", ButtonSizes.Small)]
