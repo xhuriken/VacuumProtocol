@@ -3,12 +3,17 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Description: Système de rendu de Gizmos léger en temps réel (Runtime) fonctionnant en jeu et dans les Builds standalone.
-/// Context: Appelé par PlayerV2_Gizmos et tout autre script de debug.
-/// Justification: Permet d'afficher des lignes, cercles, sphères et cônes wireframe via GL.LINES directement sur le GPU avec 0 allocation.
+/// Description: Lightweight runtime Gizmos renderer that works in play mode and in standalone builds.
+/// Context: Called by PlayerV2_Gizmos and any other debug script.
+/// Justification: Draws wireframe lines, rays, circles and spheres through GL.LINES directly on the GPU with zero allocation.
 /// </summary>
 public static class RuntimeGizmos
 {
+    /// <summary>
+    /// Description: One queued line segment with its color.
+    /// Context: Stored in the static line buffer until the next camera render.
+    /// Justification: A struct keeps the preallocated buffer allocation-free.
+    /// </summary>
     private struct LineData
     {
         public Vector3 Start;
@@ -28,7 +33,7 @@ public static class RuntimeGizmos
     private static bool _isInitialized = false;
 
     /// <summary>
-    /// Description: Initialise le système et souscrit au callback de rendu de la caméra.
+    /// Description: Initializes the system and subscribes to the camera rendering callbacks.
     /// </summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     public static void Initialize()
@@ -66,7 +71,7 @@ public static class RuntimeGizmos
     }
 
     /// <summary>
-    /// Description: Vérifie si les gizmos de debug sont activés dans les paramètres utilisateur.
+    /// Description: Returns whether debug gizmos are enabled in the user settings (false when no SettingsManager exists).
     /// </summary>
     public static bool IsEnabled
     {
@@ -81,7 +86,7 @@ public static class RuntimeGizmos
     }
 
     /// <summary>
-    /// Description: Dessine une ligne entre deux points avec une couleur donnée.
+    /// Description: Draws a line between two points with the given color.
     /// </summary>
     public static void DrawLine(Vector3 start, Vector3 end, Color color)
     {
@@ -89,7 +94,7 @@ public static class RuntimeGizmos
     }
 
     /// <summary>
-    /// Description: Dessine un rayon partant d'une origine dans une direction.
+    /// Description: Draws a ray starting at an origin along a direction.
     /// </summary>
     public static void DrawRay(Vector3 origin, Vector3 direction, Color color)
     {
@@ -97,20 +102,20 @@ public static class RuntimeGizmos
     }
 
     /// <summary>
-    /// Description: Dessine une sphère fil de fer en 3D.
+    /// Description: Draws a 3D wireframe sphere.
     /// </summary>
     public static void DrawWireSphere(Vector3 center, float radius, Color color, int segments = 16)
     {
         if (radius <= 0.001f) return;
 
-        // 3 cercles orthogonaux (XY, XZ, YZ)
+        // 3 orthogonal circles (XY, XZ, YZ)
         DrawWireCircle(center, Vector3.up, radius, color, segments);
         DrawWireCircle(center, Vector3.right, radius, color, segments);
         DrawWireCircle(center, Vector3.forward, radius, color, segments);
     }
 
     /// <summary>
-    /// Description: Dessine un cercle fil de fer orienté selon une normale.
+    /// Description: Draws a wireframe circle oriented along a normal.
     /// </summary>
     public static void DrawWireCircle(Vector3 center, Vector3 normal, float radius, Color color, int segments = 24)
     {
@@ -170,7 +175,7 @@ public static class RuntimeGizmos
         GL.End();
         GL.PopMatrix();
 
-        // On vide la liste après le rendu de la caméra principale
+        // Clear the list after a Game or SceneView camera has rendered
         if (camera.cameraType == CameraType.Game || camera.cameraType == CameraType.SceneView)
         {
             _lines.Clear();

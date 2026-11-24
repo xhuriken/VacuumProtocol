@@ -3,19 +3,19 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// Description: Gère les effets visuels (PostProcessing) lorsque le joueur est effrayé.
-/// Context: Attaché au Player_V2.
-/// Justification: Modifie dynamiquement la Vignette (intensité et couleur) pour créer un effet de peur claustrophobique quand on regarde une entité de niveau 3+.
+/// Description: Drives the fear post-processing effect (Vignette) when the player is scared.
+/// Context: Attached to Player_V2, runs only for the local player.
+/// Justification: Dynamically changes the Vignette intensity and color to create a claustrophobic fear effect while looking at an entity of priority level 3 or higher.
 /// </summary>
 [RequireComponent(typeof(PlayerViewRange))]
 public class PlayerV2_FearEffects : MonoBehaviour
 {
     [Header("Fear Post Processing Settings")]
-    [Tooltip("Intensité de la vignette quand le joueur a peur (plus petite/serrée).")]
+    [Tooltip("Role: Vignette intensity while the player is afraid (tighter vignette).")]
     public float FearVignetteIntensity = 0.6f;
-    [Tooltip("Couleur de la vignette quand le joueur a peur.")]
-    public Color FearVignetteColor = new Color(0.6f, 0f, 0f); // Rougeâtre sombre
-    [Tooltip("Vitesse de transition de l'effet.")]
+    [Tooltip("Role: Vignette color while the player is afraid.")]
+    public Color FearVignetteColor = new Color(0.6f, 0f, 0f); // Dark reddish
+    [Tooltip("Role: Transition speed of the effect (lerp factor per second).")]
     public float TransitionSpeed = 5f;
 
     private Volume _globalVolume;
@@ -30,18 +30,18 @@ public class PlayerV2_FearEffects : MonoBehaviour
     {
         _viewRange = GetComponent<PlayerViewRange>();
 
-        // L'effet ne doit tourner que pour le joueur local (la caméra locale)
+        // The effect must only run for the local player (the local camera)
         if (_viewRange != null && !_viewRange.isLocalPlayer)
         {
             enabled = false;
             return;
         }
 
-        // On récupère le volume global pour modifier ses overrides
+        // Fetch the global volume to modify its overrides
         _globalVolume = FindObjectOfType<Volume>();
         if (_globalVolume != null && _globalVolume.profile != null)
         {
-            // .profile crée une instance (clone) pour ne pas modifier l'Asset original dans l'éditeur
+            // .profile creates an instance (clone) so the original asset is not modified in the Editor
             if (_globalVolume.profile.TryGet(out _vignette))
             {
                 _defaultIntensity = _vignette.intensity.value;
@@ -54,21 +54,21 @@ public class PlayerV2_FearEffects : MonoBehaviour
     {
         if (_vignette == null || _viewRange == null) return;
 
-        // Condition de peur : On regarde une entité de niveau 3 ou plus
+        // Fear condition: looking at an entity of priority level 3 or higher
         bool isAfraid = _viewRange.HighestPriorityEntity != null && _viewRange.HighestPriorityEntity.PriorityLevel >= 3;
 
-        // Cibles
+        // Targets
         float targetIntensity = isAfraid ? FearVignetteIntensity : _defaultIntensity;
         Color targetColor = isAfraid ? FearVignetteColor : _defaultColor;
 
-        // Interpolation fluide
+        // Smooth interpolation
         _vignette.intensity.value = Mathf.Lerp(_vignette.intensity.value, targetIntensity, Time.deltaTime * TransitionSpeed);
         _vignette.color.value = Color.Lerp(_vignette.color.value, targetColor, Time.deltaTime * TransitionSpeed);
     }
 
     private void OnDisable()
     {
-        // On remet les valeurs par défaut si le script est désactivé (ex: joueur meurt)
+        // Restore the default values when the script is disabled (e.g. player dies)
         if (_vignette != null)
         {
             _vignette.intensity.value = _defaultIntensity;

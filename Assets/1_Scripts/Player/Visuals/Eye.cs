@@ -120,7 +120,7 @@ public class Eye : NetworkBehaviour
     }
 
     /// <summary>
-    /// Description: Met en pause ou réactive l'oeil du joueur (rétrécit les pupilles à 0.2).
+    /// Description: Pauses or resumes the player's eye (shrinks the pupils to 0.2 while paused).
     /// </summary>
     public void SetPaused(bool isPaused)
     {

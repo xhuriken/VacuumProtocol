@@ -15,33 +15,49 @@ using UnityEngine.UI;
 public class SettingsUIPresenter : MonoBehaviour
 {
     [Header("Audio UI Elements")]
+    [Tooltip("Role: Slider bound to SettingsData.MasterVolume. Auto-wired by name ('master') if left empty.")]
     [SerializeField] private UICustomSlider _masterVolumeSlider;
+    [Tooltip("Role: Slider bound to SettingsData.VoiceVolume. Auto-wired by name ('voice') if left empty.")]
     [SerializeField] private UICustomSlider _voiceVolumeSlider;
+    [Tooltip("Role: Slider bound to SettingsData.MicSensitivityLimit (0..1, maps to a 2..18 dB VAD threshold). Auto-wired by name ('sens'/'mic') if left empty.")]
     [SerializeField] private UICustomSlider _micSensitivitySlider;
+    [Tooltip("Role: Dropdown listing Microphone.devices, bound to SettingsData.ActiveMicrophoneDevice. Auto-wired by name ('mic'/'device') if left empty.")]
     [SerializeField] private UICustomDropdown _microphoneDropdown;
 
     [Header("Microphone Level Indicator")]
+    [Tooltip("Role: Slider used as a live microphone level meter (SNR mapped to 0..1).")]
     [SerializeField] private UICustomSlider _micLevelIndicator;
+    [Tooltip("Role: Indicator fill color while the local VAD reports silence.")]
     [SerializeField] private Color _silenceColor = new Color(0.341f, 0.235f, 0.251f, 1.000f);
+    [Tooltip("Role: Indicator fill color while the local VAD reports speech.")]
     [SerializeField] private Color _talkingColor = new Color(0.000f, 1.000f, 0.251f, 1.000f);
+    [Tooltip("Role: Decay speed of the level meter (Lerp factor per second); the attack is instant.")]
     [SerializeField] private float _indicatorSmoothSpeed = 10f;
+    [Tooltip("Role: Toggle that enables local microphone loopback preview. Auto-wired by name ('test') if left empty.")]
     [SerializeField] private UICustomToggle _micTestToggle;
 
     [Header("Auto VAD Mode")]
     [Tooltip("Role: Toggles auto VAD mode.\nUse Case: Settings configuration.\nJustification: When enabled, bypasses the manual sensitivity slider and uses UniVoice's default algorithm.")]
     [SerializeField] private UICustomToggle _autoVadToggle;
+    [Tooltip("Role: Extra slider made non-interactable while Auto VAD is enabled.")]
     [SerializeField] private UICustomSlider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
     [Header("Gameplay UI Elements")]
+    [Tooltip("Role: Slider bound to SettingsData.FieldOfView (range forced to 60..120 degrees). Auto-wired by name ('fov'/'field') if left empty.")]
     [SerializeField] private UICustomSlider _fovSlider;
+    [Tooltip("Role: Toggle bound to SettingsData.ShowDebugGizmos. Auto-wired by name ('gizmo'/'guizmo'/'debug') if left empty.")]
     [SerializeField] private UICustomToggle _debugGizmosToggle;
 
     [Header("Graphics UI Elements")]
+    [Tooltip("Role: Slider bound to SettingsData.MotionBlurIntensity. Auto-wired by name ('blur'/'motion') if left empty.")]
     [SerializeField] private UICustomSlider _motionBlurSlider;
+    [Tooltip("Role: Dropdown listing QualitySettings.names, bound to SettingsData.QualityLevelIndex. Auto-wired by name ('quality') if left empty.")]
     [SerializeField] private UICustomDropdown _qualityDropdown;
+    [Tooltip("Role: Toggle bound to SettingsData.IsFullscreen and Screen.fullScreen. Auto-wired by name ('screen'/'full') if left empty.")]
     [SerializeField] private UICustomToggle _fullscreenToggle;
 
     [Header("Debug")]
+    [Tooltip("Role: Enables debug logs for settings changes and microphone SNR.")]
     [SerializeField] private bool _enableDebugLogs = true;
 
     // Cached runtime variables
@@ -141,11 +157,11 @@ public class SettingsUIPresenter : MonoBehaviour
         var current = SettingsManager.Instance.CurrentSettings;
         if (current == null)
         {
-            Debug.LogWarning("[SettingsUIPresenter] InitializeUI -> CurrentSettings est encore null !");
+            Debug.LogWarning("[SettingsUIPresenter] InitializeUI -> CurrentSettings is still null!");
             return;
         }
 
-        Debug.Log($"[SettingsUIPresenter] InitializeUI -> Données actuelles chargées: FOV={current.FieldOfView} | Gizmos={current.ShowDebugGizmos}");
+        Debug.Log($"[SettingsUIPresenter] InitializeUI -> Current data loaded: FOV={current.FieldOfView} | Gizmos={current.ShowDebugGizmos}");
 
         // Initialize sliders
         if (_masterVolumeSlider != null) _masterVolumeSlider.value = current.MasterVolume;
@@ -169,21 +185,21 @@ public class SettingsUIPresenter : MonoBehaviour
             _fovSlider.minValue = 60f;
             _fovSlider.maxValue = 120f;
             _fovSlider.value = current.FieldOfView;
-            Debug.Log($"[SettingsUIPresenter] _fovSlider ({_fovSlider.name}) configuré: Min=60, Max=120, Value={current.FieldOfView}");
+            Debug.Log($"[SettingsUIPresenter] _fovSlider ({_fovSlider.name}) configured: Min=60, Max=120, Value={current.FieldOfView}");
         }
         else
         {
-            Debug.LogWarning("[SettingsUIPresenter] Attention : _fovSlider n'est pas assigné !");
+            Debug.LogWarning("[SettingsUIPresenter] Warning: _fovSlider is not assigned!");
         }
 
         if (_debugGizmosToggle != null)
         {
             _debugGizmosToggle.isOn = current.ShowDebugGizmos;
-            Debug.Log($"[SettingsUIPresenter] _debugGizmosToggle ({_debugGizmosToggle.name}) configuré: IsOn={current.ShowDebugGizmos}");
+            Debug.Log($"[SettingsUIPresenter] _debugGizmosToggle ({_debugGizmosToggle.name}) configured: IsOn={current.ShowDebugGizmos}");
         }
         else
         {
-            Debug.LogWarning("[SettingsUIPresenter] Attention : _debugGizmosToggle n'est pas assigné !");
+            Debug.LogWarning("[SettingsUIPresenter] Warning: _debugGizmosToggle is not assigned!");
         }
 
         // Graphics
@@ -197,7 +213,7 @@ public class SettingsUIPresenter : MonoBehaviour
         }
         if (_fullscreenToggle != null) _fullscreenToggle.isOn = current.IsFullscreen;
 
-        // Always reset both toggles to off when opening the UI
+        // Mic test is always reset to off when opening the UI; Auto VAD mirrors its current state
         if (_micTestToggle != null) _micTestToggle.isOn = false;
         if (_autoVadToggle != null) _autoVadToggle.isOn = VoiceSettingsConsumer.IsAutoVad;
 
@@ -460,7 +476,7 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.FieldOfView = value;
-            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] FOV modifié -> {data.FieldOfView}°");
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] FOV changed -> {data.FieldOfView} deg");
         }, saveToDisk: true);
     }
 
@@ -469,17 +485,17 @@ public class SettingsUIPresenter : MonoBehaviour
         SettingsManager.Instance.UpdateSettings(data =>
         {
             data.MotionBlurIntensity = value;
-            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Motion Blur modifié -> {data.MotionBlurIntensity}");
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] Motion Blur changed -> {data.MotionBlurIntensity}");
         }, saveToDisk: true);
     }
 
     /// <summary>
-    /// Description: Callback appelé quand un slider est relâché. Enregistre physiquement les données sur disque.
+    /// Description: Callback invoked when a slider is released. Writes the settings to disk.
     /// </summary>
     private void OnSliderReleased()
     {
         SettingsManager.Instance.SaveSettings();
-        if (_enableDebugLogs) Debug.Log("[SettingsUIPresenter] Slider relâché -> Sauvegarde sur disque exécutée (PlayerPrefs.Save).");
+        if (_enableDebugLogs) Debug.Log("[SettingsUIPresenter] Slider released -> Saved to disk (PlayerPrefs.Save).");
     }
 
     private void OnQualityChanged(int index)

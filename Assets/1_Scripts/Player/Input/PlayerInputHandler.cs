@@ -10,7 +10,8 @@ using UnityEngine.InputSystem;
     public class PlayerInputHandler : NetworkBehaviour
     {
         /// <summary>
-        /// Description: Active ou désactive le blocage global des inputs (ex: menu pause).
+        /// Description: Enables or disables the global input block (e.g. pause menu).
+        /// While true, every public input getter returns its neutral value.
         /// </summary>
         public bool IsInputBlocked { get; set; } = false;
 

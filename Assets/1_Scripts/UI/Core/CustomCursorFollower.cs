@@ -63,7 +63,7 @@ public class CustomCursorFollower : MonoBehaviour
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable = false;
 
-        // Désactiver le raycastTarget sur tous les graphismes du curseur pour qu'il ne bloque jamais les boutons en dessous
+        // Disable raycastTarget on every cursor graphic so it never blocks the buttons underneath
         UnityEngine.UI.Graphic[] graphics = GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
         for (int i = 0; i < graphics.Length; i++)
         {
@@ -76,6 +76,7 @@ public class CustomCursorFollower : MonoBehaviour
         ResetCursorMode();
     }
 
+    /// <summary>Clears the singleton reference when this instance is destroyed.</summary>
     private void OnDestroy()
     {
         if (Instance == this)
@@ -99,7 +100,7 @@ public class CustomCursorFollower : MonoBehaviour
             shouldBeVisible = MouseManager.Instance.ShouldShowCursor;
         }
 
-        // Contrôler la visibilité des visuels sans désactiver le GameObject racine pour que LateUpdate continue de tourner
+        // Toggle the visuals without disabling the root GameObject so LateUpdate keeps running
         if (_defaultCursorVisual != null)
         {
             _defaultCursorVisual.SetActive(shouldBeVisible && !_isInBrushMode);
@@ -114,7 +115,7 @@ public class CustomCursorFollower : MonoBehaviour
             _canvasGroup.alpha = shouldBeVisible ? 1f : 0f;
         }
 
-        // Pour les Shapes et enfants directs si les conteneurs visuels ne sont pas assignés
+        // Fallback for Shapes and direct children when the visual containers are not assigned
         if (_defaultCursorVisual == null && _brushCursorVisual == null)
         {
             for (int i = 0; i < transform.childCount; i++)
@@ -137,6 +138,7 @@ public class CustomCursorFollower : MonoBehaviour
     /// Context: Called by TexturePainterUI on canvas enter/drag.
     /// Justification: Adapts cursor visuals to show active brush diameter and color.
     /// </summary>
+    /// <param name="enabled">True to show the brush ring, false to restore the default cursor.</param>
     /// <param name="radiusPixels">Brush radius in UI screen space pixels.</param>
     /// <param name="brushColor">Active brush color.</param>
     /// <param name="isEraser">True if eraser mode is active.</param>

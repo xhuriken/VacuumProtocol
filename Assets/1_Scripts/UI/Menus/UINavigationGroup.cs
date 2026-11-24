@@ -27,12 +27,7 @@ public class UINavigationGroup : MonoBehaviour
     private UIPanelController _currentRightPanel;
 
     /// <summary>
-    /// Description: Unity Start callback. Hides all non-default panels instantly and opens the default Left panel.
-    /// Context: Lifecycle event.
-    /// Justification: Sets up the initial clean state of the main menu.
-    /// </summary>
-    /// <summary>
-    /// Description: Réinitialise la navigation au panel par défaut et masque tous les sous-panels.
+    /// Description: Resets navigation to the default panel: clears history, hides the Right panel and every non-default panel, then shows the default panel.
     /// </summary>
     public void ResetToDefault()
     {
@@ -59,6 +54,11 @@ public class UINavigationGroup : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Description: Unity Start callback. Hides all non-default panels and opens the default Left panel.
+    /// Context: Lifecycle event.
+    /// Justification: Sets up the initial clean state of the main menu.
+    /// </summary>
     private void Start()
     {
         ResetToDefault();

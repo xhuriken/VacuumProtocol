@@ -15,7 +15,7 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void Start()
     {
-        // On cherche le Volume global une seule fois au démarrage pour éviter de consommer des perfs
+        // Look up the global Volume only once at startup to avoid wasting performance
         _globalVolume = FindObjectOfType<Volume>();
 
         if (_globalVolume != null && _globalVolume.profile != null)
@@ -23,7 +23,7 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
             _globalVolume.profile.TryGet(out _motionBlur);
         }
 
-        // On s'enregistre auprès du SettingsManager
+        // Register with the SettingsManager
         if (SettingsManager.HasInstance)
         {
             SettingsManager.Instance.RegisterConsumer(this);
@@ -39,7 +39,8 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
     }
 
     /// <summary>
-    /// Description: Callback appelé automatiquement quand une valeur change dans l'UI ou au chargement.
+    /// Description: Callback invoked automatically when a value changes in the UI or on load.
+    /// Applies FOV, motion blur, quality level and fullscreen mode.
     /// </summary>
     public void OnSettingsUpdated(SettingsData settings)
     {
@@ -51,7 +52,7 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
 
     private void ApplyFieldOfView(float fov)
     {
-        // Appliquer à la caméra du joueur local en priorité
+        // Apply to the local player's camera first
         if (PlayerV2_Controller.LocalInstance != null && PlayerV2_Controller.LocalInstance.CameraTransform != null)
         {
             Camera playerCam = PlayerV2_Controller.LocalInstance.CameraTransform.GetComponentInChildren<Camera>();
@@ -61,7 +62,7 @@ public class GameplaySettingsConsumer : MonoBehaviour, ISettingsConsumer
             }
         }
 
-        // Appliquer aussi à Camera.main
+        // Also apply to Camera.main
         _mainCamera = Camera.main;
         if (_mainCamera != null)
         {
