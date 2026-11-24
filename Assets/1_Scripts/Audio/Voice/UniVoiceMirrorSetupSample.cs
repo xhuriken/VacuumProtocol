@@ -46,6 +46,10 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     [Tooltip("Role: Toggle for Voice Activity Detection.\nUse Case: Noise gating.\nJustification: VAD prevents sending silence or background noise, saving bandwidth and preventing echo.")]
     bool useVad = true;
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     /// <summary>
     /// Description: Triggers the global setup if not already initialized.
     /// Context: Start lifecycle event.
@@ -55,7 +59,7 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     {
         if (HasSetUp)
         {
-            Debug.Log($"[{TAG}] UniVoice is already set up. Ignoring...");
+            Debug.LogWarning($"[{TAG}] UniVoice is already set up. Ignoring...");
             return;
         }
         HasSetUp = Setup();
@@ -78,7 +82,7 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
                 if (prop != null)
                 {
                     prop.SetValue(ClientSession.Client, 0);
-                    Debug.Log("<color=cyan>[UniVoice Fix]</color> Host ID forced to 0 (Steamworks Fix)");
+                    if (_enableDebugLogs) Debug.Log("<color=cyan>[UniVoice Fix]</color> Host ID forced to 0 (Steamworks Fix)");
                 }
             }
         }
@@ -92,7 +96,7 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     /// <returns>True if setup succeeded.</returns>
     bool Setup()
     {
-        Debug.Log($"[{TAG}] Trying to setup UniVoice");
+        if (_enableDebugLogs) Debug.Log($"[{TAG}] Trying to setup UniVoice");
 
         bool failed = false;
 
@@ -110,7 +114,7 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
             failed = true;
         }
 
-        if (!failed)
+        if (!failed && _enableDebugLogs)
             Debug.Log($"[{TAG}] UniVoice successfully setup!");
 
         return !failed;
@@ -126,16 +130,16 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
     {
 #if MIRROR || UNIVOICE_NETWORK_MIRROR
         AudioServer = new MirrorServer();
-        Debug.Log($"[{TAG}] Created MirrorServer object");
+        if (_enableDebugLogs) Debug.Log($"[{TAG}] Created MirrorServer object");
 
         AudioServer.OnServerStart += () =>
         {
-            Debug.Log($"[{TAG}] Server started");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Server started");
         };
 
         AudioServer.OnServerStop += () =>
         {
-            Debug.Log($"[{TAG}] Server stopped");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Server stopped");
         };
         return true;
 #else
@@ -156,25 +160,25 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
         IAudioClient<int> client = new MirrorClient();
         client.OnJoined += (id, peerIds) =>
         {
-            Debug.Log($"[{TAG}] You are Peer ID {id}");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] You are Peer ID {id}");
         };
 
         client.OnLeft += () =>
         {
-            Debug.Log($"[{TAG}] You left the chatroom");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] You left the chatroom");
         };
 
         client.OnPeerJoined += id =>
         {
-            Debug.Log($"[{TAG}] Peer {id} joined");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Peer {id} joined");
         };
 
         client.OnPeerLeft += id =>
         {
-            Debug.Log($"[{TAG}] Peer {id} left");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Peer {id} left");
         };
 
-        Debug.Log($"[{TAG}] Created MirrorClient object");
+        if (_enableDebugLogs) Debug.Log($"[{TAG}] Created MirrorClient object");
 
         IAudioInput input;
         Mic.Init();
@@ -206,30 +210,30 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
             }
 
             targetMic.StartRecording(60);
-            Debug.Log($"[{TAG}] Started recording with Mic device: {targetMic.Name}");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Started recording with Mic device: {targetMic.Name}");
             input = new UniMicInput(targetMic);
         }
 
         IAudioOutputFactory outputFactory = new StreamedAudioSourceOutput.Factory();
-        Debug.Log($"[{TAG}] Using StreamedAudioSourceOutput.Factory");
+        if (_enableDebugLogs) Debug.Log($"[{TAG}] Using StreamedAudioSourceOutput.Factory");
 
         ClientSession = new ClientSession<int>(client, input, outputFactory);
 
         // Debug logs for session events
         ClientSession.Client.OnJoined += (id, peers) =>
         {
-            Debug.Log($"<color=green>[UniVoice Debug]</color> Local Client Initialized! My ID: {id}. Peers already here: {string.Join(", ", peers)}");
+            if (_enableDebugLogs) Debug.Log($"<color=green>[UniVoice Debug]</color> Local Client Initialized! My ID: {id}. Peers already here: {string.Join(", ", peers)}");
         };
 
         ClientSession.Client.OnPeerJoined += id =>
         {
-            Debug.Log($"<color=yellow>[UniVoice Debug]</color> A new peer joined: {id}");
+            if (_enableDebugLogs) Debug.Log($"<color=yellow>[UniVoice Debug]</color> A new peer joined: {id}");
         };
 
         ClientSession.Client.OnReceivedPeerAudioFrame += (id, frame) =>
         {
             // Log frame reception periodically to verify network traffic
-            if (Time.frameCount % 200 == 0)
+            if (_enableDebugLogs && Time.frameCount % 200 == 0)
                 Debug.Log($"<color=cyan>[UniVoice Debug]</color> Receiving audio from Peer {id} ({frame.samples.Length} bytes)");
         };
 
@@ -245,7 +249,7 @@ public class UniVoiceMirrorSetupSample : MonoBehaviour
         {
             ClientSession.InputFilters.Add(new ConcentusEncodeFilter());
             ClientSession.AddOutputFilter<ConcentusDecodeFilter>(() => new ConcentusDecodeFilter());
-            Debug.Log($"[{TAG}] Registered Concentus filters");
+            if (_enableDebugLogs) Debug.Log($"[{TAG}] Registered Concentus filters");
         }
 
         return true;

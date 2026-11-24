@@ -1036,7 +1036,6 @@ MonoBehaviour:
   _dots: {fileID: 6289486873709428254}
   _buttonText: {fileID: 7257078929937105501}
   _hoverDuration: 0.3
-  _clickDuration: 0.25
 --- !u!222 &4540155935235711194
 CanvasRenderer:
   m_ObjectHideFlags: 0

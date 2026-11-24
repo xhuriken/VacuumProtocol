@@ -12,6 +12,10 @@ namespace VacuumProtocol.Mechanics.Dirt
     {
         public static DirtMetricsManager Instance { get; private set; }
 
+        [Header("Debug")]
+        [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
+
         [Header("Metrics")]
         [SyncVar]
         private float _teamTotalDirt;
@@ -47,7 +51,7 @@ namespace VacuumProtocol.Mechanics.Dirt
             PlayerPrefs.SetFloat("MyTotalDirt", newTotal);
             PlayerPrefs.Save();
             
-            Debug.Log($"[DirtMetrics] Tache aspirée ! +{amount} saleté. Total perso : {newTotal}");
+            if (_enableDebugLogs) Debug.Log($"[DirtMetrics] Tache aspirée ! +{amount} saleté. Total perso : {newTotal}");
         }
     }
 }

@@ -910,7 +910,7 @@ MonoBehaviour:
   ConnectionId: -1
   SteamId: 0
   _volumeSlider: {fileID: 1845715587243061217}
-  _showDebugLogs: 1
+  _showDebugLogs: 0
 --- !u!1 &9202161823867493522
 GameObject:
   m_ObjectHideFlags: 0

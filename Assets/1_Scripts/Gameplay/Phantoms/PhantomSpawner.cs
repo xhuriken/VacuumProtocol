@@ -31,6 +31,10 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Search radius around this spawner when finding random NavMesh spawn positions.")]
         [SerializeField] private float _randomSpawnRadius = 15f;
 
+        [Header("Debug")]
+        [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
+
         [Header("Runtime Status")]
         [Sirenix.OdinInspector.ShowInInspector, Sirenix.OdinInspector.ReadOnly]
         private readonly List<GameObject> _alivePhantoms = new List<GameObject>();
@@ -152,7 +156,7 @@ namespace Gameplay.Phantoms
             NetworkServer.Spawn(phantomInstance);
 
             _alivePhantoms.Add(phantomInstance);
-            Debug.Log($"<color=cyan>[PhantomSpawner]</color> Successfully spawned phantom '{phantomInstance.name}' at position {spawnPosition}. Total alive: {_alivePhantoms.Count}");
+            if (_enableDebugLogs) Debug.Log($"<color=cyan>[PhantomSpawner]</color> Successfully spawned phantom '{phantomInstance.name}' at position {spawnPosition}. Total alive: {_alivePhantoms.Count}");
 
             return phantomInstance;
         }
@@ -180,7 +184,7 @@ namespace Gameplay.Phantoms
             }
 
             _alivePhantoms.Clear();
-            Debug.Log("<color=orange>[PhantomSpawner]</color> All active phantoms destroyed.");
+            if (_enableDebugLogs) Debug.Log("<color=orange>[PhantomSpawner]</color> All active phantoms destroyed.");
         }
         #endregion
     }

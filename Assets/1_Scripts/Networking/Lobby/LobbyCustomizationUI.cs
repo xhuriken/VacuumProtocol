@@ -17,7 +17,7 @@ public class LobbyCustomizationUI : MonoBehaviour
 
     [Header("Debug")]
     [Tooltip("Role: Toggle for debug logs.\nUse Case: Troubleshooting.\nJustification: Customization UI can spam console during rapid color switching.")]
-    public bool EnableDebugLogs = true;
+    public bool EnableDebugLogs = false;
 
     [Header("UI Tabs & Editor Integration")]
     [Tooltip("Role: Tab controller of the customization menu.\nUse Case: Returns to the Appearance tab when the Texture Editor closes.")]
@@ -221,7 +221,7 @@ public class LobbyCustomizationUI : MonoBehaviour
             if (EnableDebugLogs) Debug.Log($"[LobbyUI] Target player found. Requesting visual preset change...");
             targetPlayer.RequestVisualChange(presetIndex);
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Visual change aborted.");
+        else Debug.LogWarning("[LobbyUI] Target player is null! Visual change aborted.");
     }
 
     // (Legacy) hex parsing removed because the new system uses Preset Indices instead.
@@ -245,7 +245,7 @@ public class LobbyCustomizationUI : MonoBehaviour
             if (EnableDebugLogs) Debug.Log($"[LobbyUI] Target player found. Requesting note change to {newNote}...");
             targetPlayer.RequestNoteChange(newNote);
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Note change aborted.");
+        else Debug.LogWarning("[LobbyUI] Target player is null! Note change aborted.");
     }
 
     /// <summary>
@@ -261,7 +261,7 @@ public class LobbyCustomizationUI : MonoBehaviour
         {
             targetPlayer.RequestVacuumTest(true);
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Vacuum preview aborted.");
+        else Debug.LogWarning("[LobbyUI] Target player is null! Vacuum preview aborted.");
     }
 
     /// <summary>
@@ -277,7 +277,7 @@ public class LobbyCustomizationUI : MonoBehaviour
         {
             targetPlayer.RequestVacuumTest(false);
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[LobbyUI] Target player is null! Vacuum stop aborted.");
+        else Debug.LogWarning("[LobbyUI] Target player is null! Vacuum stop aborted.");
     }
 
     // ----------------------------------------------------
@@ -327,7 +327,7 @@ public class LobbyCustomizationUI : MonoBehaviour
         Debug.LogWarning("[LobbyUI] Local player not found yet. Make sure you are spawned in the lobby, biatch");
         var fallback = FindObjectOfType<PlayerCustomization>();
         if (fallback != null && EnableDebugLogs) Debug.Log("[LobbyUI] GetTargetPlayer returned a fallback player found in the scene.");
-        else if (fallback == null && EnableDebugLogs) Debug.LogWarning("[LobbyUI] FindObjectOfType failed. No PlayerCustomization found in the scene.");
+        else if (fallback == null) Debug.LogWarning("[LobbyUI] FindObjectOfType failed. No PlayerCustomization found in the scene.");
 
         return fallback;
     }

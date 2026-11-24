@@ -30,6 +30,10 @@ public class SteamLobby : MonoBehaviour
     /// </summary>
     [Tooltip("Role: The active Steam lobby ID.\nUse Case: API interactions.\nJustification: Exposed for inspector debugging.")]
     public ulong CurrentLobbyId;
+
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
     
     private const string HostAddressKey = "HostAddress";
     private MyNetworkManager manager;
@@ -76,7 +80,7 @@ public class SteamLobby : MonoBehaviour
             return; 
         }
         
-        Debug.Log("Lobby Created Successfully");
+        if (_enableDebugLogs) Debug.Log("Lobby Created Successfully");
 
         // Start the Mirror host
         manager.StartHost();
@@ -94,7 +98,7 @@ public class SteamLobby : MonoBehaviour
     /// <param name="callback">Data containing the lobby ID to join.</param>
     private void OnJoinRequest(GameLobbyJoinRequested_t callback)
     {
-        Debug.Log("Join Request Received");
+        if (_enableDebugLogs) Debug.Log("Join Request Received");
         SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
     }
 
@@ -106,7 +110,7 @@ public class SteamLobby : MonoBehaviour
     /// <param name="callback">Data containing the lobby entry result.</param>
     private void OnLobbyEntered(LobbyEnter_t callback)
     {
-        Debug.Log("On Lobby Entered callback");
+        if (_enableDebugLogs) Debug.Log("On Lobby Entered callback");
         
         // Update the current lobby ID for all players
         CurrentLobbyId = callback.m_ulSteamIDLobby;

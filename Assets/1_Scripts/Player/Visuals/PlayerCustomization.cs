@@ -29,7 +29,7 @@ public class PlayerCustomization : NetworkBehaviour
 
     [Header("Debug")]
     [Tooltip("Role: Enable verbose logging.\nUse Case: Debugging customization.\nJustification: Used to trace whether colors are failing to load from PlayerPrefs or failing to sync over the network.")]
-    public bool EnableDebugLogs = true;
+    public bool EnableDebugLogs = false;
 
     /// <summary>
     /// Description: One selectable visual style (name, UI color, body texture).
@@ -242,7 +242,7 @@ public class PlayerCustomization : NetworkBehaviour
     {
         if (VisualPresets == null || index < 0 || index >= VisualPresets.Length)
         {
-            if (EnableDebugLogs) Debug.LogWarning($"[PlayerCustomization] ApplyVisuals failed. Invalid index {index} or no presets defined.");
+            Debug.LogWarning($"[PlayerCustomization] ApplyVisuals failed. Invalid index {index} or no presets defined.");
             return;
         }
 
@@ -260,7 +260,7 @@ public class PlayerCustomization : NetworkBehaviour
                 _instancedMaterials[_bodyMaterialIndex].SetTexture("_BaseMap", preset.BaseMap); // Safe fallback for URP
             }
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyVisuals failed because _instancedMaterials is null or index out of bounds! Did you assign _modelRenderer?");
+        else Debug.LogWarning("[PlayerCustomization] ApplyVisuals failed because _instancedMaterials is null or index out of bounds! Did you assign _modelRenderer?");
     }
 
     /// <summary>
@@ -279,7 +279,7 @@ public class PlayerCustomization : NetworkBehaviour
                 _instancedMaterials[_eyeMaterialIndex].SetTexture("_BaseMap", eyeTexture); // Safe fallback for URP
             }
         }
-        else if (EnableDebugLogs) Debug.LogWarning("[PlayerCustomization] ApplyLocalEyeTexture failed. Invalid material array or index.");
+        else Debug.LogWarning("[PlayerCustomization] ApplyLocalEyeTexture failed. Invalid material array or index.");
     }
 
     private void ApplyNote(MusicalNote note)

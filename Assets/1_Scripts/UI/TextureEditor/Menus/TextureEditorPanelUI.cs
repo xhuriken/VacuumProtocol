@@ -86,6 +86,10 @@ public class TextureEditorPanelUI : MonoBehaviour
     [Tooltip("Role: Close editor button without saving.\nUse Case: Cancel drawing.")]
     [SerializeField] private UICustomButtonBase _closeButton;
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     /// <summary>
     /// Description: Event emitted when player saves/applies their drawn texture.
     /// Context: Subscribed to by Lobby Customization manager to assign texture to player avatar/pupils/skin.
@@ -300,7 +304,7 @@ public class TextureEditorPanelUI : MonoBehaviour
                 }
             }
 
-            Debug.Log($"[TextureEditorPanelUI] Active tool switched to: {tool}");
+            if (_enableDebugLogs) Debug.Log($"[TextureEditorPanelUI] Active tool switched to: {tool}");
         }
     }
 
@@ -386,20 +390,20 @@ public class TextureEditorPanelUI : MonoBehaviour
         if (_painterUI != null && _painterUI.Painter != null)
         {
             Texture2D result = _painterUI.Painter.TargetTexture;
-            Debug.Log($"[TextureEditorPanelUI] Texture saved ({result.width}x{result.height})!");
+            if (_enableDebugLogs) Debug.Log($"[TextureEditorPanelUI] Texture saved ({result.width}x{result.height})!");
             OnTextureSaved?.Invoke(result);
         }
     }
 
     private void OnCloseClicked()
     {
-        Debug.Log("[TextureEditorPanelUI] Editor closed without saving.");
+        if (_enableDebugLogs) Debug.Log("[TextureEditorPanelUI] Editor closed without saving.");
         OnEditorClosed?.Invoke();
     }
 
     private void HandleColorPickedFromCanvas(Color color)
     {
-        Debug.Log($"[TextureEditorPanelUI] Eyedropper picked color: {color}");
+        if (_enableDebugLogs) Debug.Log($"[TextureEditorPanelUI] Eyedropper picked color: {color}");
     }
 
     private void RefreshActionButtonsState()
@@ -480,7 +484,7 @@ public class TextureEditorPanelUI : MonoBehaviour
         PlayerPrefs.SetFloat(densityKey, settings.Density);
         PlayerPrefs.Save();
 
-        Debug.Log($"[TextureEditorPanelUI] Saved active settings for {activeTool}: Radius={settings.Radius}, Opacity={settings.Opacity}, Density={settings.Density}");
+        if (_enableDebugLogs) Debug.Log($"[TextureEditorPanelUI] Saved active settings for {activeTool}: Radius={settings.Radius}, Opacity={settings.Opacity}, Density={settings.Density}");
     }
 
     #endregion

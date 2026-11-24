@@ -266,7 +266,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb46a050cc7df1b4caa8a1ffa4e2be8e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RebindRowUI
-  _actionLabelText: {fileID: 791276917481916056}
   _bindingButtonText: {fileID: 6247647049180925626}
   _rebindButton: {fileID: 2612595367246774722}
   _rowResetButton: {fileID: 1183727975863193748}

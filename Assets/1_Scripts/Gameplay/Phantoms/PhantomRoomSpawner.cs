@@ -79,6 +79,10 @@ namespace Gameplay.Phantoms
         [SerializeField] private Color _roomEmptyColor = new Color(0.2f, 0.8f, 0.4f, 0.15f);
         [Tooltip("Role: Gizmo color of the room bounds when at least one player is inside.")]
         [SerializeField] private Color _roomOccupiedColor = new Color(1f, 0.2f, 0.2f, 0.25f);
+
+        [Title("Debug")]
+        [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
         #endregion
 
         #region Runtime State
@@ -227,7 +231,7 @@ namespace Gameplay.Phantoms
             // Fresh entry: trigger immediate spawn or quick suspense timer
             if (!wasOccupied && isNowOccupied)
             {
-                Debug.Log($"<color=yellow>[PhantomRoomSpawner]</color> Players entered room '{gameObject.name}'. Arming spawner.");
+                if (_enableDebugLogs) Debug.Log($"<color=yellow>[PhantomRoomSpawner]</color> Players entered room '{gameObject.name}'. Arming spawner.");
                 if (_spawnImmediatelyOnFirstEntry && _activeRoomPhantoms.Count < _maxConcurrentPhantoms)
                 {
                     _spawnTimer = _firstEntryDelay;
@@ -328,7 +332,7 @@ namespace Gameplay.Phantoms
             }
 
             _totalSpawnedCount++;
-            Debug.Log($"<color=cyan>[PhantomRoomSpawner]</color> Spawned '{instance.name}' from portal '{selectedPoint.name}'. Active: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms} (Total: {_totalSpawnedCount})");
+            if (_enableDebugLogs) Debug.Log($"<color=cyan>[PhantomRoomSpawner]</color> Spawned '{instance.name}' from portal '{selectedPoint.name}'. Active: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms} (Total: {_totalSpawnedCount})");
 
             return instance;
         }
@@ -361,7 +365,7 @@ namespace Gameplay.Phantoms
             if (_activeRoomPhantoms.Remove(phantom))
             {
                 string spawnerName = (this != null && gameObject != null) ? gameObject.name : "DestroyedRoomSpawner";
-                Debug.Log($"<color=magenta>[PhantomRoomSpawner]</color> Phantom '{phantom.name}' defeated! Room '{spawnerName}' active count: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms}");
+                if (_enableDebugLogs) Debug.Log($"<color=magenta>[PhantomRoomSpawner]</color> Phantom '{phantom.name}' defeated! Room '{spawnerName}' active count: {_activeRoomPhantoms.Count}/{_maxConcurrentPhantoms}");
             }
         }
 
@@ -454,7 +458,7 @@ namespace Gameplay.Phantoms
             }
 
             _activeRoomPhantoms.Clear();
-            Debug.Log($"<color=orange>[PhantomRoomSpawner]</color> All active phantoms in '{gameObject.name}' cleared.");
+            if (_enableDebugLogs) Debug.Log($"<color=orange>[PhantomRoomSpawner]</color> All active phantoms in '{gameObject.name}' cleared.");
         }
         #endregion
 
@@ -470,7 +474,7 @@ namespace Gameplay.Phantoms
             _spawnPoints.Clear();
             _spawnPoints.AddRange(found);
 
-            Debug.Log($"<color=cyan>[PhantomRoomSpawner]</color> Collected {_spawnPoints.Count} child spawn points on '{gameObject.name}'.");
+            if (_enableDebugLogs) Debug.Log($"<color=cyan>[PhantomRoomSpawner]</color> Collected {_spawnPoints.Count} child spawn points on '{gameObject.name}'.");
         }
         #endregion
 

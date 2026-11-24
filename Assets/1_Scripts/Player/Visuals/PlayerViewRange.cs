@@ -30,7 +30,7 @@ public class PlayerViewRange : NetworkBehaviour
     [SerializeField] private Transform _viewReference;
     
     [Tooltip("Role: Enable debug logs.\nUse Case: Debugging.\nJustification: Helps trace why an entity might be rejected (angle vs distance vs obstacle).")]
-    [SerializeField] private bool _showDebugLogs = true;
+    [SerializeField] private bool _showDebugLogs = false;
 
     [Tooltip("Role: List of entities currently in view.\nUse Case: State tracking.\nJustification: Serialized for inspector debugging only.")]
     [SerializeField] private readonly List<IEntity> _detectedEntities = new List<IEntity>();
