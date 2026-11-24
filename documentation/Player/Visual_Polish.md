@@ -50,3 +50,20 @@ Ces systèmes gèrent les comportements interactifs, d'animations procédurales 
   - Traverse l'ancien modèle, identifie les scripts, colliders et sous-objets personnalisés (caméras, particules).
   - Les copie/colle ou les re-parente sur les os correspondants du nouveau modèle.
   - Utilise la `Reflection` C# pour scanner tous les `MonoBehaviour` du joueur et réaffecter automatiquement les références pointant vers l'ancien modèle vers le nouveau.
+
+## 6. Écran de Vie CRT (PlayerHealthScreen)
+
+### PlayerHealthScreen (`Assets/1_Scripts/Player/Visuals/PlayerHealthScreen.cs`) + `Shader_PlayerHealthScreen`
+- **Rôle** : Affiche la vie du robot sur l'écran du torse (slot `M_HP`, sous-mesh 3 de `SKM_Robot`, matériau `Mat_PlayerHealthScreen`).
+- **Rendu** : La vie restante est une zone de phosphore (vert → ambre → rouge). La vie perdue est envahie par de l'ectoplasme (cellules Voronoi, même langage visuel que `PhantomBlobEctoplasm`) qui ronge l'écran avec un front lumineux.
+  - Drain continu (aura de terreur) : le front avance en frémissant.
+  - Coup sec : le front mord loin, des cellules entières sont avalées devant lui, avec déchirure de lignes et aberration chromatique.
+  - Soin : flash du phosphore, le front recule.
+  - Vie basse (< 25 %) : le phosphore pulse. Vie à 0 : écran entièrement contaminé, cellules ternes.
+- **Fonctionnement** :
+  - S'abonne à `PlayerHealth.OnHealthChanged` (déclenché par le hook SyncVar sur chaque client) : chaque joueur voit l'écran des autres sans réseau supplémentaire.
+  - Ne pousse que 3 valeurs au shader via un `MaterialPropertyBlock` limité au slot de l'écran : `_Health` (position lissée du front), `_Impact` (énergie de dégâts qui retombe), `_HealFlash`.
+  - `_Impact` grandit avec la quantité de vie perdue : un tick de drain fait frémir, un gros coup sature.
+  - Scanlines, grille phosphore, scintillement, bande roulante et vignette sont calculés dans le shader avec `_Time`, sans aucun appel C#.
+- **Réglages** : `_UVRect` / `_Aspect` / `_FlipV` décrivent la zone UV de l'écran sur le mesh ; `_InvertDirection` choisit le bord par lequel entre l'ectoplasme.
+- **Justification** : `PlayerHealth` reste de la logique serveur pure. Le `MaterialPropertyBlock` évite de créer une instance de matériau et n'affecte pas les autres robots qui partagent le même matériau.
