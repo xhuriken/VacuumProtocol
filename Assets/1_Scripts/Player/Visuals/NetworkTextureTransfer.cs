@@ -11,6 +11,10 @@ using UnityEngine;
 /// </summary>
 public class NetworkTextureTransfer : NetworkBehaviour
 {
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     // Settings
     // 16 KB per chunk to avoid saturating the network
     private const int CHUNK_SIZE = 16000;
@@ -65,7 +69,7 @@ public class NetworkTextureTransfer : NetworkBehaviour
     private IEnumerator SendTextureRoutine(byte[] fileData)
     {
         int totalChunks = Mathf.CeilToInt((float)fileData.Length / CHUNK_SIZE);
-        Debug.Log($"[TextureTransfer] Sending texture ({fileData.Length} bytes) in {totalChunks} chunks...");
+        if (_enableDebugLogs) Debug.Log($"[TextureTransfer] Sending texture ({fileData.Length} bytes) in {totalChunks} chunks...");
 
         for (int i = 0; i < totalChunks; i++)
         {
@@ -147,7 +151,7 @@ public class NetworkTextureTransfer : NetworkBehaviour
             }
         }
 
-        Debug.Log($"[TextureTransfer] Texture received and assembled!");
+        if (_enableDebugLogs) Debug.Log($"[TextureTransfer] Texture received and assembled!");
         ApplyTextureFromBytes(fullData);
 
         // Release the network buffers

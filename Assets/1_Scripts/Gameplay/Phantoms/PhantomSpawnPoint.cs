@@ -30,6 +30,10 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Length of the emergence vector arrow in the scene view.")]
         [SerializeField] private float _arrowLength = 1.0f;
 
+        [Header("Debug")]
+        [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
+
         /// <summary>
         /// Direction pointing perpendicularly outward from the surface into the room.
         /// </summary>
@@ -103,7 +107,7 @@ namespace Gameplay.Phantoms
                 Vector3 upward = Mathf.Abs(bestHit.normal.y) > 0.85f ? Vector3.forward : Vector3.up;
                 transform.rotation = Quaternion.LookRotation(bestHit.normal, upward);
 
-                Debug.Log($"<color=green>[PhantomSpawnPoint]</color> Snapped '{name}' to surface '{bestHit.collider.name}' (Normal: {bestHit.normal}).");
+                if (_enableDebugLogs) Debug.Log($"<color=green>[PhantomSpawnPoint]</color> Snapped '{name}' to surface '{bestHit.collider.name}' (Normal: {bestHit.normal}).");
             }
             else
             {

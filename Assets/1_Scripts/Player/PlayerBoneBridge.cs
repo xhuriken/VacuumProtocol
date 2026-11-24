@@ -26,7 +26,7 @@ public class PlayerBoneBridge : MonoBehaviour
 
     [Header("Debug")]
     [Tooltip("Role: Enable diagnostic warnings.\nUse Case: Troubleshooting mismatched bones.")]
-    [SerializeField] private bool _enableDebugLogs = true;
+    [SerializeField] private bool _enableDebugLogs = false;
 
     // Cached lookup map of the Bone Bridge bones for fast name-based searches
     private Dictionary<string, Transform> _bridgeBonesMap = new Dictionary<string, Transform>();
@@ -96,7 +96,7 @@ public class PlayerBoneBridge : MonoBehaviour
     {
         if (_importedMeshRoot == null)
         {
-            if (_enableDebugLogs) Debug.LogWarning("[PlayerBoneBridge] Imported Mesh Root is not assigned. Skipping bone mapping.");
+            Debug.LogWarning("[PlayerBoneBridge] Imported Mesh Root is not assigned. Skipping bone mapping.");
             return;
         }
 
@@ -121,7 +121,7 @@ public class PlayerBoneBridge : MonoBehaviour
                 }
                 else
                 {
-                    if (_enableDebugLogs) Debug.LogWarning($"[PlayerBoneBridge] No matching bone in Bone Bridge for mesh bone: {meshBone.name}");
+                    Debug.LogWarning($"[PlayerBoneBridge] No matching bone in Bone Bridge for mesh bone: {meshBone.name}");
                     bridgeBones[i] = meshBone; // Fallback
                 }
             }
@@ -196,7 +196,7 @@ public class PlayerBoneBridge : MonoBehaviour
                     comp.Target = src;
                 }
             }
-            else if (_enableDebugLogs)
+            else
             {
                 Debug.LogWarning($"[PlayerBoneBridge] Custom follower source bone '{follower.SourceBoneName}' not found in Bone Bridge.");
             }
@@ -229,7 +229,7 @@ public class PlayerBoneBridge : MonoBehaviour
                 _playerCustomization.ModelRenderer = meshRenderer;
                 if (_enableDebugLogs) Debug.Log($"[PlayerBoneBridge] Wired PlayerCustomization ModelRenderer to: {meshRenderer.name}");
             }
-            else if (_enableDebugLogs)
+            else
             {
                 Debug.LogWarning("[PlayerBoneBridge] Could not find any Renderer in children of Imported Mesh Root to assign to PlayerCustomization.");
             }

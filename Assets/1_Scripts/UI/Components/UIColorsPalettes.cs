@@ -116,7 +116,7 @@ public class UIColorsPalettes : MonoBehaviour
             }
             else
             {
-                if (_enableDebugLogs) Debug.LogWarning("[UIColorsPalettes] LobbyCustomizationUI could not be found in the scene. Click actions may fail until it is present.");
+                Debug.LogWarning("[UIColorsPalettes] LobbyCustomizationUI could not be found in the scene. Click actions may fail until it is present.");
             }
         }
 
@@ -144,7 +144,7 @@ public class UIColorsPalettes : MonoBehaviour
             // If there are more buttons than colors, hide the excess buttons
             if (i >= _colors.Length)
             {
-                if (_enableDebugLogs) Debug.LogWarning($"[UIColorsPalettes] Hiding excess button {i}.");
+                Debug.LogWarning($"[UIColorsPalettes] Hiding excess button {i}.");
                 currentButton.gameObject.SetActive(false);
                 continue;
             }

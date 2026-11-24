@@ -26069,6 +26069,7 @@ MonoBehaviour:
   MinPitch: -85
   MaxPitch: 85
   HeadMovementBlend: 0.05
+  _enableDebugLogs: 0
   SyncPitch: 0
 --- !u!114 &2766040700898991758
 MonoBehaviour:
@@ -26186,7 +26187,7 @@ MonoBehaviour:
     VisualTransform: {fileID: 1409045148117418958}
   - SourceBoneName: Wheel_04_end
     VisualTransform: {fileID: 5020278835456687089}
-  _enableDebugLogs: 1
+  _enableDebugLogs: 0
 --- !u!114 &2617675305823865494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26565,6 +26566,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  _enableDebugLogs: 0
 --- !u!114 &4075397423627972799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26582,7 +26584,7 @@ MonoBehaviour:
   syncInterval: 0
   _maxCapacity: 10
   _spitForce: 15
-  _enableDebugLogs: 1
+  _enableDebugLogs: 0
 --- !u!114 &4487953502993931012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26714,7 +26716,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _maxHealth: 100
-  _enableDebugLogs: 1
+  _enableDebugLogs: 0
 --- !u!114 &3129280436285379685
 MonoBehaviour:
   m_ObjectHideFlags: 0

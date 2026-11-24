@@ -24,6 +24,10 @@ public class PlayerV2_Look : NetworkBehaviour
     [Range(0f, 1f)]
     public float HeadMovementBlend = 0f;
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     [Header("Network Sync")]
     [Tooltip("Role: Camera pitch synchronized from the owner, used by remote clients to orient the camera.")]
     [SyncVar]
@@ -56,7 +60,7 @@ public class PlayerV2_Look : NetworkBehaviour
         }
         
         // Apply the FOV from the settings and bind the camera to the Canvases
-        Debug.Log($"[CanvasBinding] PlayerV2_Look.OnStartLocalPlayer executed. Controller={_controller?.name}, CameraTransform={_controller?.CameraTransform?.name}");
+        if (_enableDebugLogs) Debug.Log($"[CanvasBinding] PlayerV2_Look.OnStartLocalPlayer executed. Controller={_controller?.name}, CameraTransform={_controller?.CameraTransform?.name}");
 
         Camera cam = null;
         if (_controller != null && _controller.CameraTransform != null)
@@ -73,7 +77,7 @@ public class PlayerV2_Look : NetworkBehaviour
         }
 
         _playerCamera = cam;
-        Debug.Log($"[CanvasBinding] Camera found for the player: {(_playerCamera != null ? _playerCamera.name : "NONE (NULL)")}");
+        if (_enableDebugLogs) Debug.Log($"[CanvasBinding] Camera found for the player: {(_playerCamera != null ? _playerCamera.name : "NONE (NULL)")}");
 
         if (_playerCamera != null)
         {
@@ -81,29 +85,29 @@ public class PlayerV2_Look : NetworkBehaviour
             {
                 _playerCamera.fieldOfView = SettingsManager.Instance.CurrentSettings.FieldOfView;
                 SettingsManager.Instance.OnSettingsChanged += HandleSettingsChanged;
-                Debug.Log($"[PlayerV2_Look] Initial FOV applied to '{_playerCamera.name}': {SettingsManager.Instance.CurrentSettings.FieldOfView}° and OnSettingsChanged listener enabled.");
+                if (_enableDebugLogs) Debug.Log($"[PlayerV2_Look] Initial FOV applied to '{_playerCamera.name}': {SettingsManager.Instance.CurrentSettings.FieldOfView}° and OnSettingsChanged listener enabled.");
             }
 
             // Automatically bind every Screen Space - Camera Canvas of the scene (active or inactive)
             Canvas[] sceneCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
-            Debug.Log($"[CanvasBinding] Scanning {sceneCanvases.Length} Canvases found in resources...");
+            if (_enableDebugLogs) Debug.Log($"[CanvasBinding] Scanning {sceneCanvases.Length} Canvases found in resources...");
 
             int boundCount = 0;
             foreach (Canvas canvas in sceneCanvases)
             {
                 if (canvas != null && canvas.gameObject.scene.isLoaded)
                 {
-                    Debug.Log($"[CanvasBinding] Canvas '{canvas.name}' detected | Mode={canvas.renderMode} | WorldCam={canvas.worldCamera?.name ?? "null"}");
+                    if (_enableDebugLogs) Debug.Log($"[CanvasBinding] Canvas '{canvas.name}' detected | Mode={canvas.renderMode} | WorldCam={canvas.worldCamera?.name ?? "null"}");
                     if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
                     {
                         canvas.worldCamera = _playerCamera;
                         canvas.planeDistance = 0.5f;
                         boundCount++;
-                        Debug.Log($"[CanvasBinding] -> SUCCESS: Camera '{_playerCamera.name}' assigned to '{canvas.name}'");
+                        if (_enableDebugLogs) Debug.Log($"[CanvasBinding] -> SUCCESS: Camera '{_playerCamera.name}' assigned to '{canvas.name}'");
                     }
                 }
             }
-            Debug.Log($"[CanvasBinding] Total ScreenSpaceCamera Canvases bound: {boundCount}");
+            if (_enableDebugLogs) Debug.Log($"[CanvasBinding] Total ScreenSpaceCamera Canvases bound: {boundCount}");
         }
     }
 
@@ -126,7 +130,7 @@ public class PlayerV2_Look : NetworkBehaviour
             if (_playerCamera != null)
             {
                 _playerCamera.fieldOfView = settings.FieldOfView;
-                Debug.Log($"[PlayerV2_Look] HandleSettingsChanged -> FOV of '{_playerCamera.name}' updated to {settings.FieldOfView}°");
+                if (_enableDebugLogs) Debug.Log($"[PlayerV2_Look] HandleSettingsChanged -> FOV of '{_playerCamera.name}' updated to {settings.FieldOfView}°");
             }
             else
             {

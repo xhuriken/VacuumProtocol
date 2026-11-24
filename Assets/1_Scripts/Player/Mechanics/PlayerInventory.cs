@@ -21,7 +21,7 @@ public class PlayerInventory : NetworkBehaviour
     [Header("Debug & Diagnostics")]
     [Tooltip("Role: Enables debug logs for inventory actions.\nUse Case: Network tracing.\nJustification: Helps diagnose desync issues where an item is absorbed locally but not on the server.")]
     [SerializeField]
-    private bool _enableDebugLogs = true;
+    private bool _enableDebugLogs = false;
 
     // Server-side storage for vacuumed GameObjects
     private readonly List<GameObject> _storedItems = new List<GameObject>();

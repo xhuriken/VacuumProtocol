@@ -263,6 +263,10 @@ namespace Gameplay.Phantoms
         [Header("Direct Attack Settings")]
         [Tooltip("Role: Direct damage dealt to player on physical attack.")]
         [SerializeField] protected float _attackDamage = 25.0f;
+
+        [Header("Debug")]
+        [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
         #endregion
 
         #region State Machine Variables
@@ -592,7 +596,7 @@ namespace Gameplay.Phantoms
                                 float closerDist = Vector3.Distance(transform.position, closerPlayer.WorldPosition);
                                 if (closerDist < currentDist * _switchDistanceRatio)
                                 {
-                                    Debug.Log($"[PhantomBase] '{gameObject.name}' switched focus to closer player '{closerPlayer.name}'.");
+                                    if (_enableDebugLogs) Debug.Log($"[PhantomBase] '{gameObject.name}' switched focus to closer player '{closerPlayer.name}'.");
                                     _currentTarget = closerPlayer;
                                     _lastKnownPosition = closerPlayer.WorldPosition;
                                 }
@@ -792,7 +796,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected virtual void OnPlayerDetected(PlayerV2_Controller player)
         {
-            Debug.Log($"[PhantomBase] '{gameObject.name}' spotted player '{player.name}' in FOV! Initiating chase.");
+            if (_enableDebugLogs) Debug.Log($"[PhantomBase] '{gameObject.name}' spotted player '{player.name}' in FOV! Initiating chase.");
         }
 
         /// <summary>
@@ -800,7 +804,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected virtual void OnPlayerLost()
         {
-            Debug.Log($"[PhantomBase] '{gameObject.name}' lost line-of-sight. Investigating last known position: {_lastKnownPosition}.");
+            if (_enableDebugLogs) Debug.Log($"[PhantomBase] '{gameObject.name}' lost line-of-sight. Investigating last known position: {_lastKnownPosition}.");
         }
 
         /// <summary>
@@ -1366,7 +1370,7 @@ namespace Gameplay.Phantoms
         /// </summary>
         protected virtual void OnPhantomCaptured()
         {
-            Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
+            if (_enableDebugLogs) Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
             if (!_isDefeatedInvoked)
             {
                 _isDefeatedInvoked = true;
@@ -1442,7 +1446,7 @@ namespace Gameplay.Phantoms
         protected virtual void OnAttackPlayer(PlayerV2_Controller player)
         {
             if (player == null) return;
-            Debug.Log($"<color=red>[PhantomBase]</color> '{gameObject.name}' attacked player '{player.name}' dealing {_attackDamage} damage!");
+            if (_enableDebugLogs) Debug.Log($"<color=red>[PhantomBase]</color> '{gameObject.name}' attacked player '{player.name}' dealing {_attackDamage} damage!");
 
             PlayerHealth health = player.GetComponent<PlayerHealth>();
             if (health != null)

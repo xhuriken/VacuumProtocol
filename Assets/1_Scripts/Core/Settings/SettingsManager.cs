@@ -51,6 +51,10 @@ public class SettingsManager : MonoBehaviour
         }
     }
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     private SettingsData _currentSettings;
     private readonly List<ISettingsConsumer> _consumers = new List<ISettingsConsumer>();
 
@@ -104,7 +108,7 @@ public class SettingsManager : MonoBehaviour
         if (!_consumers.Contains(consumer))
         {
             _consumers.Add(consumer);
-            consumer.OnSettingsUpdated(_currentSettings);
+            consumer.OnSettingsUpdated(CurrentSettings);
         }
     }
 
@@ -165,7 +169,7 @@ public class SettingsManager : MonoBehaviour
         if (string.IsNullOrEmpty(json))
         {
             _currentSettings = new SettingsData();
-            Debug.Log($"[SettingsManager] LoadSettings -> No saved settings found, using default values (FOV={_currentSettings.FieldOfView}, Gizmos={_currentSettings.ShowDebugGizmos}).");
+            if (_enableDebugLogs) Debug.Log($"[SettingsManager] LoadSettings -> No saved settings found, using default values (FOV={_currentSettings.FieldOfView}, Gizmos={_currentSettings.ShowDebugGizmos}).");
             
             // Fallback to active microphone if available
             if (Adrenak.UniMic.Mic.AvailableDevices != null && Adrenak.UniMic.Mic.AvailableDevices.Count > 0)
@@ -178,7 +182,7 @@ public class SettingsManager : MonoBehaviour
             try
             {
                 _currentSettings = JsonUtility.FromJson<SettingsData>(json);
-                Debug.Log($"[SettingsManager] LoadSettings -> Loaded from disk: FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
+                if (_enableDebugLogs) Debug.Log($"[SettingsManager] LoadSettings -> Loaded from disk: FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
             }
             catch (Exception ex)
             {
@@ -202,7 +206,7 @@ public class SettingsManager : MonoBehaviour
             string json = JsonUtility.ToJson(_currentSettings);
             PlayerPrefs.SetString("UserSettingsData", json);
             PlayerPrefs.Save();
-            Debug.Log($"[SettingsManager] SaveSettings -> Saved to disk (PlayerPrefs.Save): FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
+            if (_enableDebugLogs) Debug.Log($"[SettingsManager] SaveSettings -> Saved to disk (PlayerPrefs.Save): FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
         }
         catch (Exception ex)
         {
@@ -220,7 +224,7 @@ public class SettingsManager : MonoBehaviour
         try
         {
             PlayerPrefs.Save();
-            Debug.Log("[SettingsManager] Settings successfully flushed to disk.");
+            if (_enableDebugLogs) Debug.Log("[SettingsManager] Settings successfully flushed to disk.");
         }
         catch (Exception ex)
         {

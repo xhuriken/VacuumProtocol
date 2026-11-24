@@ -24,6 +24,10 @@ public class InGameMenuController : MonoBehaviour
     [Tooltip("Role: Whether the menu is open when the scene starts.")]
     [SerializeField] private bool _startOpened = false;
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     private bool _isMenuOpened = false;
 
     /// <summary>
@@ -168,7 +172,7 @@ public class InGameMenuController : MonoBehaviour
         Canvas targetCanvas = _menuCanvas != null ? _menuCanvas : GetComponentInParent<Canvas>();
         if (targetCanvas == null) targetCanvas = GetComponent<Canvas>();
 
-        Debug.Log($"[InGameMenuController] BindCanvasCamera() called. TargetCanvas={(targetCanvas != null ? targetCanvas.name : "NULL")}, RenderMode={(targetCanvas != null ? targetCanvas.renderMode.ToString() : "N/A")}");
+        if (_enableDebugLogs) Debug.Log($"[InGameMenuController] BindCanvasCamera() called. TargetCanvas={(targetCanvas != null ? targetCanvas.name : "NULL")}, RenderMode={(targetCanvas != null ? targetCanvas.renderMode.ToString() : "N/A")}");
 
         if (targetCanvas != null)
         {
@@ -178,12 +182,12 @@ public class InGameMenuController : MonoBehaviour
                 if (PlayerV2_Controller.LocalInstance.CameraTransform != null)
                 {
                     cam = PlayerV2_Controller.LocalInstance.CameraTransform.GetComponentInChildren<Camera>(true);
-                    Debug.Log($"[InGameMenuController] Camera lookup via LocalInstance.CameraTransform ({PlayerV2_Controller.LocalInstance.CameraTransform.name}) -> Result: {(cam != null ? cam.name : "NULL")}");
+                    if (_enableDebugLogs) Debug.Log($"[InGameMenuController] Camera lookup via LocalInstance.CameraTransform ({PlayerV2_Controller.LocalInstance.CameraTransform.name}) -> Result: {(cam != null ? cam.name : "NULL")}");
                 }
                 if (cam == null)
                 {
                     cam = PlayerV2_Controller.LocalInstance.GetComponentInChildren<Camera>(true);
-                    Debug.Log($"[InGameMenuController] Camera lookup via LocalInstance root ({PlayerV2_Controller.LocalInstance.name}) -> Result: {(cam != null ? cam.name : "NULL")}");
+                    if (_enableDebugLogs) Debug.Log($"[InGameMenuController] Camera lookup via LocalInstance root ({PlayerV2_Controller.LocalInstance.name}) -> Result: {(cam != null ? cam.name : "NULL")}");
                 }
             }
             else
@@ -194,14 +198,14 @@ public class InGameMenuController : MonoBehaviour
             if (cam == null)
             {
                 cam = Camera.main;
-                Debug.Log($"[InGameMenuController] Fallback lookup Camera.main -> Result: {(cam != null ? cam.name : "NULL")}");
+                if (_enableDebugLogs) Debug.Log($"[InGameMenuController] Fallback lookup Camera.main -> Result: {(cam != null ? cam.name : "NULL")}");
             }
 
             if (cam != null)
             {
                 targetCanvas.worldCamera = cam;
                 targetCanvas.planeDistance = 0.5f;
-                Debug.Log($"[InGameMenuController] -> SUCCESS: Camera '{cam.name}' bound to Canvas '{targetCanvas.name}' with planeDistance=0.5");
+                if (_enableDebugLogs) Debug.Log($"[InGameMenuController] -> SUCCESS: Camera '{cam.name}' bound to Canvas '{targetCanvas.name}' with planeDistance=0.5");
             }
             else
             {
@@ -228,7 +232,7 @@ public class InGameMenuController : MonoBehaviour
 #else
                     esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 #endif
-                    Debug.Log("[InGameMenuController] EventSystem created automatically to handle UI clicks/hover.");
+                    Debug.LogWarning("[InGameMenuController] EventSystem created automatically to handle UI clicks/hover.");
                 }
             }
         }

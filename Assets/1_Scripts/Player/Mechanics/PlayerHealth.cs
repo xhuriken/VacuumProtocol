@@ -32,8 +32,8 @@ namespace Player.Mechanics
         private bool _isDead = false;
 
         [Title("Debug Settings")]
-        [Tooltip("Role: Logs heal events to the console when enabled.")]
-        [SerializeField] private bool _enableDebugLogs = true;
+        [Tooltip("Role: Prints this component's informational Debug.Log messages (heal, revive). Warnings and errors always print.")]
+        [SerializeField] private bool _enableDebugLogs = false;
         #endregion
 
         #region Public Properties
@@ -154,7 +154,7 @@ namespace Player.Mechanics
             }
             else
             {
-                Debug.Log($"<color=green>[PlayerHealth]</color> Player '{gameObject.name}' was revived with {_currentHealth:F1} PV!");
+                if (_enableDebugLogs) Debug.Log($"<color=green>[PlayerHealth]</color> Player '{gameObject.name}' was revived with {_currentHealth:F1} PV!");
             }
         }
         #endregion

@@ -58,7 +58,7 @@ public class SettingsUIPresenter : MonoBehaviour
 
     [Header("Debug")]
     [Tooltip("Role: Enables debug logs for settings changes and microphone SNR.")]
-    [SerializeField] private bool _enableDebugLogs = true;
+    [SerializeField] private bool _enableDebugLogs = false;
 
     // Cached runtime variables
     private float _latestRms = 0f;
@@ -161,7 +161,7 @@ public class SettingsUIPresenter : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[SettingsUIPresenter] InitializeUI -> Current data loaded: FOV={current.FieldOfView} | Gizmos={current.ShowDebugGizmos}");
+        if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] InitializeUI -> Current data loaded: FOV={current.FieldOfView} | Gizmos={current.ShowDebugGizmos}");
 
         // Initialize sliders
         if (_masterVolumeSlider != null) _masterVolumeSlider.value = current.MasterVolume;
@@ -185,7 +185,7 @@ public class SettingsUIPresenter : MonoBehaviour
             _fovSlider.minValue = 60f;
             _fovSlider.maxValue = 120f;
             _fovSlider.value = current.FieldOfView;
-            Debug.Log($"[SettingsUIPresenter] _fovSlider ({_fovSlider.name}) configured: Min=60, Max=120, Value={current.FieldOfView}");
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] _fovSlider ({_fovSlider.name}) configured: Min=60, Max=120, Value={current.FieldOfView}");
         }
         else
         {
@@ -195,7 +195,7 @@ public class SettingsUIPresenter : MonoBehaviour
         if (_debugGizmosToggle != null)
         {
             _debugGizmosToggle.isOn = current.ShowDebugGizmos;
-            Debug.Log($"[SettingsUIPresenter] _debugGizmosToggle ({_debugGizmosToggle.name}) configured: IsOn={current.ShowDebugGizmos}");
+            if (_enableDebugLogs) Debug.Log($"[SettingsUIPresenter] _debugGizmosToggle ({_debugGizmosToggle.name}) configured: IsOn={current.ShowDebugGizmos}");
         }
         else
         {

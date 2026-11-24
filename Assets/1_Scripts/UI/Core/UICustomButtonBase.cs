@@ -119,7 +119,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         Graphic graphic = GetComponent<Graphic>();
         if (graphic == null)
         {
-            if (_enableDebugLogs) Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': Raycast target missing! A Graphic component (e.g. Image) is required for EventSystem raycasts. Adding a transparent Image dynamically to resolve this.");
+            Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': Raycast target missing! A Graphic component (e.g. Image) is required for EventSystem raycasts. Adding a transparent Image dynamically to resolve this.");
             
             Image dynamicImage = gameObject.AddComponent<Image>();
             dynamicImage.color = new Color(0f, 0f, 0f, 0f);
@@ -127,7 +127,7 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         }
         else if (!graphic.raycastTarget)
         {
-            if (_enableDebugLogs) Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': The {graphic.GetType().Name} component has raycastTarget set to FALSE. Enabling raycastTarget dynamically so events can fire.");
+            Debug.LogWarning($"[UICustomButtonBase] WARNING on '{gameObject.name}': The {graphic.GetType().Name} component has raycastTarget set to FALSE. Enabling raycastTarget dynamically so events can fire.");
             graphic.raycastTarget = true;
         }
     }

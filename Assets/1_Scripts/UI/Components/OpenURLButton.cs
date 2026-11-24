@@ -43,7 +43,7 @@ public class OpenURLButton : MonoBehaviour
         }
         else
         {
-            if (_enableDebugLogs) Debug.LogError($"[OpenURLButton] CRITICAL: Button component is missing on '{gameObject.name}' despite RequireComponent constraint!");
+            Debug.LogError($"[OpenURLButton] CRITICAL: Button component is missing on '{gameObject.name}' despite RequireComponent constraint!");
         }
     }
 
@@ -70,7 +70,7 @@ public class OpenURLButton : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_url) || _url == "https://")
         {
-            if (_enableDebugLogs) Debug.LogWarning($"[OpenURLButton] Attempted to open URL on '{gameObject.name}', but the link is empty or default!");
+            Debug.LogWarning($"[OpenURLButton] Attempted to open URL on '{gameObject.name}', but the link is empty or default!");
             return;
         }
 

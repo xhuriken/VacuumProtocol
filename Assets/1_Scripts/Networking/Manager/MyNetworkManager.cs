@@ -17,6 +17,10 @@ public class MyNetworkManager : NetworkManager
     [Tooltip("Role: The actual physical robot prefab used in the game level.\nUse Case: Spawning the gameplay avatar.\nJustification: Instantiated only when transitioning to a gameplay scene.")]
     [SerializeField] private GameObject _gamePlayerPrefab;
 
+    [Header("Debug")]
+    [Tooltip("Role: Prints this component's informational Debug.Log messages. Warnings and errors always print.")]
+    [SerializeField] private bool _enableDebugLogs = false;
+
     /// <summary>
     /// Description: List of all player controllers currently connected to the game.
     /// Context: Maintained by OnClientConnect/Disconnect.
@@ -43,7 +47,7 @@ public class MyNetworkManager : NetworkManager
             _playerInstance.PlayerSteamId = (ulong)SteamMatchmaking.GetLobbyMemberByIndex((CSteamID)SteamLobby.Instance.CurrentLobbyId, GamePlayers.Count);
 
             NetworkServer.AddPlayerForConnection(conn, _playerInstance.gameObject);
-            Debug.Log($"[MyNetwork] Lobby Player Added for connection {conn.connectionId}");
+            if (_enableDebugLogs) Debug.Log($"[MyNetwork] Lobby Player Added for connection {conn.connectionId}");
         }
         else if (sceneName != "Lobby")
         {
@@ -79,7 +83,7 @@ public class MyNetworkManager : NetworkManager
 
             // Assign the new mecha object as the player's primary object
             NetworkServer.AddPlayerForConnection(conn, gamePlayerInstance);
-            Debug.Log($"[MyNetwork] Game Player (Mecha) Added in {sceneName} for connection {conn.connectionId}");
+            if (_enableDebugLogs) Debug.Log($"[MyNetwork] Game Player (Mecha) Added in {sceneName} for connection {conn.connectionId}");
         }
     }
 
@@ -91,7 +95,7 @@ public class MyNetworkManager : NetworkManager
     public override void OnStartServer()
     {
         base.OnStartServer();
-        Debug.Log("[MyNetwork] Server started!");
+        if (_enableDebugLogs) Debug.Log("[MyNetwork] Server started!");
     }
 
     /// <summary>
@@ -102,7 +106,7 @@ public class MyNetworkManager : NetworkManager
     public override void OnStopServer()
     {
         base.OnStopServer();
-        Debug.Log("[MyNetwork] Server Stopped!");
+        if (_enableDebugLogs) Debug.Log("[MyNetwork] Server Stopped!");
     }
 
     /// <summary>
@@ -113,7 +117,7 @@ public class MyNetworkManager : NetworkManager
     public override void OnClientConnect()
     {
         base.OnClientConnect();
-        Debug.Log("[MyNetwork] Client connected!");
+        if (_enableDebugLogs) Debug.Log("[MyNetwork] Client connected!");
     }
 
     /// <summary>
@@ -124,6 +128,6 @@ public class MyNetworkManager : NetworkManager
     public override void OnClientDisconnect()
     {
         base.OnClientDisconnect();
-        Debug.Log("[MyNetwork] Client Disconnected!");
+        if (_enableDebugLogs) Debug.Log("[MyNetwork] Client Disconnected!");
     }
 }

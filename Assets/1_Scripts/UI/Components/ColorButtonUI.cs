@@ -76,7 +76,7 @@ public class ColorButtonUI : UICustomButtonBase
         // Validate Shape References to assist editor diagnostics
         if (_plainShape == null)
         {
-            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Plain Shape reference is not assigned in the Inspector! Magnetic movement will be disabled.");
+            Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Plain Shape reference is not assigned in the Inspector! Magnetic movement will be disabled.");
         }
         else
         {
@@ -87,7 +87,7 @@ public class ColorButtonUI : UICustomButtonBase
 
         if (_outlineShape == null)
         {
-            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Outline Shape reference is not assigned in the Inspector! Resizing animations will be disabled.");
+            Debug.LogError($"[ColorButtonUI] ERROR on '{gameObject.name}': Outline Shape reference is not assigned in the Inspector! Resizing animations will be disabled.");
         }
         else
         {
@@ -110,13 +110,13 @@ public class ColorButtonUI : UICustomButtonBase
         // Diagnose if MouseManager is missing
         if (MouseManager.Instance == null)
         {
-            if (_enableDebugLogs) Debug.LogWarning($"[ColorButtonUI] WARNING on '{gameObject.name}': MouseManager.Instance is null! Please make sure a MouseManager component is attached to an active GameObject (e.g. your UI Canvas) in the scene.");
+            Debug.LogWarning($"[ColorButtonUI] WARNING on '{gameObject.name}': MouseManager.Instance is null! Please make sure a MouseManager component is attached to an active GameObject (e.g. your UI Canvas) in the scene.");
         }
 
         // Diagnose if EventSystem is missing in the scene
         if (EventSystem.current == null)
         {
-            if (_enableDebugLogs) Debug.LogError($"[ColorButtonUI] CRITICAL ERROR on '{gameObject.name}': No EventSystem found in the scene! Unity UI cannot process pointer events (hovers/clicks) without an EventSystem.");
+            Debug.LogError($"[ColorButtonUI] CRITICAL ERROR on '{gameObject.name}': No EventSystem found in the scene! Unity UI cannot process pointer events (hovers/clicks) without an EventSystem.");
         }
         else
         {
@@ -204,7 +204,7 @@ public class ColorButtonUI : UICustomButtonBase
 
         if (EventSystem.current == null)
         {
-            if (_enableDebugLogs) Debug.LogError("[UI Diagnostic Raycaster] EventSystem.current is NULL! Dynamic UI hover captures are completely offline.");
+            Debug.LogError("[UI Diagnostic Raycaster] EventSystem.current is NULL! Dynamic UI hover captures are completely offline.");
             return;
         }
 
