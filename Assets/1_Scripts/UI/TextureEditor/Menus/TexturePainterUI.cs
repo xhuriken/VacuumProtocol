@@ -79,12 +79,18 @@ public class TexturePainterUI : MonoBehaviour, IPointerDownHandler, IDragHandler
 
     #region EventSystem Pointer Handlers
 
+    /// <summary>
+    /// Marks the canvas as hovered and refreshes the cursor.
+    /// </summary>
     public void OnPointerEnter(PointerEventData eventData)
     {
         _isHoveringCanvas = true;
         UpdateCursorVisuals();
     }
 
+    /// <summary>
+    /// Ends any active stroke and restores the default cursor when leaving the canvas.
+    /// </summary>
     public void OnPointerExit(PointerEventData eventData)
     {
         _isHoveringCanvas = false;
@@ -99,6 +105,9 @@ public class TexturePainterUI : MonoBehaviour, IPointerDownHandler, IDragHandler
         }
     }
 
+    /// <summary>
+    /// Starts a stroke at the clicked pixel (left button only).
+    /// </summary>
     public void OnPointerDown(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left)
@@ -113,6 +122,9 @@ public class TexturePainterUI : MonoBehaviour, IPointerDownHandler, IDragHandler
         }
     }
 
+    /// <summary>
+    /// Continues the stroke under the pointer, starting one if none is active (left button only).
+    /// </summary>
     public void OnDrag(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left)
@@ -134,6 +146,9 @@ public class TexturePainterUI : MonoBehaviour, IPointerDownHandler, IDragHandler
         }
     }
 
+    /// <summary>
+    /// Ends the current stroke (left button only).
+    /// </summary>
     public void OnPointerUp(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left)

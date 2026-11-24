@@ -161,7 +161,7 @@ public class PlayerVacuumController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Demande au serveur de drainer une quantité de saleté d'une tache.
+    /// Asks the server to drain an amount of dirt from a dirt stain.
     /// </summary>
     public void DrainDirt(DirtStain stain, float drainAmount)
     {

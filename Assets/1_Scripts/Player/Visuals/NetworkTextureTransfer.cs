@@ -12,21 +12,24 @@ using UnityEngine;
 public class NetworkTextureTransfer : NetworkBehaviour
 {
     // Settings
-    // 16 Ko par morceau pour éviter de saturer le réseau
+    // 16 KB per chunk to avoid saturating the network
     private const int CHUNK_SIZE = 16000;
 
-    // Stockage côté client pour assembler les morceaux
+    // Client-side storage used to reassemble the chunks
 
     private Dictionary<int, byte[]> _receivedChunks = new Dictionary<int, byte[]>();
     private int _totalExpectedChunks = 0;
     private int _chunksReceivedCount = 0;
 
-    // Stockage côté serveur pour les joueurs qui rejoignent en cours de partie (Late Joiners)
+    // Server-side cache for players joining mid-game (late joiners)
     private byte[] _serverFullTextureCache;
 
+    /// <summary>
+    /// Loads the saved eye texture from disk, applies it locally and starts streaming it to the server.
+    /// </summary>
     public override void OnStartLocalPlayer()
     {
-        // Le joueur local lit sa texture depuis le disque
+        // The local player reads its texture from disk
         string savedPath = PlayerPrefs.GetString("SelectedEyeTexture", "");
 
 
@@ -34,32 +37,35 @@ public class NetworkTextureTransfer : NetworkBehaviour
         {
             byte[] fileData = File.ReadAllBytes(savedPath);
 
-            // On applique instantanément pour le joueur local (pas de latence)
+            // Apply instantly for the local player (no latency)
 
             ApplyTextureFromBytes(fileData);
 
-            // On démarre l'envoi vers le serveur
+            // Start uploading to the server
             StartCoroutine(SendTextureRoutine(fileData));
         }
     }
 
+    /// <summary>
+    /// On remote copies, requests the cached texture from the server so late joiners receive it.
+    /// </summary>
     public override void OnStartClient()
     {
         base.OnStartClient();
 
-        // Si on est un client distant qui vient d'arriver, on demande la texture au serveur
+        // A freshly arrived remote copy asks the server for the texture
         if (!isLocalPlayer)
         {
             CmdRequestTexture();
         }
     }
 
-    #region Envoi (Propriétaire -> Serveur)
+    #region Upload (Owner -> Server)
 
     private IEnumerator SendTextureRoutine(byte[] fileData)
     {
         int totalChunks = Mathf.CeilToInt((float)fileData.Length / CHUNK_SIZE);
-        Debug.Log($"[TextureTransfer] Envoi de la texture ({fileData.Length} octets) en {totalChunks} morceaux...");
+        Debug.Log($"[TextureTransfer] Sending texture ({fileData.Length} bytes) in {totalChunks} chunks...");
 
         for (int i = 0; i < totalChunks; i++)
         {
@@ -72,7 +78,7 @@ public class NetworkTextureTransfer : NetworkBehaviour
 
             CmdSendChunk(i, totalChunks, chunk);
 
-            // Pause de 0.05s entre chaque morceau pour ne pas faire lagger le jeu
+            // 0.05s pause between chunks so the game does not lag
             yield return new WaitForSeconds(0.05f);
 
         }
@@ -81,21 +87,21 @@ public class NetworkTextureTransfer : NetworkBehaviour
     [Command]
     private void CmdSendChunk(int index, int total, byte[] chunkData)
     {
-        // Le serveur assemble sa propre copie pour les retardataires
+        // The server assembles its own copy for late joiners
         AssembleServerCache(index, total, chunkData);
 
-        // Le serveur redistribue immédiatement le morceau à tout le monde
+        // The server immediately relays the chunk to everyone
         RpcReceiveChunk(index, total, chunkData);
     }
 
     #endregion
 
-    #region Réception (Serveur -> Tous les Clients)
+    #region Reception (Server -> All Clients)
 
     [ClientRpc]
     private void RpcReceiveChunk(int index, int total, byte[] chunkData)
     {
-        // Le joueur local a déjà appliqué son image instantanément, on ignore
+        // The local player already applied its image instantly, so ignore
         if (isLocalPlayer) return;
 
         ReceiveChunkLocally(index, total, chunkData);
@@ -115,7 +121,7 @@ public class NetworkTextureTransfer : NetworkBehaviour
             _receivedChunks.Add(index, chunkData);
             _chunksReceivedCount++;
 
-            // Si tous les morceaux sont arrivés
+            // All chunks have arrived
             if (_chunksReceivedCount == _totalExpectedChunks)
             {
                 AssembleAndApplyTextureOnClient();
@@ -141,10 +147,10 @@ public class NetworkTextureTransfer : NetworkBehaviour
             }
         }
 
-        Debug.Log($"[TextureTransfer] Texture reçue et assemblée !");
+        Debug.Log($"[TextureTransfer] Texture received and assembled!");
         ApplyTextureFromBytes(fullData);
 
-        // Nettoyage de la mémoire réseau
+        // Release the network buffers
         _receivedChunks.Clear();
         _totalExpectedChunks = 0;
     }
@@ -157,7 +163,7 @@ public class NetworkTextureTransfer : NetworkBehaviour
             eyeTex.filterMode = FilterMode.Point; // Look Pixel-Art
 
 
-            // SSOT: Centralisation vers PlayerCustomization qui gère déjà l'instanciation propre des matériaux
+            // SSOT: delegate to PlayerCustomization, which already handles clean material instancing
             PlayerCustomization customization = GetComponent<PlayerCustomization>();
             if (customization != null)
             {
@@ -165,21 +171,21 @@ public class NetworkTextureTransfer : NetworkBehaviour
             }
             else
             {
-                Debug.LogWarning("[TextureTransfer] PlayerCustomization introuvable sur ce composant, impossible d'appliquer la texture.");
+                Debug.LogWarning("[TextureTransfer] PlayerCustomization not found on this object, cannot apply the texture.");
             }
         }
     }
 
     #endregion
 
-    #region Late Joiners (Les retardataires)
+    #region Late Joiners
 
     [Command(requiresAuthority = false)]
     private void CmdRequestTexture(NetworkConnectionToClient sender = null)
     {
         if (_serverFullTextureCache != null && _serverFullTextureCache.Length > 0)
         {
-            // Le serveur renvoie la texture uniquement à la personne qui vient d'arriver
+            // The server sends the texture only to the client that just joined
             StartCoroutine(ServerSendTextureToClientRoutine(sender, _serverFullTextureCache));
         }
     }

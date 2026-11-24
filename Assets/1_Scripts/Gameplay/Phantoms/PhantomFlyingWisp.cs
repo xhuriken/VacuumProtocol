@@ -127,11 +127,20 @@ namespace Gameplay.Phantoms
         private bool _isTelegraphingChaseNeedle = false;
         private float _chaseTelegraphTimer = 0f;
 
+        /// <summary>
+        /// Description: Server-side simulation record of a needle in flight.
+        /// Context: Advanced and hit-tested by the server each tick; clients only render PhantomNeedleVisual.
+        /// Justification: Keeps damage authoritative on the server without spawning a networked object per needle.
+        /// </summary>
         private class ActiveServerNeedle
         {
+            [Tooltip("Role: Current world position of the needle.")]
             public Vector3 Position;
+            [Tooltip("Role: World velocity of the needle in meters per second.")]
             public Vector3 Velocity;
+            [Tooltip("Role: Seconds left before the needle expires.")]
             public float RemainingTime;
+            [Tooltip("Role: Damage dealt to the player hit by this needle.")]
             public float Damage;
         }
 

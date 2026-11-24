@@ -20,12 +20,20 @@ public class UIPanelController : MonoBehaviour
     [Tooltip("Role: Flag to open at Start.\nUse Case: Default visibility.\nJustification: Allows a panel to be visibly open immediately.")]
     [SerializeField] private bool _startOpened = false;
 
+    /// <summary>
+    /// Description: Layout side a panel belongs to.
+    /// Context: Used by panel navigation to decide which open panel a new one replaces.
+    /// Justification: Lets one Left and one Right panel stay open at the same time.
+    /// </summary>
     public enum PanelSide { Left, Right }
 
     [Header("Layout Settings")]
     [Tooltip("Role: The layout side this panel belongs to.\nUse Case: Multi-panel layout navigation.\nJustification: Allows Left and Right panels to remain open simultaneously.")]
     [SerializeField] private PanelSide _side = PanelSide.Left;
 
+    /// <summary>
+    /// Layout side this panel belongs to.
+    /// </summary>
     public PanelSide Side => _side;
 
     private CanvasGroup _canvasGroup;

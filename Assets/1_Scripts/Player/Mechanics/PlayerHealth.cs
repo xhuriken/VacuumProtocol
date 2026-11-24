@@ -32,13 +32,18 @@ namespace Player.Mechanics
         private bool _isDead = false;
 
         [Title("Debug Settings")]
+        [Tooltip("Role: Logs heal events to the console when enabled.")]
         [SerializeField] private bool _enableDebugLogs = true;
         #endregion
 
         #region Public Properties
+        /// <summary>Current synchronized health value.</summary>
         public float CurrentHealth => _currentHealth;
+        /// <summary>Maximum health capacity.</summary>
         public float MaxHealth => _maxHealth;
+        /// <summary>Current health as a 0-1 ratio of max health.</summary>
         public float HealthNormalized => _maxHealth > 0f ? Mathf.Clamp01(_currentHealth / _maxHealth) : 0f;
+        /// <summary>True while the player is dead (synchronized).</summary>
         public bool IsDead => _isDead;
         #endregion
 
@@ -60,6 +65,9 @@ namespace Player.Mechanics
         #endregion
 
         #region Unity & Network Lifecycle
+        /// <summary>
+        /// Resets health to max and clears the dead state when the server spawns this player.
+        /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
@@ -177,6 +185,9 @@ namespace Player.Mechanics
         #endregion
 
         #region Odin Inspector Test Actions
+        /// <summary>
+        /// Inspector debug button: inflicts 20 damage (server/host only).
+        /// </summary>
         [Title("Play Mode Debugging Tools")]
         [Button("Damage 20 PV", ButtonSizes.Medium)]
         [GUIColor(1f, 0.5f, 0.5f)]
@@ -192,6 +203,9 @@ namespace Player.Mechanics
             }
         }
 
+        /// <summary>
+        /// Inspector debug button: heals 20 health (server/host only).
+        /// </summary>
         [Button("Heal 20 PV", ButtonSizes.Medium)]
         [GUIColor(0.5f, 1f, 0.5f)]
         public void DebugHeal20()
@@ -206,6 +220,9 @@ namespace Player.Mechanics
             }
         }
 
+        /// <summary>
+        /// Inspector debug button: revives a dead player at full health (server/host only).
+        /// </summary>
         [Button("Revive (Full Health)", ButtonSizes.Medium)]
         [GUIColor(0.4f, 0.9f, 1f)]
         public void DebugRevive()
@@ -223,6 +240,9 @@ namespace Player.Mechanics
             Revive(1f);
         }
 
+        /// <summary>
+        /// Inspector debug button: kills the player instantly (server/host only).
+        /// </summary>
         [Button("Kill Immediately", ButtonSizes.Small)]
         [GUIColor(1f, 0.2f, 0.2f)]
         public void DebugKill()

@@ -14,6 +14,8 @@ public class UICustomScrollbar : MonoBehaviour, IPointerDownHandler, IDragHandle
 {
     /// <summary>
     /// Description: Orientation enum for the scrollbar.
+    /// Context: Selects the axis and the direction in which the value increases.
+    /// Justification: Mirrors UGUI's Scrollbar.Direction so the component can replace it in existing layouts.
     /// </summary>
     public enum Direction
     {
@@ -25,6 +27,8 @@ public class UICustomScrollbar : MonoBehaviour, IPointerDownHandler, IDragHandle
 
     /// <summary>
     /// Description: Event dispatched when scrollbar value changes.
+    /// Context: Carries the new normalized value (0 to 1).
+    /// Justification: A concrete serializable subclass is required for UnityEvent<float> to appear in the Inspector.
     /// </summary>
     [System.Serializable]
     public class ScrollbarEvent : UnityEvent<float> { }
@@ -74,10 +78,13 @@ public class UICustomScrollbar : MonoBehaviour, IPointerDownHandler, IDragHandle
     [SerializeField] private float _trackHoverThicknessOffset = 2f;
 
     [Header("Disabled Visual Configurations")]
+    [Tooltip("Role: Track color while the scrollbar is not interactable.")]
     [SerializeField] private Color _disabledTrackColor = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+    [Tooltip("Role: Handle color while the scrollbar is not interactable.")]
     [SerializeField] private Color _disabledHandleColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
     [Header("Events")]
+    [Tooltip("Role: Invoked with the new value (0 to 1) whenever the scrollbar value changes.")]
     [SerializeField] private ScrollbarEvent _onValueChanged = new ScrollbarEvent();
 
     private float _originalTrackThickness;

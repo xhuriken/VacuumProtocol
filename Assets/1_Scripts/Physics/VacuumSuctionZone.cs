@@ -4,6 +4,8 @@ using VacuumProtocol.Mechanics.Dirt;
 
 /// <summary>
 /// Description: Defines the available local axes of a transform.
+/// Context: Picks the suction direction of VacuumSuctionZone relative to the nozzle transform.
+/// Justification: The rig's mesh axis does not always match the physics query axis.
 /// </summary>
 public enum LocalAxis
 {
@@ -71,7 +73,7 @@ public class VacuumSuctionZone : MonoBehaviour
     private float _centripetalForce = 15f;
     
     [Header("Dirt Stains Settings")]
-    [Tooltip("Vitesse de drainage d'une tache (en quantité par seconde).")]
+    [Tooltip("Role: Dirt stain drain speed (amount per second), scaled by the visibility factor.")]
     public float DirtDrainRatePerSecond = 500f;
 
     [Header("Debug Settings")]
@@ -146,7 +148,7 @@ public class VacuumSuctionZone : MonoBehaviour
                     continue;
                 }
 
-                // Handle DirtStain (taches statiques sans physique)
+                // Handle DirtStain (static stains without physics)
                 DirtStain stain = col.GetComponent<DirtStain>();
                 if (stain != null)
                 {
@@ -155,7 +157,7 @@ public class VacuumSuctionZone : MonoBehaviour
                         float amountToDrain = DirtDrainRatePerSecond * Time.fixedDeltaTime * visibilityFactor;
                         _playerVacuum.DrainDirt(stain, amountToDrain);
                     }
-                    continue; // On passe à l'objet suivant, pas de physique pour les taches
+                    continue; // Move on to the next object: no physics for stains
                 }
 
                 // Handle Physical Collectibles

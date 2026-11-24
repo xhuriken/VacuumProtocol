@@ -48,7 +48,7 @@ public class PlayerViewRange : NetworkBehaviour
     /// <summary>
     /// Description: Start callback. Disables logic for remote clients.
     /// Context: Lifecycle event.
-    /// Justification: Remote players don't need to run detections logic locally since their eye movements aren't networked (to save bandwidth).
+    /// Justification: Remote copies don't need to run detection locally: the owner picks the target and Eye syncs the resulting rotations.
     /// </summary>
     private void Start()
     {
@@ -59,6 +59,9 @@ public class PlayerViewRange : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Re-enables detection on the local player (disabled by default in Start for remote copies).
+    /// </summary>
     public override void OnStartLocalPlayer()
     {
         enabled = true;

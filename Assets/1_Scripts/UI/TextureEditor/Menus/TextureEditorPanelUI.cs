@@ -32,11 +32,19 @@ public class TextureEditorPanelUI : MonoBehaviour
     [Tooltip("Role: Custom shapes slider for adjusting airbrush spray density.\nUse Case: Density selection.\nJustification: Integrates project UICustomSlider.")]
     [SerializeField] private UICustomSlider _brushDensitySlider;
 
+    /// <summary>
+    /// Description: Brush settings remembered for one painter tool.
+    /// Context: Stored per PainterTool and restored when the user switches back to that tool.
+    /// Justification: Each tool keeps its own size, opacity and density instead of sharing a single set of values.
+    /// </summary>
     [System.Serializable]
     private class SavedToolSettings
     {
+        [Tooltip("Role: Saved brush radius in pixels.")]
         public int Radius = 5;
+        [Tooltip("Role: Saved brush opacity (0 to 1).")]
         public float Opacity = 1f;
+        [Tooltip("Role: Saved airbrush spray density (0 to 1).")]
         public float Density = 0.3f;
     }
 
@@ -235,6 +243,9 @@ public class TextureEditorPanelUI : MonoBehaviour
 
     #region UI Handlers
 
+    /// <summary>
+    /// Selects the active painter tool, updates the tool buttons and shows only the sliders that tool uses.
+    /// </summary>
     public void SetTool(PainterTool tool)
     {
         if (_painterUI != null && _painterUI.Painter != null)
@@ -303,6 +314,9 @@ public class TextureEditorPanelUI : MonoBehaviour
         if (_eyedropperButton != null) _eyedropperButton.Interactable = (activeTool != PainterTool.Eyedropper);
     }
 
+    /// <summary>
+    /// Sets the brush color; switches back to the Pencil if the Eraser or Eyedropper was active.
+    /// </summary>
     public void SetColor(Color color)
     {
         if (_painterUI != null && _painterUI.Painter != null)

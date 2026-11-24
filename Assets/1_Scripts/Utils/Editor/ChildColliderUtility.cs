@@ -12,6 +12,11 @@ namespace Utils.Editor
     /// </summary>
     public class ChildColliderUtility : EditorWindow
     {
+        /// <summary>
+        /// Description: Collider type added to child meshes.
+        /// Context: Chosen in the Collider Helper window or fixed by each quick menu item.
+        /// Justification: MeshCollider fits exact geometry, BoxCollider is cheaper for simple props.
+        /// </summary>
         public enum TargetColliderType
         {
             MeshCollider,
@@ -31,6 +36,9 @@ namespace Utils.Editor
         #region Menu Item Entrypoints
         [MenuItem("Tools/Vacuum Protocol/Collider Helper", false, 10)]
         [MenuItem("Window/Vacuum Protocol/Collider Helper", false, 20)]
+        /// <summary>
+        /// Opens the Collider Helper editor window.
+        /// </summary>
         public static void OpenWindow()
         {
             ChildColliderUtility window = GetWindow<ChildColliderUtility>("Collider Helper");
@@ -39,6 +47,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Add MeshColliders to Children", false, 20)]
+        /// <summary>
+        /// Adds non-convex MeshColliders to every child mesh of the selection.
+        /// </summary>
         public static void QuickAddMeshColliders()
         {
             ProcessSelectedObjects(TargetColliderType.MeshCollider, false, -1, null, true, false);
@@ -51,6 +62,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Add MeshColliders to Children (Convex)", false, 21)]
+        /// <summary>
+        /// Adds convex MeshColliders to every child mesh of the selection.
+        /// </summary>
         public static void QuickAddMeshCollidersConvex()
         {
             ProcessSelectedObjects(TargetColliderType.MeshCollider, true, -1, null, true, false);
@@ -63,6 +77,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Add BoxColliders to Children", false, 22)]
+        /// <summary>
+        /// Adds BoxColliders to every child mesh of the selection.
+        /// </summary>
         public static void QuickAddBoxColliders()
         {
             ProcessSelectedObjects(TargetColliderType.BoxCollider, false, -1, null, true, false);
@@ -75,6 +92,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Set Layer/Ground", false, 35)]
+        /// <summary>
+        /// Sets the "Ground" layer on all children of the selection.
+        /// </summary>
         public static void QuickSetLayerGround()
         {
             int groundLayer = LayerMask.NameToLayer("Ground");
@@ -89,6 +109,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Set Layer/Obstacle", false, 36)]
+        /// <summary>
+        /// Sets the "Obstacle" layer on all children of the selection.
+        /// </summary>
         public static void QuickSetLayerObstacle()
         {
             int obstacleLayer = LayerMask.NameToLayer("Obstacle");
@@ -103,6 +126,9 @@ namespace Utils.Editor
         }
 
         [MenuItem("GameObject/Colliders/Remove All Colliders from Children", false, 50)]
+        /// <summary>
+        /// Removes every collider from the children of the selection (inactive included).
+        /// </summary>
         public static void QuickRemoveColliders()
         {
             RemoveCollidersFromSelectedObjects(true);
@@ -283,6 +309,9 @@ namespace Utils.Editor
         #endregion
 
         #region Core Processing Logic
+        /// <summary>
+        /// Adds or updates colliders on all child meshes of the selected objects, with optional layer and physics material (undoable).
+        /// </summary>
         public static void ProcessSelectedObjects(
             TargetColliderType colliderType,
             bool convex,
@@ -377,6 +406,9 @@ namespace Utils.Editor
             Debug.Log($"<color=green>[ColliderUtility]</color> Scanned {totalScanned} child meshes across {targets.Length} object(s): <b>Added {totalAdded}</b> {colliderType}s, <b>Updated {totalUpdated}</b>{layerInfo}. (Undo with Ctrl+Z)");
         }
 
+        /// <summary>
+        /// Applies the given layer to all children of the selected objects (undoable).
+        /// </summary>
         public static void SetLayerOnSelectedChildren(int targetLayer)
         {
             GameObject[] targets = Selection.gameObjects;
@@ -409,6 +441,9 @@ namespace Utils.Editor
             Debug.Log($"<color=green>[ColliderUtility]</color> Set layer to '<b>{LayerMask.LayerToName(targetLayer)}</b>' on {count} child objects.");
         }
 
+        /// <summary>
+        /// Removes all colliders from the children of the selected objects (undoable).
+        /// </summary>
         public static void RemoveCollidersFromSelectedObjects(bool includeInactive)
         {
             GameObject[] targets = Selection.gameObjects;
@@ -441,6 +476,9 @@ namespace Utils.Editor
             Debug.Log($"<color=orange>[ColliderUtility]</color> Removed {count} colliders from children across {targets.Length} object(s).");
         }
 
+        /// <summary>
+        /// Selects every child mesh of the selection that has no collider.
+        /// </summary>
         public static void SelectChildrenMissingColliders(bool includeInactive)
         {
             GameObject[] targets = Selection.gameObjects;

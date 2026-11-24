@@ -10,6 +10,9 @@ using UnityEngine;
 [CustomEditor(typeof(PlayerBoneBridge))]
 public class PlayerBoneBridgeEditor : UnityEditor.Editor
 {
+    /// <summary>
+    /// Draws the default inspector plus bone validation and follower auto-detection buttons.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         // Draw default fields
@@ -98,7 +101,7 @@ public class PlayerBoneBridgeEditor : UnityEditor.Editor
         List<string> keywords = new List<string> { "wheel", "caster", "attachment", "nozzle" };
         int addedCount = 0;
 
-        // Clear list first or ask user? We can just append unique items.
+        // Append unique items only: existing entries are kept
         HashSet<Transform> existingVisuals = new HashSet<Transform>();
         for (int i = 0; i < followersProp.arraySize; i++)
         {

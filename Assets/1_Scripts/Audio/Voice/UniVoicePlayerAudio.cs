@@ -20,13 +20,13 @@ public class UniVoicePlayerAudio : NetworkBehaviour
     /// </summary>
     public override void OnStartClient()
     {
-        _followTarget = transform; // Défaut (racine du prefab)
+        _followTarget = transform; // Default (prefab root)
 
         // Cache the connection ID from the player's movement or controller component
         if (TryGetComponent(out PlayerV2_Controller v2))
         {
             _cachedId = v2.ConnectionId;
-            // IMPORTANT : En V2, la racine ne bouge pas. Il faut suivre le corps physique !
+            // IMPORTANT: in V2 the root does not move, so follow the physical body instead
             if (v2.HipsRigidbody != null) _followTarget = v2.HipsRigidbody.transform;
             else if (v2.TorsoRigidbody != null) _followTarget = v2.TorsoRigidbody.transform;
         }
@@ -43,7 +43,7 @@ public class UniVoicePlayerAudio : NetworkBehaviour
     /// </summary>
     void Update()
     {
-        // We only spatialized other players' audio, and only if we have a valid ID and session
+        // We only spatialize other players' audio, and only if we have a valid ID and session
         if (isLocalPlayer || _cachedId == -1 || UniVoiceMirrorSetupSample.ClientSession == null) return;
 
         // Find the audio output associated with this peer's ID

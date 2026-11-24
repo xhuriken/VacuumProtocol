@@ -3,63 +3,81 @@ using System.Collections.Generic;
 using DG.Tweening;
 using Mirror;
 using UnityEngine;
-// Pour PlayerInputHandler
 
 /// <summary>
-/// Description: Contrôle physique des bras pour le Player_V2.
-/// Context: Attaché au Player_V2 (doit être au même niveau que PlayerV2_Controller).
-/// Justification: Applique des forces et torques sur la main (dernier bone) pour étirer le bras physique vers la direction regardée.
+/// Description: Physics-driven arm control for Player_V2.
+/// Context: Attached to Player_V2 (must sit on the same GameObject as PlayerV2_Controller).
+/// Justification: Applies forces and torques along the arm chain and on the hand (last bone) to stretch the physical arm toward the look direction.
 /// </summary>
 [RequireComponent(typeof(PlayerV2_Controller))]
 [RequireComponent(typeof(PlayerInputHandler))]
 public class PlayerV2_Arms : NetworkBehaviour
 {
     [Header("Physics Tuning Parameters")]
-    [Tooltip("Hauteur de l'arc (courbe) formé par le bras en extension pour un rendu plus organique.")]
+    [Tooltip("Role: Height of the arc (curve) formed by the extended arm, for a more organic look.")]
     public float ArcHeight = 1f;
+    [Tooltip("Role: Spring force pulling each arm segment toward its target point on the curve.")]
     public float ExtendForce = 350f;
+    [Tooltip("Role: Linear damping applied to arm segments while extending.")]
     public float ExtendDamping = 12f;
+    [Tooltip("Role: Torque strength aligning the hand rotation with the look direction.")]
     public float AlignmentTorque = 20f;
+    [Tooltip("Role: Angular damping applied to the hand during rotation alignment.")]
     public float AlignmentDamping = 3f;
 
     [Header("Reach Settings")]
+    [Tooltip("Role: Multiplier on the measured arm length used to place the reach target.")]
     public float ReachLengthFactor = 1.0f;
+    [Tooltip("Role: Extra distance added to the reach target along the look direction.")]
     public float ForwardOffset = 0f;
+    [Tooltip("Role: Vertical offset of the reach target along the camera up axis.")]
     public float VerticalOffset = -0.1f;
+    [Tooltip("Role: Euler offset applied to the hand target rotation.")]
     public Vector3 HandRotationOffset = Vector3.zero;
 
     [Header("Animation")]
-    [Tooltip("Role: Durée de la rotation des épaules.\nUse Case: Animation.")]
-    public float ShoulderRotateDuration = 0.25f; // Réduit pour être plus vif et moins bégayer avec la physique
-    [Tooltip("Role: Type d'easing pour l'animation.\nUse Case: Fluidité.")]
-    public Ease ShoulderEase = Ease.OutQuad; // OutQuad au lieu de OutBack pour éviter le rebond (jitter)
+    [Tooltip("Role: Duration of the shoulder rotation.\nUse Case: Animation.")]
+    public float ShoulderRotateDuration = 0.25f; // Kept short to feel snappier and stutter less against the physics
+    [Tooltip("Role: Easing type for the shoulder animation.\nUse Case: Smoothness.")]
+    public Ease ShoulderEase = Ease.OutQuad; // OutQuad instead of OutBack to avoid the overshoot bounce (jitter)
 
     [Header("Crouch Retraction")]
-    [Tooltip("Combien de segments ignorer au début du bras (0 = l'épaule est le premier affecté, 1 = on ignore le premier joint).")]
+    [Tooltip("Role: Number of segments to skip at the start of the arm (0 = the shoulder is the first affected, 1 = the first joint is skipped).")]
     public int RetractedSegmentsOffset = 1;
-    [Tooltip("Combien de segments doivent se rétracter après l'offset.")]
+    [Tooltip("Role: Number of segments that retract after the offset.")]
     public int RetractedSegmentsCount = 2;
-    [Tooltip("Durée de l'animation de rétraction en secondes.")]
+    [Tooltip("Role: Duration of the retraction animation, in seconds.")]
     public float RetractionDuration = 0.25f;
 
     [Header("Joint Tuning (Auto-Configured)")]
+    [Tooltip("Role: Locks angular X motion on every arm joint except the hand.")]
     public bool LockAngularX = false;
+    [Tooltip("Role: Enables joint projection (position and rotation) to keep the chain from separating.")]
     public bool EnableJointProjection = true;
 
+    [Tooltip("Role: Shoulder joint drive spring while the arm is extended.")]
     public float ShoulderExtendSpringForce = 1500f;
+    [Tooltip("Role: Shoulder joint drive damper while the arm is extended.")]
     public float ShoulderExtendDamping = 20f;
+    [Tooltip("Role: Shoulder joint drive spring while the arm is at rest.")]
     public float ShoulderRestSpringForce = 800f;
+    [Tooltip("Role: Shoulder joint drive damper while the arm is at rest.")]
     public float ShoulderRestDamping = 40f;
 
+    [Tooltip("Role: Elbow/wrist joint drive spring while the arm is extended.")]
     public float ElbowWristExtendSpringForce = 1500f;
+    [Tooltip("Role: Elbow/wrist joint drive damper while the arm is extended.")]
     public float ElbowWristExtendDamping = 20f;
+    [Tooltip("Role: Elbow/wrist joint drive spring while the arm is at rest.")]
     public float ElbowWristRestSpringForce = 150f;
+    [Tooltip("Role: Elbow/wrist joint drive damper while the arm is at rest.")]
     public float ElbowWristRestDamping = 15f;
 
+    [Tooltip("Role: Angular damping applied to every arm rigidbody.")]
     public float ArmAngularDrag = 15f;
 
     [Header("Retraction / Rest Physics")]
-    [Tooltip("Si activé, aucune force n'est appliquée sur la main au repos. Elle pend librement avec la gravité.")]
+    [Tooltip("Role: When enabled, no force is applied to the hand at rest; it hangs freely under gravity.")]
     public bool FreeHangAtRest = true;
 
     // Synchronized Variables
@@ -105,11 +123,18 @@ public class PlayerV2_Arms : NetworkBehaviour
     private bool _lastLeftExtended;
     private bool _lastRightExtended;
 
+    /// <summary>Last bone (hand) of the left arm chain, resolved at Start.</summary>
     public Transform LeftHand => _leftHand;
+    /// <summary>Last bone (hand) of the right arm chain, resolved at Start.</summary>
     public Transform RightHand => _rightHand;
+    /// <summary>True while the left arm extension input is active (network synchronized).</summary>
     public bool IsLeftArmExtended => _isLeftArmExtended;
+    /// <summary>True while the right arm extension input is active (network synchronized).</summary>
     public bool IsRightArmExtended => _isRightArmExtended;
 
+    /// <summary>
+    /// True when the left arm is extended and the hand actually reached at least 80% of the target reach distance.
+    /// </summary>
     public bool IsLeftHandExtendedPhysically
     {
         get
@@ -131,7 +156,7 @@ public class PlayerV2_Arms : NetworkBehaviour
         // 1. Resolve and cache joints
         if (_controller.LeftArmRoot != null)
         {
-            // Utilise GetComponentInChildren au cas où le script est configuré sur Shoulder (qui n'a pas de joint) au lieu de Arm.Base
+            // GetComponentInChildren in case the root is set to Shoulder (which has no joint) instead of Arm.Base
             _leftShoulderJoint = _controller.LeftArmRoot.GetComponentInChildren<ConfigurableJoint>();
             if (_leftShoulderJoint != null)
             {
@@ -144,7 +169,7 @@ public class PlayerV2_Arms : NetworkBehaviour
 
         if (_controller.RightArmRoot != null)
         {
-            // Utilise GetComponentInChildren au cas où le script est configuré sur Shoulder (qui n'a pas de joint) au lieu de Arm.Base
+            // GetComponentInChildren in case the root is set to Shoulder (which has no joint) instead of Arm.Base
             _rightShoulderJoint = _controller.RightArmRoot.GetComponentInChildren<ConfigurableJoint>();
             if (_rightShoulderJoint != null)
             {
@@ -155,7 +180,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             }
         }
 
-        // Initialisation Bras Gauche
+        // Left arm initialization
         if (_controller.LeftArmRoot != null)
         {
             _leftArmRbs.AddRange(_controller.LeftArmRoot.GetComponentsInChildren<Rigidbody>());
@@ -167,7 +192,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             }
         }
 
-        // Initialisation Bras Droit
+        // Right arm initialization
         if (_controller.RightArmRoot != null)
         {
             _rightArmRbs.AddRange(_controller.RightArmRoot.GetComponentsInChildren<Rigidbody>());
@@ -179,7 +204,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             }
         }
 
-        // Setup Snap Épaules Initial
+        // Snap shoulders to their initial rotation
         if (_controller.LeftShoulder != null)
             _controller.LeftShoulder.localRotation = Quaternion.Euler(0f, _isLeftArmExtended ? 90f : 0f, 0f);
 
@@ -224,7 +249,7 @@ public class PlayerV2_Arms : NetworkBehaviour
 
     private void FixedUpdate()
     {
-        // Bras Gauche
+        // Left arm
         if (_leftArmRbs.Count > 0 && _leftHandRb != null)
         {
             if (_isLeftArmExtended != _lastLeftExtended)
@@ -235,7 +260,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             ApplyArmPhysicsForces(_leftArmRbs, _leftHandRb, _leftArmLength, true, _isLeftArmExtended);
         }
 
-        // Bras Droit
+        // Right arm
         if (_rightArmRbs.Count > 0 && _rightHandRb != null)
         {
             if (_isRightArmExtended != _lastRightExtended)
@@ -251,7 +276,7 @@ public class PlayerV2_Arms : NetworkBehaviour
     {
         if (!isExtended && FreeHangAtRest)
         {
-            // On n'applique aucune force externe, on laisse le bras pendre par la gravité et la raideur des joints.
+            // No external force: the arm hangs under gravity and joint stiffness only.
             return;
         }
 
@@ -266,17 +291,17 @@ public class PlayerV2_Arms : NetworkBehaviour
                 + forward * (armLength * ReachLengthFactor + ForwardOffset)
                 + up * VerticalOffset;
 
-            Vector3 armRootPos = armRbs[0].position; // La base de l'épaule
+            Vector3 armRootPos = armRbs[0].position; // Shoulder base
 
-            // Force d'attraction répartie sur chaque segment pour une belle courbe et aucun à-coup
+            // Attraction force spread over every segment for a clean curve with no jerks
             for (int i = 0; i < armRbs.Count; i++)
             {
                 Rigidbody rb = armRbs[i];
                 if (rb == null) continue;
 
-                float weight = (float)(i + 1) / armRbs.Count; // 0.x à 1.0 (main)
+                float weight = (float)(i + 1) / armRbs.Count; // 0.x to 1.0 (hand)
 
-                // Rétractation : On ignore les segments repliés
+                // Retraction: folded segments are skipped
                 if (_isRetracted)
                 {
                     int retractedEnd = Mathf.Min(RetractedSegmentsOffset + RetractedSegmentsCount, armRbs.Count);
@@ -293,16 +318,16 @@ public class PlayerV2_Arms : NetworkBehaviour
 
                 if (weight > 0f)
                 {
-                    // FIX COURBE NATURELLE SUR LE PITCH (Bézier Cubique) : 
-                    // Pour éviter que la base ne prenne toute la rotation (angle droit) quand on regarde en haut/bas,
-                    // le début de la courbe part Droit Devant le torse (horizontal), et la fin s'aligne sur la caméra.
-                    
+                    // FIX NATURAL PITCH CURVE (cubic Bezier):
+                    // To keep the base from taking the whole rotation (right angle) when looking up/down,
+                    // the curve starts straight ahead of the torso (horizontal) and its end aligns with the camera.
+
                     Vector3 torsoForward = _controller.TorsoRigidbody.transform.forward;
 
                     Vector3 p0 = armRootPos;
-                    // Le point de contrôle 1 pousse dans l'axe du torse (génère la courbe verticale / pitch)
+                    // Control point 1 pushes along the torso axis (creates the vertical / pitch curve)
                     Vector3 p1 = p0 + torsoForward * (armLength * ArcHeight);
-                    // Le point de contrôle 2 pousse en arrière depuis la cible dans l'axe du regard
+                    // Control point 2 pulls back from the target along the look axis
                     Vector3 p2 = finalTargetPosition - forward * (armLength * ArcHeight);
                     Vector3 p3 = finalTargetPosition;
 
@@ -323,7 +348,7 @@ public class PlayerV2_Arms : NetworkBehaviour
                 }
             }
 
-            // Alignement Rotation
+            // Hand rotation alignment
             Quaternion targetRotation = Quaternion.LookRotation(forward, up) * Quaternion.Euler(HandRotationOffset);
             Quaternion deltaRotation = targetRotation * Quaternion.Inverse(handRb.rotation);
             deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
@@ -359,7 +384,7 @@ public class PlayerV2_Arms : NetworkBehaviour
 
         while (current != null && current != lastBone && current.childCount > 0)
         {
-            // Trouver l'enfant qui mène au lastBone (ou prendre le premier si on ne trouve pas)
+            // Find the child leading to lastBone (fall back to the first child if none is found)
             Transform next = current.GetChild(0);
             foreach (Transform child in current)
             {
@@ -436,10 +461,10 @@ public class PlayerV2_Arms : NetworkBehaviour
         {
             if (joint == null) continue;
 
-            // On sauvegarde le connectedAnchor correctement calculé avant de désactiver l'auto-configure
+            // Save the correctly computed connectedAnchor before disabling auto-configure
             if (joint.autoConfigureConnectedAnchor)
             {
-                // Calcul manuel du connectedAnchor exact basé sur la pose initiale pour éviter les bugs au spawn
+                // Compute the exact connectedAnchor manually from the initial pose to avoid spawn glitches
                 Vector3 worldAnchor = joint.transform.TransformPoint(joint.anchor);
                 Vector3 connectedAnchor = joint.connectedBody != null ? joint.connectedBody.transform.InverseTransformPoint(worldAnchor) : worldAnchor;
 
@@ -452,10 +477,10 @@ public class PlayerV2_Arms : NetworkBehaviour
                 _originalConnectedAnchors[joint] = joint.connectedAnchor;
             }
 
-            // CRITICAL FIX: Empêcher les bras de pousser/tourner le Torso !
-            // En mettant le connectedMassScale à une valeur minuscule sur l'épaule, le solver Unity 
-            // considère que le Torso a une masse infinie par rapport au bras. 
-            // Le bras peut bouger, mais il ne pourra plus JAMAIS faire bouger le Torso !
+            // CRITICAL FIX: keep the arms from pushing/rotating the Torso!
+            // With a tiny connectedMassScale on the shoulder, the Unity solver treats
+            // the Torso as infinitely heavy relative to the arm.
+            // The arm can still move, but it can NEVER move the Torso.
             if (joint == _leftShoulderJoint || joint == _rightShoulderJoint)
             {
                 joint.connectedMassScale = 0.00001f;
@@ -474,9 +499,9 @@ public class PlayerV2_Arms : NetworkBehaviour
             if (EnableJointProjection)
             {
                 joint.projectionMode = JointProjectionMode.PositionAndRotation;
-                // FIX: Des valeurs trop faibles causent des forces de téléportation infinies (explosion physique)
-                joint.projectionDistance = 0.1f; // 10cm de tolérance (Unity par défaut)
-                joint.projectionAngle = 180f; // 180 degrés de tolérance (Unity par défaut)
+                // FIX: values that are too low cause infinite teleport forces (physics explosion)
+                joint.projectionDistance = 0.1f; // 10 cm tolerance (Unity default)
+                joint.projectionAngle = 180f; // 180 degrees tolerance (Unity default)
             }
         }
 
@@ -492,7 +517,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             rb.solverVelocityIterations = 15;
         }
 
-        // --- Zéro Friction Setup ---
+        // --- Zero friction setup ---
         PhysicsMaterial zeroFrictionMaterial = new PhysicsMaterial("ZeroFrictionArmMaterial");
         zeroFrictionMaterial.dynamicFriction = 0f;
         zeroFrictionMaterial.staticFriction = 0f;
@@ -543,6 +568,9 @@ public class PlayerV2_Arms : NetworkBehaviour
 
     #region Crouch Retraction
 
+    /// <summary>
+    /// Retracts (crouch) or restores both arms by animating the connected anchors of the configured segments.
+    /// </summary>
     public void SetArmRetraction(bool isRetracted)
     {
         if (_isRetracted == isRetracted) return;
@@ -557,7 +585,7 @@ public class PlayerV2_Arms : NetworkBehaviour
 
     private IEnumerator AnimateArmRetraction(List<ConfigurableJoint> joints, bool isRetracted)
     {
-        // Sécurité des bornes
+        // Bounds safety
         int startIndex = Mathf.Clamp(RetractedSegmentsOffset, 0, joints.Count);
         int endIndex = Mathf.Min(startIndex + RetractedSegmentsCount, joints.Count);
         int countToAnimate = endIndex - startIndex;
@@ -566,7 +594,7 @@ public class PlayerV2_Arms : NetworkBehaviour
 
         float time = 0f;
 
-        // Stocker les positions de départ pour l'interpolation
+        // Store start anchors for interpolation
         Vector3[] startAnchors = new Vector3[countToAnimate];
         Vector3[] targetAnchors = new Vector3[countToAnimate];
 
@@ -585,7 +613,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             time += Time.deltaTime;
             float t = Mathf.Clamp01(time / RetractionDuration);
 
-            // Un peu de easing basique (SmoothStep)
+            // Basic easing (SmoothStep)
             float smoothT = t * t * (3f - 2f * t);
 
             for (int i = 0; i < countToAnimate; i++)
@@ -599,7 +627,7 @@ public class PlayerV2_Arms : NetworkBehaviour
             yield return null;
         }
 
-        // S'assurer d'atteindre la valeur finale exactement
+        // Make sure the final value is reached exactly
         for (int i = 0; i < countToAnimate; i++)
         {
             var joint = joints[startIndex + i];

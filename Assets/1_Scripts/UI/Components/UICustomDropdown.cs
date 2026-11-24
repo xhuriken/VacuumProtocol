@@ -23,6 +23,8 @@ public class UICustomDropdown : UICustomButtonBase
 
     /// <summary>
     /// Description: Serializable event dispatched when the dropdown value changes.
+    /// Context: Carries the newly selected option index.
+    /// Justification: A concrete serializable subclass is required for UnityEvent<int> to appear in the Inspector.
     /// </summary>
     [System.Serializable]
     public class DropdownEvent : UnityEvent<int> { }
@@ -30,6 +32,7 @@ public class UICustomDropdown : UICustomButtonBase
     #endregion
 
     #region Serialized Fields & References
+    [Tooltip("Role: Extra height in pixels added to the accordion spacer below the opened list.")]
     public float _accordionExtraSpacing = 10f;
 
     [Header("Header Shapes References")]

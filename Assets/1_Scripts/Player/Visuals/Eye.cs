@@ -19,10 +19,10 @@ public class Eye : NetworkBehaviour
     private Transform _cameraTransform;
 
     [Header("Settings")]
-    [SerializeField, Range(0f, 1f), Tooltip("Combien l'oeil tourne vers la cible (0.75 = 75%)")]
+    [SerializeField, Range(0f, 1f), Tooltip("Role: How much the eye bone rotates toward the target (0.75 = 75%).")]
     private float _eyeTargetWeight = 0.75f;
 
-    [SerializeField, Range(0f, 1f), Tooltip("Combien la pupille tourne vers la cible (1.0 = 100%)")]
+    [SerializeField, Range(0f, 1f), Tooltip("Role: How much the pupil rotates toward the target (1.0 = 100%).")]
     private float _pupilTargetWeight = 1.0f;
 
     [SerializeField, Tooltip("Role: How fast the eye bone follows the target.\nUse Case: Slerp speed.\nJustification: Simulates biological saccadic movement constraints.")]
@@ -52,13 +52,13 @@ public class Eye : NetworkBehaviour
     private Quaternion _pupilInitialWorldRotOffset;
 
     [Header("Saccades (Idle Movement)")]
-    [SerializeField, Tooltip("Activer les micro-mouvements (accoups) réalistes des yeux.")]
+    [SerializeField, Tooltip("Role: Enables realistic eye micro-movements (saccade jerks).")]
     private bool _enableSaccades = true;
-    [SerializeField, Tooltip("Rayon maximum de la saccade (en mètres, projeté sur la cible).")]
+    [SerializeField, Tooltip("Role: Maximum saccade radius (in meters, projected onto the target).")]
     private float _saccadeRadius = 1.5f;
-    [SerializeField, Tooltip("Temps min/max entre deux saccades (en secondes).")]
+    [SerializeField, Tooltip("Role: Min/max time between two saccades (in seconds).")]
     private Vector2 _saccadeInterval = new Vector2(0.3f, 2.0f);
-    [SerializeField, Tooltip("Vitesse de rotation de la tête au-delà de laquelle les saccades s'arrêtent (deg/sec).")]
+    [SerializeField, Tooltip("Role: Head rotation speed above which saccades stop (deg/sec).")]
     private float _headMovementThreshold = 30f;
 
     private Vector3 _currentSaccadeOffset = Vector3.zero;
@@ -66,7 +66,7 @@ public class Eye : NetworkBehaviour
     private Quaternion _lastCameraRotation;
     private float _headAngularSpeed = 0f;
 
-    // Synchronisation des deux yeux
+    // Keeps both eyes in sync: non-master eyes copy the master's saccade
     private Eye _masterEye;
 
     /// <summary>
@@ -101,7 +101,7 @@ public class Eye : NetworkBehaviour
         
         _input = GetComponentInParent<PlayerInputHandler>();
 
-        // Synchronisation des saccades : Le premier oeil trouvé devient le cerveau
+        // Saccade sync: the first eye found becomes the master
         PlayerV2_Controller controller = GetComponentInParent<PlayerV2_Controller>();
         if (controller != null)
         {
@@ -156,7 +156,7 @@ public class Eye : NetworkBehaviour
 
     private void UpdateSaccades(int priority, bool hasEntityTarget, float distance)
     {
-        // Synchronisation : Si je ne suis pas le maitre, je copie exactement sa saccade
+        // Sync: a non-master eye copies the master's saccade exactly
         if (_masterEye != null && _masterEye != this)
         {
             _currentSaccadeOffset = _masterEye._currentSaccadeOffset;
@@ -170,38 +170,38 @@ public class Eye : NetworkBehaviour
             return;
         }
 
-        // Rayon de base pour l'idle
+        // Base radius for idle
         float radius = _saccadeRadius;
         Vector2 interval = _saccadeInterval;
 
         if (hasEntityTarget)
         {
-            // Focus normal sur une entité (~2.5 degrés)
+            // Normal focus on an entity (~2.5 degrees)
             radius = distance * 0.04f;
         }
 
         if (priority >= 3)
         {
-            // Peur (Fear) : Tremblement large proportionnel à la distance
+            // Fear: wide trembling proportional to distance
             radius = distance * 0.15f;
             interval = new Vector2(0.02f, 0.08f);
         }
         else if (priority >= 2)
         {
-            // Attention/Curiosité : Yeuter l'objet (Scanner ses contours, ~7 degrés)
+            // Attention/curiosity: glance around the object (scan its outline, ~7 degrees)
             radius = distance * 0.12f;
             interval = new Vector2(0.15f, 0.5f);
         }
 
-        // Si on tourne la tête rapidement, on annule les saccades pour recentrer le regard (Focus), sauf si on a peur
+        // Turning the head quickly cancels saccades to re-center the gaze (focus), unless afraid
         if (_headAngularSpeed > _headMovementThreshold && priority < 3)
         {
             _currentSaccadeOffset = Vector3.Lerp(_currentSaccadeOffset, Vector3.zero, Time.deltaTime * 10f);
-            _nextSaccadeTime = Time.time + Random.Range(0.2f, 0.5f); // Pause avant de reprendre
+            _nextSaccadeTime = Time.time + Random.Range(0.2f, 0.5f); // Pause before resuming
             return;
         }
 
-        // Déclenchement d'un accoup sec aléatoire
+        // Trigger a sharp random jerk
         if (Time.time >= _nextSaccadeTime)
         {
             Vector2 randomCircle = Random.insideUnitCircle * radius;
@@ -218,12 +218,12 @@ public class Eye : NetworkBehaviour
         bool hasTarget = false;
         Quaternion worldLookRot = Quaternion.identity;
 
-        // Si on est accroupi, on ignore les entités pour forcer la vue vers la caméra
+        // While crouching, ignore entities to force the gaze toward the camera direction
         bool isCrouching = _input != null && _input.IsCrouching;
 
         bool hasEntityTarget = _playerViewRange.HighestPriorityEntity != null && !isCrouching;
         int priority = 0;
-        float distanceToTarget = 20f; // Distance virtuelle par défaut pour l'idle
+        float distanceToTarget = 20f; // Default virtual distance for idle
 
         if (hasEntityTarget)
         {
@@ -234,7 +234,7 @@ public class Eye : NetworkBehaviour
         UpdateSaccades(priority, hasEntityTarget, distanceToTarget);
         
         float targetEyeScale = 1f;
-        if (priority >= 3) targetEyeScale = 1.3f; // L'oeil entier s'écarquille (grossit) par la peur
+        if (priority >= 3) targetEyeScale = 1.3f; // The whole eye widens (scales up) in fear
 
         if (hasEntityTarget)
         {
@@ -250,8 +250,8 @@ public class Eye : NetworkBehaviour
         }
         else if (_cameraTransform != null)
         {
-            // Cible la direction exacte de ce que la caméra regarde (un point virtuel à distance)
-            // + l'offset de saccade aléatoire
+            // Target exactly where the camera looks (a virtual point at distance)
+            // plus the random saccade offset
             Vector3 virtualTarget = _cameraTransform.position + _cameraTransform.forward * 20f + _currentSaccadeOffset;
             Vector3 directionToTarget = virtualTarget - transform.position;
             
@@ -264,14 +264,14 @@ public class Eye : NetworkBehaviour
 
         if (hasTarget)
         {
-            // Calcul de la rotation de base (tout droit par rapport à la tête)
+            // Base rotation (straight ahead relative to the head)
             Quaternion baseWorldRot = transform.parent.rotation * _initialLocalRotation;
 
-            // L'oeil ne tourne qu'à X% vers la cible
+            // The eye only rotates X% toward the target
             Quaternion eyeTargetWorld = Quaternion.Slerp(baseWorldRot, worldLookRot, _eyeTargetWeight);
             Quaternion newTargetLocal = Quaternion.Inverse(transform.parent.rotation) * eyeTargetWorld;
 
-            // La pupille tourne à Y% vers la cible
+            // The pupil rotates Y% toward the target
             Quaternion pupilTargetWorld = Quaternion.Slerp(baseWorldRot, worldLookRot, _pupilTargetWeight);
             Quaternion newPupilTargetLocal = Quaternion.Inverse(_pupilBone.parent.rotation) * (pupilTargetWorld * _pupilInitialWorldRotOffset);
 
@@ -289,6 +289,7 @@ public class Eye : NetworkBehaviour
         }
     }
 
+    /// <summary>Returns the pupil bone transform driven by this eye.</summary>
     public Transform GetPupilBone() => _pupilBone;
 
     /// <summary>

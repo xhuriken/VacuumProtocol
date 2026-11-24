@@ -11,67 +11,68 @@ using UnityEditor;
 /// <summary>
 /// Description: Centralized upgradable parameters for mouth phantom suction, ectoplasm drain, and ghost echo stream visuals.
 /// Context: Acts as the Single Source of Truth (SSOT) for item upgrades, perks, and gameplay balancing.
+/// Justification: Serialized as a plain class inside PlayerMouthVacuum so upgrades mutate one object instead of scattered fields.
 /// </summary>
 [System.Serializable]
 public class MouthVacuumStats
 {
     [Header("Suction Cone Upgradable Stats")]
-    [Tooltip("Base distance along cone axis Z reached by the mouth vacuum.")]
+    [Tooltip("Role: Base distance along cone axis Z reached by the mouth vacuum.")]
     public float BaseConeLength = 5.5f;
 
-    [Tooltip("Multiplier applied by items/perks to cone reach and volume.")]
+    [Tooltip("Role: Multiplier applied by items/perks to cone reach and volume.")]
     public float ConeSizeMultiplier = 1.0f;
 
     [Header("Ectoplasm Drain Stats")]
-    [Tooltip("Base ectoplasm health drained per second from captured phantoms.")]
+    [Tooltip("Role: Base ectoplasm health drained per second from captured phantoms.")]
     public float BaseDrainRate = 10.0f;
 
-    [Tooltip("Multiplier applied by items/perks to ectoplasm drain rate.")]
+    [Tooltip("Role: Multiplier applied by items/perks to ectoplasm drain rate.")]
     public float DrainMultiplier = 1.0f;
 
     [Header("Suction Pull Acceleration")]
-    [Tooltip("Multiplier applied to the physical pull velocity dragging phantoms towards the nozzle.")]
+    [Tooltip("Role: Multiplier applied to the physical pull velocity dragging phantoms towards the nozzle.")]
     public float SuctionPullMultiplier = 1.0f;
 
     [Header("Phantom Suction Ghost Echoes Stream (SSOT)")]
-    [Tooltip("Interval in seconds between ghost snapshots emitted along the stream per captured phantom.")]
+    [Tooltip("Role: Interval in seconds between ghost snapshots emitted along the stream per captured phantom.")]
     public float EchoSpawnInterval = 0.032f;
 
-    [Tooltip("Speed in meters per second at which ghost echoes flow along the stream into the mouth nozzle.")]
+    [Tooltip("Role: Speed in meters per second at which ghost echoes flow along the stream into the mouth nozzle.")]
     public float EchoFlowSpeed = 8.5f;
 
-    [Tooltip("Scale ratio when an echo reaches the mouth nozzle (e.g. 0.12 = shrinks down to 12% original scale).")]
+    [Tooltip("Role: Scale ratio when an echo reaches the mouth nozzle (e.g. 0.12 = shrinks down to 12% original scale).")]
     [Range(0.01f, 0.5f)]
     public float EchoMinScaleRatio = 0.12f;
 
-    [Tooltip("Curvature pull factor bending the stream towards the central cone vortex axis (0 = straight line, 0.5 = curved).")]
+    [Tooltip("Role: Curvature pull factor bending the stream towards the central cone vortex axis (0 = straight line, 0.5 = curved).")]
     [Range(0f, 0.8f)]
     public float EchoCenteringInfluence = 0.22f;
 
-    [Tooltip("Fresnel rim power for the ectoplasm ghost shader.")]
+    [Tooltip("Role: Fresnel rim power for the ectoplasm ghost shader.")]
     public float EchoFresnelPower = 2.2f;
 
-    [Tooltip("Base HDR tint color for the ectoplasmic suction echoes.")]
+    [Tooltip("Role: Base HDR tint color for the ectoplasmic suction echoes.")]
     public Color EchoColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
 
-    [Tooltip("Maximum number of pre-allocated ghost echo objects in the pool.")]
+    [Tooltip("Role: Maximum number of pre-allocated ghost echo objects in the pool.")]
     public int MaxEchoPoolSize = 64;
 
     [Header("Ectoplasm Milestone & Color Feedback")]
-    [Tooltip("Amount of drained ectoplasm triggering the milestone SFX and blue color pulse.")]
+    [Tooltip("Role: Amount of drained ectoplasm triggering the milestone SFX and blue color pulse.")]
     public float DrainThresholdForPulse = 50f;
 
-    [Tooltip("HDR color flashed when the 50 ectoplasm drain milestone is reached.")]
+    [Tooltip("Role: HDR color flashed when the 50 ectoplasm drain milestone is reached.")]
     public Color MilestoneBlueColor = new Color(0.15f, 0.7f, 1.0f, 1.0f);
 
-    [Tooltip("Duration in seconds for the suction echo color to return from blue to default color.")]
+    [Tooltip("Role: Duration in seconds for the suction echo color to return from blue to default color.")]
     public float MilestonePulseDuration = 0.75f;
 
-    [Tooltip("HDR color when the phantom is defeated/dead and plunging into the mouth nozzle.")]
+    [Tooltip("Role: HDR color when the phantom is defeated/dead and plunging into the mouth nozzle.")]
     public Color SwallowDeadColor = new Color(0.2f, 1.0f, 0.35f, 1.0f);
 
     [Header("Progressive Suction & Feel")]
-    [Tooltip("Duration in seconds for suction grip, pull force, and drain rate to ramp up from initial contact to 100%.")]
+    [Tooltip("Role: Duration in seconds for suction grip, pull force, and drain rate to ramp up from initial contact to 100%.")]
     public float SuctionRampDuration = 0.65f;
 }
 
@@ -80,7 +81,7 @@ public class MouthVacuumStats
 /// Context: Attached to Player_V2. Activates only when both left and right clicks are held simultaneously.
 /// Justification: Decouples phantom capture from arm-based item/dust collection, keeping mechanics clean, SSOT, and optimized.
 /// Uses PhantomBase.ActivePhantoms registry for O(1) query performance without continuous Physics.OverlapSphere allocations.
-/// Features high-performance pooled ghost afterimages (Fresnel echoes) that stream in a tight single-file procession ("file indienne")
+/// Features high-performance pooled ghost afterimages (Fresnel echoes) that stream in a tight single-file procession
 /// between the captured phantom and the mouth nozzle, shrinking and dissolving as they enter the nozzle.
 /// </summary>
 [RequireComponent(typeof(PlayerInputHandler))]
@@ -88,6 +89,7 @@ public class MouthVacuumStats
 public class PlayerMouthVacuum : NetworkBehaviour
 {
     [Header("Centralized Mouth Vacuum Stats (SSOT)")]
+    [Tooltip("Role: Upgradable suction, drain and echo stream parameters (single source of truth).")]
     [SerializeField] private MouthVacuumStats _stats = new MouthVacuumStats();
 
     [Header("Mouth Suction Parameters (Legacy Serialization Overrides)")]
@@ -124,6 +126,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
     [SerializeField] private float _fadeOutDuration = 0.50f;
 
     [Header("Debug")]
+    [Tooltip("Role: Draws the suction cone wireframe in the Scene view.")]
     [SerializeField] private bool _showDebugGizmos = true;
 
     [SyncVar]
@@ -151,7 +154,8 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     /// <summary>
     /// Description: Internal pooled entity representing a phantom snapshot afterimage streaming along the suction cord.
-    /// Operates with zero per-frame GC allocations through shared MeshFilter reassignment and MaterialPropertyBlocks.
+    /// Context: Pre-allocated in InitEchoPool, recycled by SpawnEchoSnapshot / DespawnEcho.
+    /// Justification: Operates with zero per-frame GC allocations through shared MeshFilter reassignment and MaterialPropertyBlocks.
     /// </summary>
     private class PhantomSuctionEcho
     {
@@ -183,9 +187,13 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     #region Public Upgrade & Inspection API
 
+    /// <summary>Centralized upgradable stats instance.</summary>
     public MouthVacuumStats Stats => _stats;
+    /// <summary>Drain rate per second after applying the drain multiplier.</summary>
     public float EffectiveDrainRate => _stats.BaseDrainRate * _stats.DrainMultiplier;
+    /// <summary>Cone reach after applying the cone size multiplier.</summary>
     public float EffectiveConeLength => _stats.BaseConeLength * _stats.ConeSizeMultiplier;
+    /// <summary>Current suction pull multiplier.</summary>
     public float EffectivePullMultiplier => _stats.SuctionPullMultiplier;
 
     /// <summary>
@@ -641,7 +649,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     /// <summary>
     /// Description: Scans all active phantoms and applies suction and drain to those within the mouth cone.
-    /// Emits ghost snapshots forming a continuous "file indienne" between the phantom and the mouth nozzle.
+    /// Emits ghost snapshots forming a continuous single-file stream between the phantom and the mouth nozzle.
     /// </summary>
     private void ProcessMouthSuction()
     {
@@ -822,7 +830,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
     /// <summary>
     /// Description: Updates all active ghost afterimages along the streamline connecting the phantom to the nozzle.
-    /// Drives the "file indienne" procession into the mouth nozzle, shrinking scale and dissolving alpha as they approach.
+    /// Drives the single-file procession into the mouth nozzle, shrinking scale and dissolving alpha as they approach.
     /// </summary>
     private void UpdateSuctionEchoes()
     {

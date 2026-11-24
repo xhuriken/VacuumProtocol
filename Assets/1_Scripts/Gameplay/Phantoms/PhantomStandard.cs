@@ -44,6 +44,9 @@ namespace Gameplay.Phantoms
             _agent.stoppingDistance = _attackRadius * 0.8f;
         }
 
+        /// <summary>
+        /// Client start: disables the NavMeshAgent on remote clients so it does not fight NetworkTransform.
+        /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
@@ -55,6 +58,9 @@ namespace Gameplay.Phantoms
             }
         }
 
+        /// <summary>
+        /// Server start: snaps the agent onto the NavMesh and fails loudly if it cannot be placed.
+        /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
