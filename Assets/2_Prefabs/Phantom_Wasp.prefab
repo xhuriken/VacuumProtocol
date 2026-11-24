@@ -86,24 +86,24 @@ MonoBehaviour:
   _maxInvestigateTravelTime: 6
   _wanderRadius: 8
   _wanderWaitTime: 1.5
-  _maxEctoplasm: 35
-  _currentEctoplasm: 35
+  _maxEctoplasm: 50
+  _currentEctoplasm: 50
   _suctionSlowdownRatio: 0.2
   _centeringStrength: 7
   _maxCenteringSpeed: 5
   _suctionPullSpeed: 2.4
   _shakeFrequency: 35
-  _shakeAmplitude: 0.08
+  _shakeAmplitude: 0.05
   _struggleResistance: 0.25
-  _escapeDashForce: 10
-  _escapeIntervalMin: 0.9
-  _escapeIntervalMax: 1.8
+  _escapeDashForce: 5
+  _escapeIntervalMin: 0.5
+  _escapeIntervalMax: 1.5
   _escapeDashDuration: 0.35
   _dashTelegraphDuration: 0.22
-  _dashSquashAmount: 0.35
+  _dashSquashAmount: 0.8
   _dashStretchAmount: 0.55
   _swallowThresholdRatio: 0.25
-  _swallowDiveSpeed: 12
+  _swallowDiveSpeed: 5
   _escapeRayDistance: 8
   _tuggingResistanceForce: 1.2
   _struggleTugFrequency: 1
@@ -137,17 +137,17 @@ MonoBehaviour:
     m_RotationOrder: 4
   _drainObstacleLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   _attackDamage: 25
   _currentState: 0
   _currentTarget: {fileID: 0}
-  _flightChaseSpeed: 4.2
+  _flightChaseSpeed: 4
   _flightWanderSpeed: 2.2
   _turnSpeed: 8
   _stoppingDistance: 0.8
-  _targetHoverAltitude: 1.5
-  _minHoverAltitude: 0.9
-  _maxHoverAltitude: 2.7
+  _targetHoverAltitude: 2
+  _minHoverAltitude: 1
+  _maxHoverAltitude: 3
   _groundLayer:
     serializedVersion: 2
     m_Bits: 8
@@ -158,6 +158,12 @@ MonoBehaviour:
   _wallAvoidanceDistance: 1.4
   _avoidanceForce: 4.5
   _vacuumDragSpeed: 2
+  _keepUpright: 1
+  _enableChaseNeedles: 1
+  _chaseNeedleCooldown: 3
+  _chaseNeedleTelegraphDuration: 0.45
+  _chaseNeedleMinDistance: 1.8
+  _chaseNeedleMaxDistance: 14
   _enableSuctionNeedles: 1
   _needleIntervalMin: 1.8
   _needleIntervalMax: 2.8

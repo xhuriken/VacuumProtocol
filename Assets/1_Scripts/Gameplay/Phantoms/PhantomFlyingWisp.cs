@@ -70,15 +70,35 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Speed at which this lightweight wisp is dragged into the player's mouth nozzle while being vacuumed.")]
         [SerializeField] private float _vacuumDragSpeed = 1.8f;
 
+        [Title("Upright Flight Orientation")]
+        [Tooltip("Role: Keeps the wasp body upright on the horizontal plane when chasing or wandering, preventing head-down nosediving.")]
+        [SerializeField] private bool _keepUpright = true;
+
+        [Title("Chase Ranged Combat: Electric Ecto-Needles")]
+        [Tooltip("Role: Enables shooting electric ecto-needles at the player while actively chasing.")]
+        [SerializeField] private bool _enableChaseNeedles = true;
+
+        [Tooltip("Role: Cooldown in seconds between needle bursts while chasing.")]
+        [SerializeField] private float _chaseNeedleCooldown = 3.0f;
+
+        [Tooltip("Role: Duration of charging telegraph before firing needles during chase.")]
+        [SerializeField] private float _chaseNeedleTelegraphDuration = 0.45f;
+
+        [Tooltip("Role: Minimum distance to the target player to fire needles.")]
+        [SerializeField] private float _chaseNeedleMinDistance = 1.8f;
+
+        [Tooltip("Role: Maximum distance to the target player to fire needles.")]
+        [SerializeField] private float _chaseNeedleMaxDistance = 14.0f;
+
         [Title("Suction Retaliation: Electric Ecto-Needles")]
         [Tooltip("Role: Enables active projectile retaliation when caught in mouth suction.")]
         [SerializeField] private bool _enableSuctionNeedles = true;
 
         [Tooltip("Role: Minimum interval in seconds between electric needle bursts while in suction.")]
-        [SerializeField] private float _needleIntervalMin = 1.8f;
+        [SerializeField] private float _needleIntervalMin = 0.9f;
 
         [Tooltip("Role: Maximum interval in seconds between electric needle bursts while in suction.")]
-        [SerializeField] private float _needleIntervalMax = 2.8f;
+        [SerializeField] private float _needleIntervalMax = 1.6f;
 
         [Tooltip("Role: Duration of the charging telegraph before launching needles.")]
         [SerializeField] private float _needleTelegraphDuration = 0.35f;
@@ -103,9 +123,13 @@ namespace Gameplay.Phantoms
         private bool _isDestinationSet = false;
 
         private float _needleCooldownTimer = 0f;
-        private float _currentNeedleInterval = 2.2f;
+        private float _currentNeedleInterval = 1.2f;
         private bool _isTelegraphingNeedle = false;
         private float _needleTelegraphTimer = 0f;
+
+        private float _chaseNeedleTimer = 0f;
+        private bool _isTelegraphingChaseNeedle = false;
+        private float _chaseTelegraphTimer = 0f;
 
         private class ActiveServerNeedle
         {
@@ -240,9 +264,27 @@ namespace Gameplay.Phantoms
             // Apply position translation on server (synced to clients via NetworkTransform)
             transform.position += _currentVelocity * Time.deltaTime;
 
-            // Smooth rotation towards flight direction
-            Vector3 lookDirection = _currentVelocity;
-            lookDirection.y *= 0.5f; // keep tilt reasonable
+            // Smooth rotation: face the target directly during chase, or flight velocity during wander
+            Vector3 lookDirection;
+            if (_currentState == PhantomState.Chasing && _currentTarget != null)
+            {
+                lookDirection = _currentTarget.WorldPosition - transform.position;
+            }
+            else
+            {
+                lookDirection = _currentVelocity;
+            }
+
+            // Flatten vertical pitch so the wasp stays upright and faces the player eye-to-eye rather than diving head-first
+            if (_keepUpright)
+            {
+                lookDirection.y *= 0.15f;
+            }
+            else
+            {
+                lookDirection.y *= 0.5f;
+            }
+
             if (lookDirection.sqrMagnitude > 0.05f)
             {
                 Quaternion targetRot = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
@@ -344,6 +386,16 @@ namespace Gameplay.Phantoms
             _isDestinationSet = true;
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            if (isServer)
+            {
+                UpdateServerNeedles();
+            }
+        }
+
         protected override void UpdateWanderingState()
         {
             if (!isServer) return;
@@ -354,6 +406,47 @@ namespace Gameplay.Phantoms
             base.UpdateWanderingState();
         }
 
+        protected override void UpdateChasingState()
+        {
+            if (!isServer) return;
+
+            base.UpdateChasingState();
+
+            if (_currentTarget == null || !_enableChaseNeedles)
+            {
+                _isTelegraphingChaseNeedle = false;
+                return;
+            }
+
+            float distToTarget = Vector3.Distance(transform.position, _currentTarget.WorldPosition);
+
+            if (!_isTelegraphingChaseNeedle)
+            {
+                _chaseNeedleTimer += Time.deltaTime;
+                if (_chaseNeedleTimer >= _chaseNeedleCooldown && distToTarget >= _chaseNeedleMinDistance && distToTarget <= _chaseNeedleMaxDistance)
+                {
+                    Vector3 origin = LookAtPoint != null ? LookAtPoint.position : transform.position;
+                    Vector3 toTarget = _currentTarget.WorldPosition - origin;
+                    if (!Physics.Raycast(origin, toTarget.normalized, toTarget.magnitude, _obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        _chaseNeedleTimer = 0f;
+                        _isTelegraphingChaseNeedle = true;
+                        _chaseTelegraphTimer = _chaseNeedleTelegraphDuration;
+                        RpcOnNeedleTelegraphed();
+                    }
+                }
+            }
+            else
+            {
+                _chaseTelegraphTimer -= Time.deltaTime;
+                if (_chaseTelegraphTimer <= 0f)
+                {
+                    _isTelegraphingChaseNeedle = false;
+                    LaunchNeedleBurstTowards(_currentTarget.WorldPosition);
+                }
+            }
+        }
+
         protected override void UpdateBeingVacuumedState()
         {
             if (!isServer) return;
@@ -361,10 +454,13 @@ namespace Gameplay.Phantoms
             // Execute full base suction physics (centering, nozzle pull, jitter, flanking escape dashes, shrink, swallow)
             base.UpdateBeingVacuumedState();
 
-            // Simulate active projectiles server-side
-            UpdateServerNeedles();
+            if (!_enableSuctionNeedles || _isBeingSwallowed)
+            {
+                _isTelegraphingNeedle = false;
+                return;
+            }
 
-            if (!_enableSuctionNeedles || _isBeingSwallowed || _isDashing || _isTelegraphingDash)
+            if (_isDashing)
             {
                 _isTelegraphingNeedle = false;
                 return;
@@ -387,8 +483,9 @@ namespace Gameplay.Phantoms
             {
                 _needleTelegraphTimer -= Time.deltaTime;
 
-                // Keep eyes / stinger oriented towards player mouth nozzle
+                // Keep eyes / stinger oriented towards player mouth nozzle, upright
                 Vector3 toNozzle = (_lastSuctionNozzlePos - transform.position);
+                toNozzle.y *= 0.2f;
                 if (toNozzle.sqrMagnitude > 0.01f)
                 {
                     transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toNozzle.normalized, Vector3.up), Time.deltaTime * 12f);
@@ -397,15 +494,15 @@ namespace Gameplay.Phantoms
                 if (_needleTelegraphTimer <= 0f)
                 {
                     _isTelegraphingNeedle = false;
-                    LaunchNeedleBurst();
+                    LaunchNeedleBurstTowards(_lastSuctionNozzlePos);
                 }
             }
         }
 
-        private void LaunchNeedleBurst()
+        private void LaunchNeedleBurstTowards(Vector3 targetPos)
         {
             Vector3 origin = LookAtPoint != null ? LookAtPoint.position : transform.position;
-            Vector3 baseDir = (_lastSuctionNozzlePos - origin);
+            Vector3 baseDir = (targetPos - origin);
             if (baseDir.sqrMagnitude < 0.01f) baseDir = transform.forward;
             baseDir.Normalize();
 
@@ -419,11 +516,11 @@ namespace Gameplay.Phantoms
                 {
                     Position = launchPos,
                     Velocity = spreadDir * _needleSpeed,
-                    RemainingTime = 1.2f,
+                    RemainingTime = 1.6f,
                     Damage = _needleDamage
                 });
 
-                RpcSpawnNeedleVisual(launchPos, spreadDir * _needleSpeed, 1.2f);
+                RpcSpawnNeedleVisual(launchPos, spreadDir * _needleSpeed, 1.6f);
             }
         }
 

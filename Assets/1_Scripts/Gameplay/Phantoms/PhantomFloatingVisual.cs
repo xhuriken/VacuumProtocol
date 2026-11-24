@@ -26,10 +26,15 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Speed of the rotation sway cycle.\nUse Case: Pacing of the rotational drift.")]
         [SerializeField] private float _swayFrequency = 1.4f;
 
+        private Quaternion _initialLocalRotation;
+        private Vector3 _initialLocalPosition;
         private float _randomOffset;
 
         private void Awake()
         {
+            _initialLocalRotation = transform.localRotation;
+            _initialLocalPosition = transform.localPosition;
+
             // Give each phantom instance a unique phase offset so multiple phantoms don't bob in mechanical unison
             _randomOffset = Random.Range(0f, 10f);
         }
@@ -38,14 +43,14 @@ namespace Gameplay.Phantoms
         {
             float time = Time.time + _randomOffset;
 
-            // 1. Calculate vertical bobbing
+            // 1. Calculate vertical bobbing relative to base transform local position
             float verticalOffset = _baseHeight + Mathf.Sin(time * _bobFrequency) * _bobAmplitude;
-            transform.localPosition = new Vector3(0f, verticalOffset, 0f);
+            transform.localPosition = _initialLocalPosition + new Vector3(0f, verticalOffset, 0f);
 
-            // 2. Calculate gentle organic sway
+            // 2. Calculate gentle organic sway preserving the model's initial orientation (e.g. -90 deg X from Blender FBX)
             float rollAngle = Mathf.Sin(time * _swayFrequency) * _swayAngle;
             float pitchAngle = Mathf.Cos(time * _swayFrequency * 0.7f) * (_swayAngle * 0.6f);
-            transform.localRotation = Quaternion.Euler(pitchAngle, 0f, rollAngle);
+            transform.localRotation = _initialLocalRotation * Quaternion.Euler(pitchAngle, 0f, rollAngle);
         }
     }
 }
