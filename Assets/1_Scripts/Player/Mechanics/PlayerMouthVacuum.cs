@@ -56,6 +56,23 @@ public class MouthVacuumStats
 
     [Tooltip("Maximum number of pre-allocated ghost echo objects in the pool.")]
     public int MaxEchoPoolSize = 64;
+
+    [Header("Ectoplasm Milestone & Color Feedback")]
+    [Tooltip("Amount of drained ectoplasm triggering the milestone SFX and blue color pulse.")]
+    public float DrainThresholdForPulse = 50f;
+
+    [Tooltip("HDR color flashed when the 50 ectoplasm drain milestone is reached.")]
+    public Color MilestoneBlueColor = new Color(0.15f, 0.7f, 1.0f, 1.0f);
+
+    [Tooltip("Duration in seconds for the suction echo color to return from blue to default color.")]
+    public float MilestonePulseDuration = 0.75f;
+
+    [Tooltip("HDR color when the phantom is defeated/dead and plunging into the mouth nozzle.")]
+    public Color SwallowDeadColor = new Color(0.2f, 1.0f, 0.35f, 1.0f);
+
+    [Header("Progressive Suction & Feel")]
+    [Tooltip("Duration in seconds for suction grip, pull force, and drain rate to ramp up from initial contact to 100%.")]
+    public float SuctionRampDuration = 0.65f;
 }
 
 /// <summary>
@@ -149,6 +166,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
         public Quaternion InitialRotation;
         public Vector3 InitialScale;
         public float Progress; // Normalized progress along stream: 0 at phantom -> 1 at mouth nozzle
+        public Color BaseColor; // Captured phantom's fresnel rim color
     }
 
     private GameObject _echoPoolRoot;
@@ -157,6 +175,11 @@ public class PlayerMouthVacuum : NetworkBehaviour
     private MaterialPropertyBlock _echoMpb;
     private readonly Dictionary<PhantomBase, float> _phantomEchoTimers = new Dictionary<PhantomBase, float>();
     private readonly List<PhantomBase> _activeCapturedPhantoms = new List<PhantomBase>();
+
+    private float _totalEctoplasmDrained = 0f;
+    private float _lastMilestoneDrain = 0f;
+    private float _milestonePulseTimer = 0f;
+    private readonly Dictionary<PhantomBase, float> _phantomCaptureGrip = new Dictionary<PhantomBase, float>();
 
     #region Public Upgrade & Inspection API
 
@@ -463,6 +486,11 @@ public class PlayerMouthVacuum : NetworkBehaviour
         UpdateVisuals();
         UpdateSuctionEchoes();
 
+        if (_milestonePulseTimer > 0f)
+        {
+            _milestonePulseTimer = Mathf.MoveTowards(_milestonePulseTimer, 0f, Time.deltaTime / Mathf.Max(0.01f, _stats.MilestonePulseDuration));
+        }
+
         if (!isLocalPlayer || _input == null) return;
 
         bool isVacuuming = _input.IsVacuuming;
@@ -486,6 +514,10 @@ public class PlayerMouthVacuum : NetworkBehaviour
             if (_phantomEchoTimers.Count > 0)
             {
                 _phantomEchoTimers.Clear();
+            }
+            if (_phantomCaptureGrip.Count > 0)
+            {
+                _phantomCaptureGrip.Clear();
             }
         }
     }
@@ -659,21 +691,45 @@ public class PlayerMouthVacuum : NetworkBehaviour
 
                 _activeCapturedPhantoms.Add(phantom);
 
+                // Progressive capture grip ramp-up
+                if (!_phantomCaptureGrip.TryGetValue(phantom, out float currentGrip))
+                {
+                    currentGrip = 0f;
+                }
+                currentGrip = Mathf.Clamp01(currentGrip + Time.deltaTime / Mathf.Max(0.01f, _stats.SuctionRampDuration));
+                _phantomCaptureGrip[phantom] = currentGrip;
+
+                // Smooth progression: ramp pull and drain over time
+                float rampFactor = Mathf.SmoothStep(0.2f, 1.0f, currentGrip);
+
+                // Distance falloff: suction pulls progressively stronger the closer the phantom is to the nozzle
+                float maxConeDist = EffectiveConeLength;
+                float distRatio = Mathf.Clamp01(distance / Mathf.Max(0.1f, maxConeDist));
+                float distanceFactor = Mathf.Lerp(1.0f, 0.65f, distRatio);
+
+                float rampedDrain = effectiveDrain * rampFactor * distanceFactor;
+                float rampedPull = effectivePull * rampFactor * distanceFactor;
+
                 // Apply instant client-side prediction and authoritative server command
-                phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
-                CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, effectiveDrain, effectivePull);
+                phantom.OnMouthSuctionApplied(netId, nozzleOrigin, coneForward, coneUp, coneRight, rampedDrain, rampedPull);
+                CmdApplyMouthSuction(phantom.gameObject, nozzleOrigin, coneForward, coneUp, coneRight, rampedDrain, rampedPull);
+
+                // Track drained ectoplasm & trigger milestone pulse every 50 drained points
+                float drainedThisTick = rampedDrain * Time.deltaTime;
+                _totalEctoplasmDrained += drainedThisTick;
+
+                if (_totalEctoplasmDrained - _lastMilestoneDrain >= _stats.DrainThresholdForPulse)
+                {
+                    _lastMilestoneDrain += _stats.DrainThresholdForPulse;
+                    _milestonePulseTimer = 1.0f;
+
+                    // TODO: Play SFX here (50 Ectoplasm Drained Milestone Pulse)
+                }
 
                 // 3. Emit / Maintain the stream chain of ghost clones between phantom and nozzle
+                // Smooth progressive stream emission without popping an entire instant pre-seed of 18 echoes
                 if (!_phantomEchoTimers.TryGetValue(phantom, out float nextEchoTime))
                 {
-                    // Instant pre-seed: immediately fill the "file indienne" along the stream
-                    int initialSteps = Mathf.Clamp(Mathf.RoundToInt(distance / 0.28f), 4, 18);
-                    for (int s = 1; s < initialSteps; s++)
-                    {
-                        float prog = (float)s / initialSteps;
-                        SpawnEchoSnapshot(phantom, nozzleOrigin, prog);
-                    }
-
                     SpawnEchoSnapshot(phantom, nozzleOrigin, 0f);
                     _phantomEchoTimers[phantom] = Time.time + _stats.EchoSpawnInterval;
                 }
@@ -741,6 +797,7 @@ public class PlayerMouthVacuum : NetworkBehaviour
         echo.InitialRotation = pT.rotation;
         echo.InitialScale = pT.lossyScale;
         echo.Progress = Mathf.Clamp01(initialProgress);
+        echo.BaseColor = phantom.GetFresnelRimColor();
         echo.IsActive = true;
 
         // Position along the streamline at initialProgress
@@ -749,11 +806,11 @@ public class PlayerMouthVacuum : NetworkBehaviour
         echo.Transform.rotation = echo.InitialRotation;
         echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, echo.Progress);
 
-        float alpha = (1f - (echo.Progress * echo.Progress)) * _stats.EchoColor.a;
+        float alpha = (1f - (echo.Progress * echo.Progress)) * echo.BaseColor.a;
 
         echo.Renderer.GetPropertyBlock(_echoMpb);
         _echoMpb.SetFloat(PropEchoAlpha, alpha);
-        _echoMpb.SetColor(PropEchoColor, _stats.EchoColor);
+        _echoMpb.SetColor(PropEchoColor, echo.BaseColor);
         _echoMpb.SetFloat(PropEchoFresnel, _stats.EchoFresnelPower);
         echo.Renderer.SetPropertyBlock(_echoMpb);
 
@@ -823,12 +880,37 @@ public class PlayerMouthVacuum : NetworkBehaviour
             // Progressive shrink towards nozzle
             echo.Transform.localScale = Vector3.Lerp(echo.InitialScale, echo.InitialScale * _stats.EchoMinScaleRatio, echo.Progress);
 
+            // Determine echo color depending on stage
+            Color echoColor;
+            if (echo.BoundPhantom != null && echo.BoundPhantom.IsBeingSwallowed)
+            {
+                // Green when defeated and plunging into the nozzle
+                echoColor = _stats.SwallowDeadColor;
+            }
+            else
+            {
+                // Default: phantom's own Fresnel Rim Color
+                echoColor = echo.BaseColor;
+
+                // Flash blue on milestone pulse and smoothly return to default color
+                if (_milestonePulseTimer > 0f)
+                {
+                    echoColor = Color.Lerp(echoColor, _stats.MilestoneBlueColor, _milestonePulseTimer);
+                }
+            }
+
             // Progressive dissolve (quadratic fade towards mouth nozzle)
-            float alpha = (1f - (echo.Progress * echo.Progress)) * _stats.EchoColor.a;
+            float alpha = (1f - (echo.Progress * echo.Progress)) * echoColor.a;
+
+            // Scale opacity with phantom capture grip so new streams fade in smoothly
+            if (echo.BoundPhantom != null && _phantomCaptureGrip.TryGetValue(echo.BoundPhantom, out float grip))
+            {
+                alpha *= Mathf.Lerp(0.35f, 1.0f, grip);
+            }
 
             echo.Renderer.GetPropertyBlock(_echoMpb);
             _echoMpb.SetFloat(PropEchoAlpha, alpha);
-            _echoMpb.SetColor(PropEchoColor, _stats.EchoColor);
+            _echoMpb.SetColor(PropEchoColor, echoColor);
             _echoMpb.SetFloat(PropEchoFresnel, _stats.EchoFresnelPower);
             echo.Renderer.SetPropertyBlock(_echoMpb);
         }

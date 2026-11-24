@@ -43,8 +43,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _Alpha: 1
-    - _FresnelPower: 2.2
     - _FresnelBias: 0.05
+    - _FresnelPower: 2.2
     - _InnerAlpha: 0.25
     m_Colors:
     - _Color: {r: 0.3, g: 0.9, b: 1, a: 0.85}

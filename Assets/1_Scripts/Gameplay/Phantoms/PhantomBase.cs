@@ -298,6 +298,46 @@ namespace Gameplay.Phantoms
         public int ActiveSuctionStreamCount => _activeSuctionStreams.Count;
         public bool IsDashing => _isDashing;
         public bool IsTelegraphingDash => _isTelegraphingDash;
+        public bool IsBeingSwallowed => _isBeingSwallowed;
+
+        private static readonly int PropFresnelColor = Shader.PropertyToID("_FresnelColor");
+        private Color _cachedFresnelColor = Color.white;
+        private bool _hasCachedFresnelColor = false;
+
+        /// <summary>
+        /// Description: Retrieves the default HDR Fresnel Rim Color from this phantom's material (Shader_PhantomBlobEctoplasm).
+        /// Context: Used by PlayerMouthVacuum suction echo streams to tint echoes with the captured phantom's exact ectoplasmic glow.
+        /// </summary>
+        public Color GetFresnelRimColor()
+        {
+            if (!_hasCachedFresnelColor)
+            {
+                Renderer r = GetComponentInChildren<Renderer>();
+                if (r == null || r.sharedMaterial == null)
+                {
+                    Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' has no Renderer or sharedMaterial to resolve FresnelRimColor! Fail loudly per workspace rules.", this);
+                    _cachedFresnelColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
+                    _hasCachedFresnelColor = true;
+                    return _cachedFresnelColor;
+                }
+
+                if (r.sharedMaterial.HasProperty(PropFresnelColor))
+                {
+                    _cachedFresnelColor = r.sharedMaterial.GetColor(PropFresnelColor);
+                }
+                else if (r.sharedMaterial.HasProperty("_Color"))
+                {
+                    _cachedFresnelColor = r.sharedMaterial.GetColor("_Color");
+                }
+                else
+                {
+                    Debug.LogError($"[PhantomBase] Material '{r.sharedMaterial.name}' on '{gameObject.name}' does not contain '_FresnelColor' or '_Color' property! Fail loudly per workspace rules.", this);
+                    _cachedFresnelColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
+                }
+                _hasCachedFresnelColor = true;
+            }
+            return _cachedFresnelColor;
+        }
 
         /// <summary>
         /// Global registry of active phantoms in the scene for O(1) high-performance queries without Physics.OverlapSphere.
@@ -945,7 +985,9 @@ namespace Gameplay.Phantoms
             if (!_isDashing && toAxis.sqrMagnitude > 0.001f)
             {
                 float centeringSpeed = Mathf.Min(toAxis.magnitude * _centeringStrength, _maxCenteringSpeed);
-                centeringVel = toAxis.normalized * (centeringSpeed * (1f - _struggleResistance));
+                // Scale centering smoothly with the active stream's pull multiplier so initial contact feels progressive rather than snapping
+                float pullScale = _activeSuctionStreams.Count > 0 ? Mathf.Clamp01(_activeSuctionStreams[0].PullMultiplier) : 1f;
+                centeringVel = toAxis.normalized * (centeringSpeed * (1f - _struggleResistance) * pullScale);
             }
 
             // --- 7. Axial Suction Drag vs Luigi's Mansion Resistance ---

@@ -26624,6 +26624,11 @@ MonoBehaviour:
     EchoFresnelPower: 2.2
     EchoColor: {r: 0.3, g: 0.9, b: 1, a: 0.85}
     MaxEchoPoolSize: 64
+    DrainThresholdForPulse: 20
+    MilestoneBlueColor: {r: 0.15, g: 0.7, b: 1, a: 1}
+    MilestonePulseDuration: 0.5
+    SwallowDeadColor: {r: 0.2, g: 1, b: 0.35, a: 1}
+    SuctionRampDuration: 0.65
   _coneLength: 5.5
   _coneRadiusProfile:
     serializedVersion: 2
