@@ -10,9 +10,6 @@ using TMPro;
 public class RebindRowUI : MonoBehaviour
 {
     [Header("UI Components")]
-    [Tooltip("Role: The label showing the action name.\nUse Case: UI display.\nJustification: Identifies the control to the user.")]
-    [SerializeField] private TextMeshProUGUI _actionLabelText;
-
     [Tooltip("Role: The text inside the rebind button showing the current key.\nUse Case: UI display.\nJustification: Shows what key is currently bound.")]
     [SerializeField] private TextMeshProUGUI _bindingButtonText;
 

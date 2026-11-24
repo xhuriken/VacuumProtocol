@@ -23,7 +23,7 @@ public class PlayerV2_Look : NetworkBehaviour
     public float HeadMovementBlend = 0f;
 
     [Header("Network Sync")]
-    [SyncVar(hook = nameof(OnSyncPitchChanged))]
+    [SyncVar]
     public float SyncPitch;
 
     private PlayerV2_Controller _controller;
@@ -54,12 +54,6 @@ public class PlayerV2_Look : NetworkBehaviour
     public void CmdSetPitch(float pitch)
     {
         SyncPitch = pitch;
-    }
-
-    private void OnSyncPitchChanged(float oldVal, float newVal)
-    {
-        // La rotation de la caméra distante est désormais gérée dans le LateUpdate
-        // pour calculer correctement la rotation World sans empiler les angles locaux sur le ressort de la tête.
     }
 
     private void Update()

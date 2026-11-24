@@ -103,10 +103,6 @@ public class UICustomButtonBase : MonoBehaviour, IPointerEnterHandler, IPointerE
         // Custom transitions can be defined by subclasses
     }
 
-    [Header("Awake Setup")]
-    [Tooltip("Role: Safety image raycast setup.")]
-    private bool _unusedPlaceholder;
-
     /// <summary>
     /// Description: Unity Awake callback. Performs safety validation to ensure pointer raycasts are configured.
     /// Context: Initialization.

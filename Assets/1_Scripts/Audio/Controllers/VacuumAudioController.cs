@@ -112,21 +112,6 @@ public class VacuumAudioController : MonoBehaviour
     }
 
     /// <summary>
-    /// Description: Update the note offset dynamically to resolve chords.
-    /// Context: Can be called by gameplay managers to alter the pitch of the vacuum.
-    /// Justification: Allows musical interplay during gameplay without permanently modifying the user's customized RootNote.
-    /// </summary>
-    public void SetNoteOffset(int semitones)
-    {
-        SemitoneShift = semitones;
-        if (_isActive)
-        {
-            _pitchTween?.Kill();
-            _pitchTween = _audioSource.DOPitch(GetCurrentTargetPitch(), 0.1f).SetEase(Ease.InOutSine).SetUpdate(true);
-        }
-    }
-
-    /// <summary>
     /// Description: Changes the fundamental base note of the vacuum sound.
     /// Context: Used by the Lobby Customization UI when the player selects a new note.
     /// Justification: Immediately updates the running tween to provide real-time audio feedback to the player.

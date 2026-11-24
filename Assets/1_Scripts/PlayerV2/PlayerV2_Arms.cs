@@ -222,24 +222,6 @@ public class PlayerV2_Arms : NetworkBehaviour
         }
     }
 
-    public Transform GetLeftHand()
-    {
-        if (_leftElbowWristJoints.Count > 0)
-        {
-            return _leftElbowWristJoints[_leftElbowWristJoints.Count - 1].transform;
-        }
-        return null;
-    }
-
-    public Transform GetRightHand()
-    {
-        if (_rightElbowWristJoints.Count > 0)
-        {
-            return _rightElbowWristJoints[_rightElbowWristJoints.Count - 1].transform;
-        }
-        return null;
-    }
-
     private void FixedUpdate()
     {
         // Bras Gauche

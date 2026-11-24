@@ -35,20 +35,6 @@ public class UIPanelController : MonoBehaviour
     private bool _isOpened = false;
 
     /// <summary>
-    /// Description: Event raised when the panel completes its opening animation.
-    /// Context: Fired by DOTween sequence end.
-    /// Justification: Allows external scripts to know when UI is fully ready.
-    /// </summary>
-    public event Action OnPanelOpened;
-
-    /// <summary>
-    /// Description: Event raised when the panel completes its closing animation.
-    /// Context: Fired by DOTween sequence end.
-    /// Justification: Allows external scripts to know when UI is fully hidden.
-    /// </summary>
-    public event Action OnPanelClosed;
-
-    /// <summary>
     /// Description: Gets whether this panel is currently opened.
     /// Context: State flag.
     /// Justification: Checked before triggering open/close logic to prevent redundant tweens.
@@ -100,12 +86,7 @@ public class UIPanelController : MonoBehaviour
             _rectTransform.localScale = _hiddenScale;
             _activeScaleTween = _rectTransform.DOScale(Vector3.one, _transitionDuration)
                 .SetEase(Ease.OutBack)
-                .SetUpdate(true)
-                .OnComplete(() => OnPanelOpened?.Invoke());
-        }
-        else
-        {
-            OnPanelOpened?.Invoke();
+                .SetUpdate(true);
         }
     }
 
@@ -146,7 +127,6 @@ public class UIPanelController : MonoBehaviour
     private void CompleteHide()
     {
         gameObject.SetActive(false);
-        OnPanelClosed?.Invoke();
     }
 
     private void InstantHide()

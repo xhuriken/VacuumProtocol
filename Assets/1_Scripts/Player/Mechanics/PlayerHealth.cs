@@ -49,11 +49,6 @@ namespace Player.Mechanics
         public event System.Action<float, float> OnHealthChanged;
 
         /// <summary>
-        /// Fired on damage feedback (amount, source).
-        /// </summary>
-        public event System.Action<float, string> OnDamageReceived;
-
-        /// <summary>
         /// Fired when this player reaches 0 health.
         /// </summary>
         public event System.Action<PlayerV2_Controller> OnPlayerDied;
@@ -89,8 +84,6 @@ namespace Player.Mechanics
             if (_isDead || amount <= 0f) return;
 
             _currentHealth = Mathf.Max(0f, _currentHealth - amount);
-
-            RpcOnDamageFeedback(amount, damageSource);
 
             if (_currentHealth <= 0f && !_isDead)
             {
@@ -180,12 +173,6 @@ namespace Player.Mechanics
 
             if (dead) OnPlayerDied?.Invoke(controller);
             else OnPlayerRevived?.Invoke(controller);
-        }
-
-        [ClientRpc]
-        private void RpcOnDamageFeedback(float amount, string source)
-        {
-            OnDamageReceived?.Invoke(amount, source);
         }
         #endregion
 

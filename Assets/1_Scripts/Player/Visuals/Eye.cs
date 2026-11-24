@@ -290,8 +290,6 @@ public class Eye : NetworkBehaviour
     }
 
     public Transform GetPupilBone() => _pupilBone;
-    public float GetEyeTargetWeight() => _eyeTargetWeight;
-    public float GetPupilTargetWeight() => _pupilTargetWeight;
 
     /// <summary>
     /// Description: Smoothly slerps the eye bone and pupil bone local rotations.

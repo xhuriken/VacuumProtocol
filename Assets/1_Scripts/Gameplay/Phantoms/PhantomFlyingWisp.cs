@@ -66,10 +66,6 @@ namespace Gameplay.Phantoms
         [Tooltip("Role: Push strength applied perpendicular to detected obstacles.")]
         [SerializeField] private float _avoidanceForce = 4.5f;
 
-        [Title("Mouth Suction Pull")]
-        [Tooltip("Role: Speed at which this lightweight wisp is dragged into the player's mouth nozzle while being vacuumed.")]
-        [SerializeField] private float _vacuumDragSpeed = 1.8f;
-
         [Title("Upright Flight Orientation")]
         [Tooltip("Role: Keeps the wasp body upright on the horizontal plane when chasing or wandering, preventing head-down nosediving.")]
         [SerializeField] private bool _keepUpright = true;
