@@ -2,18 +2,18 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Description: Gère dynamiquement les points d'apparition (spawn) des joueurs dans une carte.
-/// Context: Script à placer dans la scène de jeu (Level).
-/// Justification: Permet de définir facilement les positions et orientations de spawn pour chaque joueur depuis l'inspecteur, jusqu'à 10 joueurs.
+/// Description: Dynamically manages player spawn points in a map.
+/// Context: Placed in the gameplay scene (Level).
+/// Justification: Lets designers define spawn positions and orientations for each player from the Inspector, up to 10 players.
 /// </summary>
 public class MapSpawnManager : MonoBehaviour
 {
     /// <summary>
-    /// Description: Instance statique (Singleton) pour un accès global facile depuis le NetworkManager.
+    /// Description: Static singleton instance for easy global access from the NetworkManager.
     /// </summary>
     public static MapSpawnManager Instance { get; private set; }
 
-    [Tooltip("Role: Liste des points d'apparition disponibles dans la scène.\nUse Case: Assigner les Transforms de spawn (position et rotation).\nJustification: Permet un spawn dynamique selon le nombre de joueurs.")]
+    [Tooltip("Role: List of spawn points available in the scene.\nUse Case: Assign the spawn Transforms (position and rotation).\nJustification: Enables dynamic spawning based on the number of players.")]
     [SerializeField]
 
     private List<Transform> _spawnPoints = new List<Transform>();
@@ -59,16 +59,16 @@ public class MapSpawnManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Description: Récupère le prochain point d'apparition disponible.
-    /// Context: Appelé par le NetworkManager lors du spawn d'un joueur en jeu.
-    /// Justification: Distribue les joueurs sur les différents points de spawn de manière circulaire.
+    /// Description: Returns the next available spawn point.
+    /// Context: Called by the NetworkManager when a player spawns in game.
+    /// Justification: Distributes players across the spawn points in round-robin order.
     /// </summary>
-    /// <returns>Transform du point d'apparition, ou null si aucun n'est configuré.</returns>
+    /// <returns>Spawn point Transform, or null if none is configured.</returns>
     public Transform GetNextSpawnPoint()
     {
         if (_spawnPoints == null || _spawnPoints.Count == 0)
         {
-            Debug.LogError("[MapSpawnManager] Aucun point de spawn n'est configuré dans la liste _spawnPoints !");
+            Debug.LogError("[MapSpawnManager] No spawn point is configured in the _spawnPoints list!");
             return null;
         }
 

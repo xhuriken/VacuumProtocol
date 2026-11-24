@@ -101,6 +101,9 @@ public class PlayerObjectController : NetworkBehaviour
         Manager.ServerChangeScene(sceneName);
     }
 
+    /// <summary>
+    /// Local player only: pushes the Steam name to the server and registers as the lobby's local player.
+    /// </summary>
     public override void OnStartAuthority()
     {
         CmdSetPlayerName(SteamFriends.GetPersonaName());
@@ -109,6 +112,9 @@ public class PlayerObjectController : NetworkBehaviour
         LobbyController.Instance.UpdateLobbyName();
     }
 
+    /// <summary>
+    /// Registers this player in the manager's GamePlayers list and refreshes the lobby UI.
+    /// </summary>
     public override void OnStartClient()
     {
         Manager.GamePlayers.Add(this);
@@ -116,6 +122,9 @@ public class PlayerObjectController : NetworkBehaviour
         LobbyController.Instance.UpdatePlayerList();
     }
 
+    /// <summary>
+    /// Removes this player from the GamePlayers list and refreshes the lobby player list.
+    /// </summary>
     public override void OnStopClient()
     {
         Manager.GamePlayers.Remove(this);

@@ -1,24 +1,28 @@
 using UnityEngine;
 
 /// <summary>
-/// Description: Affiche un HUD pour montrer où la caméra pointe (Cible) et où la buse pointe réellement (Réel).
-/// Context: Peut être attaché au joueur ou à un Canvas.
-/// Justification: Permet au joueur de comprendre la différence entre sa visée et l'orientation physique de son bras.
+/// Description: HUD showing where the camera aims (Target) and where the nozzle actually points (Actual).
+/// Context: Can be attached to the player or to a Canvas.
+/// Justification: Helps the player understand the gap between their aim and the physical orientation of their arm.
 /// </summary>
 public class PlayerV2_DynamicCrosshair : MonoBehaviour
 {
     [Header("References")]
+    [Tooltip("Role: Player whose camera aim is projected. Falls back to the first PlayerV2_Controller found if empty.")]
     public PlayerV2_Controller Player;
+    [Tooltip("Role: Camera used for world-to-screen projection. Falls back to Camera.main if empty.")]
     public Camera MainCamera;
 
     [Header("UI Elements / Transforms")]
-    [Tooltip("Le Transform qui représente la cible désirée (rose)")]
+    [Tooltip("Role: Transform representing the desired target (pink).")]
     public Transform CameraTargetCrosshair; 
 
     [Header("Settings")]
+    [Tooltip("Role: Distance in front of the camera at which the virtual aim target is projected.")]
     public float ProjectionDistance = 20f;
+    [Tooltip("Role: Lerp speed of the crosshair toward its target position.")]
     public float SmoothSpeed = 25f;
-    [Tooltip("Si vrai, déplace les objets en coordonnées d'écran (UI Canvas). Si faux, les déplace en 3D dans le monde devant la caméra.")]
+    [Tooltip("Role: If true, moves the objects in screen coordinates (UI Canvas). If false, moves them in 3D world space in front of the camera.")]
     public bool UseScreenSpace = true;
 
     private PlayerV2_Arms _arms;
@@ -39,7 +43,7 @@ public class PlayerV2_DynamicCrosshair : MonoBehaviour
     {
         if (Player == null || MainCamera == null) return;
 
-        // 1. Position désirée (Caméra)
+        // 1. Desired position (camera)
         if (CameraTargetCrosshair != null && Player.CameraTransform != null)
         {
             Vector3 virtualTarget = Player.CameraTransform.position + Player.CameraTransform.forward * ProjectionDistance;
@@ -57,7 +61,7 @@ public class PlayerV2_DynamicCrosshair : MonoBehaviour
             else
             {
                 CameraTargetCrosshair.position = Vector3.Lerp(CameraTargetCrosshair.position, virtualTarget, Time.deltaTime * SmoothSpeed);
-                // Optionnel: Faire pointer le crosshair vers la caméra
+                // Optional: make the crosshair face the camera
                 CameraTargetCrosshair.rotation = Quaternion.LookRotation(CameraTargetCrosshair.position - MainCamera.transform.position);
                 CameraTargetCrosshair.gameObject.SetActive(true);
             }

@@ -1,60 +1,60 @@
 using Mirror;
 using UnityEngine;
-// Pour PlayerInputHandler
 
 /// <summary>
-/// Description: Gère le déplacement de la base (Hips) et le saut.
-/// Context: Attaché au Player_V2.
-/// Justification: Sépare le mouvement continu (FixedUpdate) des impulsions instantanées comme le saut (Update) pour une réactivité parfaite aux inputs.
+/// Description: Handles the base (Hips) locomotion and jumping.
+/// Context: Attached to Player_V2.
+/// Justification: Separates continuous movement (FixedUpdate) from instant impulses such as the jump (Update) for perfectly responsive input.
 /// </summary>
 [RequireComponent(typeof(PlayerV2_Controller))]
 public class PlayerV2_Movement : NetworkBehaviour
 {
     [Header("Movement Settings")]
-    [Tooltip("La vitesse cible du joueur.")]
+    [Tooltip("Role: Target movement speed of the player.")]
     public float MoveSpeed = 5f;
 
-    [Tooltip("Vitesse maximale absolue (sécurité pour brider les forces externes).")]
+    [Tooltip("Role: Absolute maximum horizontal speed (safety cap against external forces).")]
     public float MaxSpeed = 10f;
 
-    [Tooltip("Force d'accélération pour atteindre la vitesse cible.")]
+    [Tooltip("Role: Acceleration used to reach the target speed.")]
     public float Acceleration = 15f;
 
-    [Tooltip("Force de freinage lorsqu'il n'y a pas d'input.")]
+    [Tooltip("Role: Braking strength when there is no input.")]
     public float Deceleration = 15f;
 
     [Header("Sprint Settings")]
-    [Tooltip("Multiplicateur de vitesse lorsque le joueur sprinte.")]
+    [Tooltip("Role: Speed multiplier while the player sprints.")]
     public float SprintSpeedMultiplier = 1.5f;
 
     [Header("Crouch Settings")]
-    [Tooltip("Multiplicateur de vitesse lorsque le joueur s'accroupit.")]
+    [Tooltip("Role: Speed multiplier while the player crouches.")]
     public float CrouchSpeedMultiplier = 0.5f;
-    [Tooltip("Décalage vertical total de la tête lors de l'accroupissement.")]
+    [Tooltip("Role: Total vertical head offset while crouching.")]
     public float CrouchHeadOffset = -0.3f;
 
     [Header("Jump Settings")]
-    [Tooltip("Vélocité instantanée (indépendante de la masse) appliquée aux Hips lors du saut.")]
+    [Tooltip("Role: Instant velocity (mass independent) applied to the Hips on jump.")]
     public float JumpForce = 8f;
 
     [Header("Gravity Settings")]
-    [Tooltip("Multiplicateur de gravité en chute (rend la chute plus lourde, style Hollow Knight).")]
+    [Tooltip("Role: Gravity multiplier while falling (heavier fall, Hollow Knight style).")]
     public float FallGravityMultiplier = 3f;
 
-    [Tooltip("Rayon de la sphère de détection (doit être environ la taille de ta roue).")]
+    [Tooltip("Role: Radius of the ground detection sphere (should roughly match the wheel size).")]
     public float WheelRadius = 0.15f;
 
-    [Tooltip("Layer du sol pour le Ground Check.")]
+    [Tooltip("Role: Ground layer used by the ground check.")]
     public LayerMask GroundLayer;
 
     [Header("Jump Compression Scaling")]
-    [Tooltip("Distance Y (Hips -> Roue) quand la suspension est au max de son extension (Ressort détendu = Saut Faible).")]
+    [Tooltip("Role: Y distance (Hips -> wheel) when the suspension is fully extended (relaxed spring = weak jump).")]
     public float JumpMaxExtensionDistance = 0.6f;
 
-    [Tooltip("Distance Y (Hips -> Roue) quand la suspension est écrasée (Ressort compressé = Saut Fort).")]
+    [Tooltip("Role: Y distance (Hips -> wheel) when the suspension is compressed (compressed spring = strong jump).")]
     public float JumpMinCompressionDistance = 0.2f;
 
     [Header("Debug")]
+    [Tooltip("Role: Enables verbose debug logging for this component.")]
     public bool EnableDebugLogs = false;
 
     private PlayerV2_Controller _controller;
@@ -77,7 +77,7 @@ public class PlayerV2_Movement : NetworkBehaviour
     {
         if (_controller != null && _controller.HipsRigidbody != null)
         {
-            // On fige complètement la rotation des Hips pour qu'elle ne tourne JAMAIS
+            // Fully freeze the Hips rotation so it NEVER rotates
             _controller.HipsRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
         }
     }
@@ -87,7 +87,7 @@ public class PlayerV2_Movement : NetworkBehaviour
         if (!isOwned) return;
         if (_input == null || _controller.HipsRigidbody == null) return;
 
-        // Le GroundCheck est fait dans l'Update pour être parfaitement synchro avec l'Input (qui dure 1 frame)
+        // The ground check runs in Update to stay perfectly in sync with the input (which lasts 1 frame)
         UpdateGroundCheckAndCompression();
 
         // --- Crouch (Head & Arms Retraction) ---
@@ -103,13 +103,13 @@ public class PlayerV2_Movement : NetworkBehaviour
             {
                 float finalJumpForce = JumpForce * _currentCompressionMultiplier;
 
-                // Sécurité : Ne saute pas si la force est trop faible (roues pendouillantes)
+                // Safety: do not jump if the force is too low (dangling wheels)
                 if (finalJumpForce > 1f)
                 {
                     Vector3 currentVel = _controller.HipsRigidbody.linearVelocity;
 
-                    // Calcul de la force à appliquer pour atteindre EXACTEMENT la vélocité désirée.
-                    // Cela empêche le joueur de cumuler le rebond de la suspension et le saut pour s'envoler.
+                    // Compute the force needed to reach EXACTLY the desired velocity.
+                    // This keeps the player from stacking the suspension rebound with the jump and flying off.
                     float forceToApply = finalJumpForce - currentVel.y;
 
                     if (forceToApply > 0)
@@ -140,7 +140,7 @@ public class PlayerV2_Movement : NetworkBehaviour
                 if (joint == null) continue;
 
                 Vector3 wheelPos = joint.transform.position;
-                // CheckSphere à la position exacte de la roue
+                // CheckSphere at the exact wheel position
                 if (Physics.CheckSphere(wheelPos, WheelRadius, GroundLayer))
                 {
                     _isGrounded = true;
@@ -157,11 +157,11 @@ public class PlayerV2_Movement : NetworkBehaviour
             float avgWheelY = totalWheelY / wheelCount;
             float distanceToWheels = _controller.HipsRigidbody.position.y - avgWheelY;
 
-            // InverseLerp : si distance = MaxExtension, multiplier = 0. Si distance = MinCompression, multiplier = 1.
+            // InverseLerp: distance = MaxExtension gives multiplier 0, distance = MinCompression gives multiplier 1.
             _currentCompressionMultiplier = Mathf.InverseLerp(JumpMaxExtensionDistance, JumpMinCompressionDistance, distanceToWheels);
         }
 
-        // Détection de l'atterrissage
+        // Landing detection
         if (_isGrounded && !_wasGrounded)
         {
             if (_lastVerticalVelocity < -2f)
@@ -181,15 +181,15 @@ public class PlayerV2_Movement : NetworkBehaviour
 
         if (_controller.CameraTransform == null)
         {
-            Debug.LogError("[PlayerV2_Movement] Erreur Critique : CameraTransform n'est pas assigné dans le PlayerV2_Controller !");
+            Debug.LogError("[PlayerV2_Movement] Critical error: CameraTransform is not assigned on PlayerV2_Controller!");
             return;
         }
 
         Vector2 moveInput = _input.MoveInput;
 
-        // FIX: Ne SURTOUT PAS utiliser _controller.TorsoRigidbody.transform.forward, 
-        // car la physique des bras tire sur le Torso et le fait vriller, ce qui dévie le mouvement !
-        // On récupère le yaw purement mathématique du composant Look pour une trajectoire parfaite, comme dans la V1.
+        // FIX: do NOT use _controller.TorsoRigidbody.transform.forward,
+        // because the arm physics pulls on the Torso and twists it, which deflects the movement!
+        // Use the purely mathematical yaw from the Look component for a perfect trajectory, as in V1.
         PlayerV2_Look look = GetComponent<PlayerV2_Look>();
         float yaw = look != null ? look.CurrentYaw : _controller.TorsoRigidbody.transform.eulerAngles.y;
 
@@ -202,7 +202,7 @@ public class PlayerV2_Movement : NetworkBehaviour
 
         if (moveInput.sqrMagnitude > 0.01f)
         {
-            // Calcul de la vitesse modifiée par le Sprint / Crouch
+            // Speed modified by sprint / crouch
             float currentMoveSpeed = MoveSpeed;
             if (_input.IsCrouching)
             {
@@ -213,16 +213,16 @@ public class PlayerV2_Movement : NetworkBehaviour
                 currentMoveSpeed *= SprintSpeedMultiplier;
             }
 
-            // Mouvement basé sur l'accélération vers une vitesse cible
+            // Acceleration-based movement toward a target velocity
             Vector3 targetVelocity = moveDirection * currentMoveSpeed;
             Vector3 velocityChange = targetVelocity - horizontalVelocity;
 
-            // Application des forces continues dans FixedUpdate
+            // Continuous forces are applied in FixedUpdate
             _controller.HipsRigidbody.AddForce(velocityChange * Acceleration, ForceMode.Acceleration);
         }
         else
         {
-            // Freinage contrôlé
+            // Controlled braking
             if (horizontalVelocity.magnitude > 0.1f)
             {
                 Vector3 brakingForce = -horizontalVelocity * Deceleration;
@@ -230,12 +230,12 @@ public class PlayerV2_Movement : NetworkBehaviour
             }
             else
             {
-                // Arrêt total pour contrer l'absence de friction
+                // Full stop to compensate for the zero friction
                 _controller.HipsRigidbody.linearVelocity = new Vector3(0f, currentVelocity.y, 0f);
             }
         }
 
-        // Application stricte de la MaxSpeed pour limiter la vitesse absolue
+        // Strictly enforce MaxSpeed to cap the absolute speed
         currentVelocity = _controller.HipsRigidbody.linearVelocity;
         horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
         if (horizontalVelocity.magnitude > MaxSpeed)
@@ -244,7 +244,7 @@ public class PlayerV2_Movement : NetworkBehaviour
             _controller.HipsRigidbody.linearVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
         }
 
-        // Effet de chute plus lourde (Hollow Knight style)
+        // Heavier fall effect (Hollow Knight style)
         if (currentVelocity.y < 0 && !_isGrounded)
         {
             _controller.HipsRigidbody.AddForce(Physics.gravity * (FallGravityMultiplier - 1f), ForceMode.Acceleration);
@@ -259,7 +259,7 @@ public class PlayerV2_Movement : NetworkBehaviour
         if (_controller == null || _controller.HipsRigidbody == null) return;
         if (_suspension == null || _suspension.WheelJoints == null) return;
 
-        // Gizmos Ground Check des roues (Raycast vers le bas)
+        // Wheel ground check gizmos (downward raycast)
         foreach (var joint in _suspension.WheelJoints)
         {
             if (joint == null) continue;
@@ -272,7 +272,7 @@ public class PlayerV2_Movement : NetworkBehaviour
             Gizmos.DrawWireSphere(wheelPos + Vector3.down * WheelRadius, 0.05f);
         }
 
-        // Gizmo pour afficher le multiplicateur de compression (Jump)
+        // Gizmo showing the jump compression multiplier
         Vector3 hipsPos = _controller.HipsRigidbody.position;
         Gizmos.color = Color.yellow;
         Gizmos.DrawLine(hipsPos, hipsPos + Vector3.up * _currentCompressionMultiplier);

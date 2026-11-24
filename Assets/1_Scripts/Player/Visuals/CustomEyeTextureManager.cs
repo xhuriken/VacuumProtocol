@@ -12,6 +12,9 @@ public static class CustomEyeTextureManager
 {
     private const string FOLDER_NAME = "CustomEyes";
 
+    /// <summary>
+    /// Returns the custom eye texture folder under persistentDataPath, creating it if missing.
+    /// </summary>
     public static string GetFolderPath()
     {
         string path = Path.Combine(Application.persistentDataPath, FOLDER_NAME);

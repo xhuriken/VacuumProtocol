@@ -15,24 +15,35 @@ using UnityEngine.UI;
 public class SettingsUIPresenter : MonoBehaviour
 {
     [Header("Audio UI Elements")]
+    [Tooltip("Role: Slider bound to the master volume setting.")]
     [SerializeField] private UICustomSlider _masterVolumeSlider;
+    [Tooltip("Role: Slider bound to the incoming voice chat volume setting.")]
     [SerializeField] private UICustomSlider _voiceVolumeSlider;
+    [Tooltip("Role: Slider bound to the manual microphone sensitivity (voice activation threshold).")]
     [SerializeField] private UICustomSlider _micSensitivitySlider;
+    [Tooltip("Role: Dropdown listing the available microphone devices.")]
     [SerializeField] private UICustomDropdown _microphoneDropdown;
 
     [Header("Microphone Level Indicator")]
+    [Tooltip("Role: Slider used as a live microphone level (RMS) meter.\nUse Case: Compared against the sensitivity slider to show when the voice would be transmitted.")]
     [SerializeField] private UICustomSlider _micLevelIndicator;
+    [Tooltip("Role: Fill color of the level meter while the input is below the sensitivity threshold.")]
     [SerializeField] private Color _silenceColor = new Color(0.341f, 0.235f, 0.251f, 1.000f);
+    [Tooltip("Role: Fill color of the level meter while the input is above the sensitivity threshold.")]
     [SerializeField] private Color _talkingColor = new Color(0.000f, 1.000f, 0.251f, 1.000f);
+    [Tooltip("Role: Lerp speed used to smooth the level meter.")]
     [SerializeField] private float _indicatorSmoothSpeed = 10f;
+    [Tooltip("Role: Toggle enabling local microphone loopback to test the input.")]
     [SerializeField] private UICustomToggle _micTestToggle;
 
     [Header("Auto VAD Mode")]
     [Tooltip("Role: Toggles auto VAD mode.\nUse Case: Settings configuration.\nJustification: When enabled, bypasses the manual sensitivity slider and uses UniVoice's default algorithm.")]
     [SerializeField] private UICustomToggle _autoVadToggle;
+    [Tooltip("Role: Sensitivity slider made non-interactable while auto VAD mode is on.")]
     [SerializeField] private UICustomSlider _autoVadSensitivitySliderRef; // reference to disable slider in Auto mode
 
     [Header("Debug")]
+    [Tooltip("Role: Enables debug logs for this presenter.")]
     [SerializeField] private bool _enableDebugLogs = false;
 
     // Cached runtime variables

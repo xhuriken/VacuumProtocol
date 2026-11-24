@@ -1,0 +1,1535 @@
+using System.Collections.Generic;
+using Mirror;
+using Player.Mechanics;
+using UnityEngine;
+
+namespace Gameplay.Phantoms
+{
+    /// <summary>
+    /// Description: Defines the possible behavioral states for Phantom AI entities.
+    /// Context: Used by PhantomBase and derived phantom controllers to drive state-machine decisions.
+    /// Justification: A single shared enum keeps the state machine, gizmos and network debug tools in agreement.
+    /// </summary>
+    public enum PhantomState
+    {
+        Idle,
+        Wandering,
+        Chasing,
+        Investigating,
+        BeingVacuumed,
+        Attacking
+    }
+
+    /// <summary>
+    /// Description: Data record for escape raycast evaluations during mouth vacuum struggle.
+    /// Context: Used by PhantomBase AI to select the optimal dash vector and visualized by PhantomGizmos.
+    /// Justification: Caching each ray result lets the gizmos display exactly what the AI evaluated.
+    /// </summary>
+    [System.Serializable]
+    public struct EscapeRaycastData
+    {
+        [Tooltip("Role: Normalized world direction of the escape feeler ray.")]
+        public Vector3 Direction;
+        [Tooltip("Role: Clear distance travelled by the ray before hitting an obstacle (or max distance).")]
+        public float Distance;
+        [Tooltip("Role: True if the ray hit an obstacle before reaching its max distance.")]
+        public bool HitObstacle;
+        [Tooltip("Role: World position where the ray stopped (hit point or max-distance end point).")]
+        public Vector3 HitPoint;
+        [Tooltip("Role: Desirability score of this direction; the highest score is chosen for the escape dash.")]
+        public float Score;
+    }
+
+    /// <summary>
+    /// Description: Tracks an individual player's suction stream applied to this phantom.
+    /// Context: Enables multiple players to vacuum the same phantom simultaneously with stacked drain rates.
+    /// Justification: Keying streams by source netId lets each player's suction be added, refreshed and expired independently.
+    /// </summary>
+    public struct SuctionStreamData
+    {
+        [Tooltip("Role: Network id of the player whose vacuum produces this stream.")]
+        public uint SourceNetId;
+        [Tooltip("Role: World position of the suction nozzle.")]
+        public Vector3 NozzlePos;
+        [Tooltip("Role: Forward axis of the suction cone.")]
+        public Vector3 ConeForward;
+        [Tooltip("Role: Up axis of the suction cone.")]
+        public Vector3 ConeUp;
+        [Tooltip("Role: Right axis of the suction cone.")]
+        public Vector3 ConeRight;
+        [Tooltip("Role: Ectoplasm drained per second by this stream.")]
+        public float DrainRate;
+        [Tooltip("Role: Multiplier applied to the pull force of this stream.")]
+        public float PullMultiplier;
+        [Tooltip("Role: Time of the last refresh; used to expire streams that stopped updating.")]
+        public float LastUpdateTime;
+    }
+
+    /// <summary>
+    /// Description: Abstract base class for all Phantom entities in the game.
+    /// Context: Runs server-side in Mirror multiplayer. Drives target detection via FOV and Line-of-Sight,
+    /// last-known-position tracking, state machine transitions, and IEntity exposure.
+    /// Justification: Provides a common extensible foundation so specialized phantoms can share core vision,
+    /// multiplayer targeting, and investigation logic while customizing movement.
+    /// </summary>
+    [RequireComponent(typeof(NetworkIdentity))]
+    public abstract class PhantomBase : NetworkBehaviour, IEntity
+    {
+        #region IEntity Implementation
+        [Header("Entity Settings")]
+        [Tooltip("Role: The display name of this phantom.\nUse Case: UI label rendering and logging.\nJustification: Identifies the enemy to players and debugging logs.")]
+        [SerializeField] private string _entityName = "Phantom";
+
+        [Tooltip("Role: Priority level for player visual detection.\nUse Case: Vision targeting and fear animations.\nJustification: Values >= 3 trigger fear saccades in robot eyes as defined in game design.")]
+        [SerializeField] private int _priorityLevel = 3;
+
+        [Tooltip("Role: The focal transform target for eye tracking and vision origin.\nUse Case: Where player heads/cameras focus, and raycast origin point for the phantom's vision.\nJustification: Required by IEntity interface. Must be assigned in prefab.")]
+        [SerializeField] private Transform _lookAtPoint;
+
+        /// <summary>
+        /// Display name of this phantom (IEntity).
+        /// </summary>
+        public string Name
+        {
+            get => _entityName;
+            set => _entityName = value;
+        }
+
+        /// <summary>
+        /// Visual detection priority of this phantom (IEntity).
+        /// </summary>
+        public int PriorityLevel
+        {
+            get => _priorityLevel;
+            set => _priorityLevel = value;
+        }
+
+        /// <summary>
+        /// Focal transform for eye tracking and vision origin; falls back to this transform when unassigned (IEntity).
+        /// </summary>
+        public Transform LookAtPoint => _lookAtPoint != null ? _lookAtPoint : transform;
+        #endregion
+
+        #region Visual Mesh Settings
+        [Header("Visual Mesh Settings")]
+        [Tooltip("Role: The primary visual MeshFilter used for rendering and suction ghost echoes.\nUse Case: Captured by mouth vacuum to spawn Fresnel afterimage clones.\nJustification: Fast SSOT reference avoiding runtime GetComponent searches during high-speed vacuum gameplay.")]
+        [SerializeField] private MeshFilter _visualMeshFilter;
+
+        /// <summary>
+        /// Primary visual MeshFilter, resolved lazily from children when not assigned.
+        /// </summary>
+        public MeshFilter VisualMeshFilter
+        {
+            get
+            {
+                if (_visualMeshFilter == null)
+                {
+                    _visualMeshFilter = GetComponentInChildren<MeshFilter>();
+                }
+                return _visualMeshFilter;
+            }
+        }
+        #endregion
+
+        #region Vision & Detection Settings
+        [Header("Vision & Field of View")]
+        [Tooltip("Role: Horizontal field of view angle in degrees.\nUse Case: Players outside this cone cannot be seen.")]
+        [SerializeField] protected float _fieldOfViewAngle = 110f;
+
+        [Tooltip("Role: Maximum distance at which this phantom can see a player.\nUse Case: Vision cone range limit.")]
+        [SerializeField] protected float _detectionRadius = 15f;
+
+        [Tooltip("Role: Maximum distance before losing interest even if target is still in line of sight.\nUse Case: Max chase range cutoff.")]
+        [SerializeField] protected float _loseTargetRadius = 25f;
+
+        [Tooltip("Role: Layers that block line-of-sight (walls, obstacles, ground).\nUse Case: If a wall is between phantom and player, player remains undetected.")]
+        [SerializeField] protected LayerMask _obstacleLayer;
+
+        [Header("Multiplayer Target Switch Settings")]
+        [Tooltip("Role: Allows the phantom to switch to a much closer visible player while chasing.\nUse Case: False = tunnel-vision on current prey; True = switches if another player gets much closer.")]
+        [SerializeField] protected bool _allowTargetSwitchWhileChasing = false;
+
+        [Tooltip("Role: Proximity ratio required to trigger a target switch during chase.\nUse Case: e.g. 0.6 means new target must be at least 40% closer than current target.")]
+        [SerializeField] protected float _switchDistanceRatio = 0.6f;
+
+        [Header("Combat & Investigation Settings")]
+        [Tooltip("Role: Distance required to trigger an attack.\nUse Case: Transitions from Chasing to Attacking.")]
+        [SerializeField] protected float _attackRadius = 1.8f;
+
+        [Tooltip("Role: Cooldown in seconds between attacks.\nUse Case: Pacing attacks.")]
+        [SerializeField] protected float _attackCooldown = 2.0f;
+
+        [Tooltip("Role: Time in seconds to inspect the last known position before returning to Idle.\nUse Case: Gives players a window to escape and hide.")]
+        [SerializeField] protected float _investigateWaitTime = 3.0f;
+
+        [Tooltip("Role: Maximum time allowed to reach the last known position before giving up.")]
+        [SerializeField] protected float _maxInvestigateTravelTime = 8.0f;
+
+        [Header("Wander Settings")]
+        [Tooltip("Role: Radius within which random wander destinations are picked.\nUse Case: Exploration when no player is detected.")]
+        [SerializeField] protected float _wanderRadius = 10f;
+
+        [Tooltip("Role: Time in seconds to wait at a wander destination before picking a new one.\nUse Case: Natural pacing in idle/patrol state.")]
+        [SerializeField] protected float _wanderWaitTime = 3f;
+
+        [Header("Mouth Vacuum Capture & Struggle Settings")]
+        [Tooltip("Role: Maximum ectoplasm / capture threshold of the phantom.\nUse Case: Depleted by mouth dual-click suction.")]
+        [SerializeField] protected float _maxEctoplasm = 150f;
+
+        [Tooltip("Role: Current ectoplasm (capture health), synchronized to clients.\nUse Case: Drained by suction; the phantom is swallowed once it drops below the swallow threshold.")]
+        [SyncVar(hook = nameof(OnEctoplasmChanged))]
+        [SerializeField] protected float _currentEctoplasm = 150f;
+
+        [Tooltip("Role: Speed reduction ratio when caught in mouth vacuum (0 = stopped, 1 = full speed).")]
+        [SerializeField] protected float _suctionSlowdownRatio = 0.25f;
+
+        [Tooltip("Role: Centripetal force dragging the phantom towards the central axis of the suction cone.")]
+        [SerializeField] protected float _centeringStrength = 7.0f;
+
+        [Tooltip("Role: Maximum speed at which the phantom can be pulled laterally towards the center axis.")]
+        [SerializeField] protected float _maxCenteringSpeed = 5.0f;
+
+        [Tooltip("Role: Axial drag speed pulling the phantom towards the mouth nozzle.")]
+        [SerializeField] protected float _suctionPullSpeed = 2.4f;
+
+        [Tooltip("Role: Frequency of panic jitter / vibration while caught in the suction vortex.")]
+        [SerializeField] protected float _shakeFrequency = 35.0f;
+
+        [Tooltip("Role: Amplitude of panic jitter / vibration in meters.")]
+        [SerializeField] protected float _shakeAmplitude = 0.08f;
+
+        [Tooltip("Role: Resistance factor (0 to 1) reducing the effectiveness of suction centering and drag.")]
+        [Range(0f, 0.9f)]
+        [SerializeField] protected float _struggleResistance = 0.35f;
+
+        [Tooltip("Role: Impulse force applied when the phantom performs an escape dash.")]
+        [SerializeField] protected float _escapeDashForce = 8.5f;
+
+        [Tooltip("Role: Minimum interval in seconds between escape dash attempts.")]
+        [SerializeField] protected float _escapeIntervalMin = 1.0f;
+
+        [Tooltip("Role: Maximum interval in seconds between escape dash attempts.")]
+        [SerializeField] protected float _escapeIntervalMax = 2.0f;
+
+        [Tooltip("Role: Duration in seconds of the escape dash impulse burst.")]
+        [SerializeField] protected float _escapeDashDuration = 0.32f;
+
+        [Header("Dash Feeling & Telegraph")]
+        [Tooltip("Role: Wind-up duration in seconds before the dash fires where the phantom compresses and vibrates frantically.")]
+        [SerializeField] protected float _dashTelegraphDuration = 0.22f;
+
+        [Tooltip("Role: Squash factor along dash axis during wind-up (0 = none, 0.35 = 35% squash).")]
+        [SerializeField] protected float _dashSquashAmount = 0.35f;
+
+        [Tooltip("Role: Stretch factor along dash axis during explosive burst (0 = none, 0.55 = 55% stretch).")]
+        [SerializeField] protected float _dashStretchAmount = 0.55f;
+
+        [Tooltip("Role: Size/health threshold ratio (e.g. 0.25 = 25%) where the phantom gives up, collapses, and is swallowed into the nozzle.")]
+        [Range(0.1f, 0.5f)]
+        [SerializeField] protected float _swallowThresholdRatio = 0.25f;
+
+        [Tooltip("Role: Speed at which the defeated phantom dives directly into the nozzle once the swallow threshold is reached.")]
+        [SerializeField] protected float _swallowDiveSpeed = 12.0f;
+
+        [Header("Intelligent Escape Dash & Luigi's Mansion Feel")]
+        [Tooltip("Role: Max distance tested by escape feeler rays to check clearance.")]
+        [SerializeField] protected float _escapeRayDistance = 8.0f;
+
+        [Tooltip("Role: Luigi's Mansion backward tugging resistance force opposing the mouth vacuum pull.")]
+        [SerializeField] protected float _tuggingResistanceForce = 2.8f;
+
+        [Tooltip("Role: Frequency in Hz of the rhythmic tug-of-war struggle pulses.")]
+        [SerializeField] protected float _struggleTugFrequency = 1.8f;
+
+        [Tooltip("Role: Additional impulse multiplier during a struggle tug pulse.")]
+        [SerializeField] protected float _struggleTugImpulse = 1.6f;
+
+        [Header("Proximity Terror Drain Aura")]
+        [Tooltip("Role: Enables continuous health drain for players within proximity aura.")]
+        [SerializeField] protected bool _enableProximityDrain = true;
+
+        [Tooltip("Role: Radius of the terror / miasma aura in meters.")]
+        [SerializeField] protected float _proximityDrainRadius = 6.0f;
+
+        [Tooltip("Role: Maximum health drain rate in PV per second at point-blank range.")]
+        [SerializeField] protected float _maxDrainRate = 20.0f;
+
+        [Tooltip("Role: Falloff curve for damage rate based on normalized distance (0 = point blank, 1 = max radius).")]
+        [SerializeField] protected AnimationCurve _drainFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+
+        [Tooltip("Role: Layers that block the drain aura (walls, obstacles). If blocked by a wall, no damage.")]
+        [SerializeField] protected LayerMask _drainObstacleLayer;
+
+        [Header("Direct Attack Settings")]
+        [Tooltip("Role: Direct damage dealt to player on physical attack.")]
+        [SerializeField] protected float _attackDamage = 25.0f;
+        #endregion
+
+        #region State Machine Variables
+        [Header("Current State (Debug)")]
+        [Tooltip("Role: Current AI state (exposed for debugging, driven at runtime by the server).")]
+        [SerializeField] protected PhantomState _currentState = PhantomState.Idle;
+        [Tooltip("Role: Player currently targeted by this phantom (exposed for debugging, driven at runtime by the server).")]
+        [SerializeField] protected PlayerV2_Controller _currentTarget;
+
+        protected float _stateTimer = 0f;
+        protected float _lastAttackTime = -999f;
+
+        protected Vector3 _lastKnownPosition;
+        protected bool _hasLastKnownPosition = false;
+        protected float _investigateWaitTimer = 0f;
+        protected bool _hasReachedLastKnown = false;
+
+        protected float _lastMouthSuctionTime = -999f;
+        protected Vector3 _lastSuctionNozzlePos;
+        protected Vector3 _lastConeForward = Vector3.forward;
+        protected Vector3 _lastConeUp = Vector3.up;
+        protected Vector3 _lastConeRight = Vector3.right;
+
+        protected Vector3 _initialLocalScale = Vector3.one;
+        protected float _escapeTimer = 0f;
+        protected float _currentEscapeInterval = 1.5f;
+        protected Vector3 _currentEscapeVelocity = Vector3.zero;
+        protected float _escapeDurationTimer = 0f;
+        protected bool _isDashing = false;
+        protected bool _isTelegraphingDash = false;
+        protected float _dashTelegraphTimer = 0f;
+        protected float _visualSquashStretch = 0f;
+
+        [SyncVar]
+        protected bool _isBeingSwallowed = false;
+        protected bool _isDefeatedInvoked = false;
+        protected float _swallowTimer = 0f;
+
+        protected readonly List<EscapeRaycastData> _lastEscapeRays = new List<EscapeRaycastData>();
+        protected Vector3 _chosenEscapeDirection = Vector3.zero;
+        protected float _lastEscapeEvaluationTime = -999f;
+        protected readonly List<SuctionStreamData> _activeSuctionStreams = new List<SuctionStreamData>();
+        #endregion
+
+        #region Public Accessors (for Gizmos and Debug Tools)
+        /// <summary>Current AI state.</summary>
+        public PhantomState CurrentState => _currentState;
+        /// <summary>Player currently targeted, or null.</summary>
+        public PlayerV2_Controller CurrentTarget => _currentTarget;
+        /// <summary>Horizontal field of view angle in degrees.</summary>
+        public float FieldOfViewAngle => _fieldOfViewAngle;
+        /// <summary>Maximum vision distance.</summary>
+        public float DetectionRadius => _detectionRadius;
+        /// <summary>Distance beyond which the current target is lost.</summary>
+        public float LoseTargetRadius => _loseTargetRadius;
+        /// <summary>Last position where the target was seen.</summary>
+        public Vector3 LastKnownPosition => _lastKnownPosition;
+        /// <summary>True if a last known target position is stored.</summary>
+        public bool HasLastKnownPosition => _hasLastKnownPosition;
+        /// <summary>Layers that block line of sight.</summary>
+        public LayerMask ObstacleLayer => _obstacleLayer;
+        /// <summary>Current ectoplasm (capture health).</summary>
+        public float CurrentEctoplasm => _currentEctoplasm;
+        /// <summary>Maximum ectoplasm (capture threshold).</summary>
+        public float MaxEctoplasm => _maxEctoplasm;
+        /// <summary>Speed ratio applied while caught in the mouth vacuum.</summary>
+        public float SuctionSlowdownRatio => _suctionSlowdownRatio;
+        /// <summary>Radius of the terror drain aura.</summary>
+        public float ProximityDrainRadius => _proximityDrainRadius;
+        /// <summary>Maximum drain rate at point-blank range.</summary>
+        public float MaxDrainRate => _maxDrainRate;
+        /// <summary>True if the proximity drain aura is enabled.</summary>
+        public bool EnableProximityDrain => _enableProximityDrain;
+        /// <summary>Direct attack damage.</summary>
+        public float AttackDamage => _attackDamage;
+        /// <summary>Escape feeler rays from the latest evaluation (debug).</summary>
+        public IReadOnlyList<EscapeRaycastData> LastEscapeRays => _lastEscapeRays;
+        /// <summary>Escape direction chosen by the latest evaluation (debug).</summary>
+        public Vector3 ChosenEscapeDirection => _chosenEscapeDirection;
+        /// <summary>Time of the latest escape evaluation (debug).</summary>
+        public float LastEscapeEvaluationTime => _lastEscapeEvaluationTime;
+        /// <summary>Number of player suction streams currently applied.</summary>
+        public int ActiveSuctionStreamCount => _activeSuctionStreams.Count;
+        /// <summary>True while an escape dash impulse is active.</summary>
+        public bool IsDashing => _isDashing;
+        /// <summary>True during the dash wind-up telegraph.</summary>
+        public bool IsTelegraphingDash => _isTelegraphingDash;
+        /// <summary>True once the phantom is being swallowed into the nozzle.</summary>
+        public bool IsBeingSwallowed => _isBeingSwallowed;
+
+        private static readonly int PropFresnelColor = Shader.PropertyToID("_FresnelColor");
+        private Color _cachedFresnelColor = Color.white;
+        private bool _hasCachedFresnelColor = false;
+
+        /// <summary>
+        /// Description: Retrieves the default HDR Fresnel Rim Color from this phantom's material (Shader_PhantomBlobEctoplasm).
+        /// Context: Used by PlayerMouthVacuum suction echo streams to tint echoes with the captured phantom's exact ectoplasmic glow.
+        /// </summary>
+        public Color GetFresnelRimColor()
+        {
+            if (!_hasCachedFresnelColor)
+            {
+                Renderer r = GetComponentInChildren<Renderer>();
+                if (r == null || r.sharedMaterial == null)
+                {
+                    Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' has no Renderer or sharedMaterial to resolve FresnelRimColor! Fail loudly per workspace rules.", this);
+                    _cachedFresnelColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
+                    _hasCachedFresnelColor = true;
+                    return _cachedFresnelColor;
+                }
+
+                if (r.sharedMaterial.HasProperty(PropFresnelColor))
+                {
+                    _cachedFresnelColor = r.sharedMaterial.GetColor(PropFresnelColor);
+                }
+                else if (r.sharedMaterial.HasProperty("_Color"))
+                {
+                    _cachedFresnelColor = r.sharedMaterial.GetColor("_Color");
+                }
+                else
+                {
+                    Debug.LogError($"[PhantomBase] Material '{r.sharedMaterial.name}' on '{gameObject.name}' does not contain '_FresnelColor' or '_Color' property! Fail loudly per workspace rules.", this);
+                    _cachedFresnelColor = new Color(0.3f, 0.9f, 1.0f, 0.85f);
+                }
+                _hasCachedFresnelColor = true;
+            }
+            return _cachedFresnelColor;
+        }
+
+        /// <summary>
+        /// Global registry of active phantoms in the scene for O(1) high-performance queries without Physics.OverlapSphere.
+        /// </summary>
+        public static readonly List<PhantomBase> ActivePhantoms = new List<PhantomBase>();
+
+        protected virtual void OnEnable()
+        {
+            if (!ActivePhantoms.Contains(this))
+            {
+                ActivePhantoms.Add(this);
+            }
+        }
+
+        protected virtual void OnDisable()
+        {
+            ActivePhantoms.Remove(this);
+        }
+        #endregion
+
+        #region Unity Callbacks
+        protected virtual void Awake()
+        {
+            _initialLocalScale = transform.localScale;
+            _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
+
+            if (_lookAtPoint == null)
+            {
+                Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' is missing a '_lookAtPoint' assignment! Please set it on the prefab to satisfy IEntity requirements. Fail loudly per workspace rules.");
+            }
+
+            if (VisualMeshFilter == null)
+            {
+                Debug.LogError($"[PhantomBase] Critical Configuration Error: '{gameObject.name}' has no MeshFilter in children for suction ghost echoes! Fail loudly per workspace rules.", this);
+            }
+
+            // Default obstacle layer mask if unassigned in inspector
+            if (_obstacleLayer.value == 0)
+            {
+                _obstacleLayer = LayerMask.GetMask("Default", "Ground", "Obstacle", "Obstable");
+                if (_obstacleLayer.value == 0)
+                {
+                    _obstacleLayer = (1 << 0) | (1 << 3) | (1 << 8);
+                }
+            }
+
+            if (_drainObstacleLayer.value == 0)
+            {
+                _drainObstacleLayer = _obstacleLayer;
+            }
+        }
+
+        protected virtual void Update()
+        {
+            if (!isServer)
+            {
+                if (_isBeingSwallowed)
+                {
+                    transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, Time.deltaTime * 10f);
+                    transform.Rotate(Vector3.forward, 720f * Time.deltaTime, Space.Self);
+                }
+                return;
+            }
+
+            UpdateTargetDetection();
+            UpdateStateMachine();
+
+            if (_enableProximityDrain)
+            {
+                UpdateProximityDrain();
+            }
+        }
+        #endregion
+
+        #region Vision & Detection Logic
+        /// <summary>
+        /// Description: Checks if a player is within the phantom's field of view and not obstructed by an obstacle.
+        /// Context: Runs server-side. Used for both initial target acquisition and maintaining chase.
+        /// </summary>
+        public virtual bool IsPlayerVisible(PlayerV2_Controller player, out float distance)
+        {
+            distance = float.MaxValue;
+            if (player == null || !player.gameObject.activeInHierarchy) return false;
+
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+            Vector3 targetPoint = player.LookAtPoint != null ? player.LookAtPoint.position : (player.WorldPosition + Vector3.up * 0.8f);
+
+            Vector3 directionToPlayer = targetPoint - eyeOrigin;
+            distance = directionToPlayer.magnitude;
+
+            float maxRange = (_currentTarget == player) ? _loseTargetRadius : _detectionRadius;
+            if (distance > maxRange) return false;
+
+            // FOV cone check
+            float angle = Vector3.Angle(transform.forward, directionToPlayer.normalized);
+            if (angle > _fieldOfViewAngle / 2f) return false;
+
+            // Line-of-sight raycast against obstacle layer (ignoring own body)
+            RaycastHit[] hits = Physics.RaycastAll(eyeOrigin, directionToPlayer.normalized, distance, _obstacleLayer, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
+            {
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    RaycastHit hit = hits[i];
+                    if (hit.transform == null) continue;
+                    if (hit.transform.IsChildOf(transform)) continue; // Ignore own colliders!
+                    if (hit.transform.IsChildOf(player.transform)) break; // Reached target player without obstacles!
+
+                    // Blocked by a real obstacle/wall between phantom and player
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Description: Scans all active players and selects the closest visible one within FOV.
+        /// Context: Resolves multiplayer targeting conflicts when multiple players are present.
+        /// </summary>
+        protected virtual PlayerV2_Controller GetClosestVisiblePlayer()
+        {
+            IReadOnlyList<PlayerV2_Controller> players = PlayerV2_Controller.ActivePlayers;
+            PlayerV2_Controller bestPlayer = null;
+            float minDistance = float.MaxValue;
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                PlayerV2_Controller player = players[i];
+                if (player == null || !player.gameObject.activeInHierarchy) continue;
+
+                if (IsPlayerVisible(player, out float dist))
+                {
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                        bestPlayer = player;
+                    }
+                }
+            }
+
+            return bestPlayer;
+        }
+
+        /// <summary>
+        /// Description: Drives target acquisition, tracking, and vision loss server-side.
+        /// </summary>
+        protected virtual void UpdateTargetDetection()
+        {
+            switch (_currentState)
+            {
+                case PhantomState.Idle:
+                case PhantomState.Wandering:
+                case PhantomState.Investigating:
+                    // Look for any visible player
+                    PlayerV2_Controller spottedPlayer = GetClosestVisiblePlayer();
+                    if (spottedPlayer != null)
+                    {
+                        _currentTarget = spottedPlayer;
+                        _lastKnownPosition = spottedPlayer.WorldPosition;
+                        _hasLastKnownPosition = true;
+                        OnPlayerDetected(_currentTarget);
+                        TransitionToState(PhantomState.Chasing);
+                    }
+                    break;
+
+                case PhantomState.Chasing:
+                    // Validate current target
+                    if (_currentTarget == null || !_currentTarget.gameObject.activeInHierarchy)
+                    {
+                        OnPlayerLost();
+                        _currentTarget = null;
+                        if (_hasLastKnownPosition)
+                        {
+                            TransitionToState(PhantomState.Investigating);
+                        }
+                        else
+                        {
+                            TransitionToState(PhantomState.Idle);
+                        }
+                        return;
+                    }
+
+                    // Check if current target is still visible
+                    if (IsPlayerVisible(_currentTarget, out float currentDist))
+                    {
+                        // Target still in sight: update last known position
+                        _lastKnownPosition = _currentTarget.WorldPosition;
+                        _hasLastKnownPosition = true;
+
+                        // Optional: switch to another player if much closer
+                        if (_allowTargetSwitchWhileChasing)
+                        {
+                            PlayerV2_Controller closerPlayer = GetClosestVisiblePlayer();
+                            if (closerPlayer != null && closerPlayer != _currentTarget)
+                            {
+                                float closerDist = Vector3.Distance(transform.position, closerPlayer.WorldPosition);
+                                if (closerDist < currentDist * _switchDistanceRatio)
+                                {
+                                    Debug.Log($"[PhantomBase] '{gameObject.name}' switched focus to closer player '{closerPlayer.name}'.");
+                                    _currentTarget = closerPlayer;
+                                    _lastKnownPosition = closerPlayer.WorldPosition;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Lost line-of-sight! Target went behind a wall or out of FOV
+                        OnPlayerLost();
+                        TransitionToState(PhantomState.Investigating);
+                    }
+                    break;
+
+                case PhantomState.Attacking:
+                    // In attack range, keep target updated
+                    if (_currentTarget != null && _currentTarget.gameObject.activeInHierarchy)
+                    {
+                        _lastKnownPosition = _currentTarget.WorldPosition;
+                        _hasLastKnownPosition = true;
+                    }
+                    break;
+            }
+        }
+        #endregion
+
+        #region State Machine Logic
+        /// <summary>
+        /// Description: Executes state-specific logic for the current AI state.
+        /// </summary>
+        protected virtual void UpdateStateMachine()
+        {
+            switch (_currentState)
+            {
+                case PhantomState.Idle:
+                    UpdateIdleState();
+                    break;
+
+                case PhantomState.Wandering:
+                    UpdateWanderingState();
+                    break;
+
+                case PhantomState.Chasing:
+                    UpdateChasingState();
+                    break;
+
+                case PhantomState.Investigating:
+                    UpdateInvestigatingState();
+                    break;
+
+                case PhantomState.BeingVacuumed:
+                    UpdateBeingVacuumedState();
+                    break;
+
+                case PhantomState.Attacking:
+                    UpdateAttackingState();
+                    break;
+            }
+        }
+
+        protected virtual void UpdateIdleState()
+        {
+            _stateTimer += Time.deltaTime;
+            if (_stateTimer >= _wanderWaitTime)
+            {
+                TransitionToState(PhantomState.Wandering);
+            }
+        }
+
+        protected virtual void UpdateWanderingState()
+        {
+            if (IsDestinationReached())
+            {
+                StopMovement();
+                TransitionToState(PhantomState.Idle);
+            }
+        }
+
+        protected virtual void UpdateChasingState()
+        {
+            if (_currentTarget == null)
+            {
+                StopMovement();
+                TransitionToState(PhantomState.Idle);
+                return;
+            }
+
+            Vector3 targetPosition = _currentTarget.WorldPosition;
+
+            // In pursuit, the phantom relentlessly closes distance to maintain proximity terror drain.
+            // Continuous pressure rather than locking into a stationary melee attack.
+            MoveTowards(targetPosition);
+        }
+
+        /// <summary>
+        /// Description: Moves towards the last known position where the player was last seen.
+        /// If reached, pauses briefly to look around before returning to Idle.
+        /// </summary>
+        protected virtual void UpdateInvestigatingState()
+        {
+            _stateTimer += Time.deltaTime;
+
+            if (!_hasReachedLastKnown)
+            {
+                MoveTowards(_lastKnownPosition);
+
+                // Check if arrived at last known spot or timed out
+                if (IsDestinationReached() || _stateTimer >= _maxInvestigateTravelTime)
+                {
+                    _hasReachedLastKnown = true;
+                    StopMovement();
+                    _investigateWaitTimer = 0f;
+                }
+            }
+            else
+            {
+                // Inspecting area
+                _investigateWaitTimer += Time.deltaTime;
+                if (_investigateWaitTimer >= _investigateWaitTime)
+                {
+                    _currentTarget = null;
+                    _hasLastKnownPosition = false;
+                    TransitionToState(PhantomState.Idle);
+                }
+            }
+        }
+
+        protected virtual void UpdateAttackingState()
+        {
+            if (_currentTarget == null || !_currentTarget.gameObject.activeInHierarchy)
+            {
+                TransitionToState(PhantomState.Idle);
+                return;
+            }
+
+            float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.WorldPosition);
+            if (distanceToTarget > _attackRadius * 1.3f)
+            {
+                TransitionToState(PhantomState.Chasing);
+                return;
+            }
+
+            if (Time.time - _lastAttackTime >= _attackCooldown)
+            {
+                _lastAttackTime = Time.time;
+                OnAttackPlayer(_currentTarget);
+            }
+        }
+
+        /// <summary>
+        /// Description: Handles transition logic when entering a new state.
+        /// </summary>
+        protected virtual void TransitionToState(PhantomState newState)
+        {
+            _currentState = newState;
+            _stateTimer = 0f;
+
+            if (newState == PhantomState.Wandering)
+            {
+                PickAndStartWanderDestination();
+            }
+            else if (newState == PhantomState.Investigating)
+            {
+                _hasReachedLastKnown = false;
+                _investigateWaitTimer = 0f;
+                if (_hasLastKnownPosition)
+                {
+                    MoveTowards(_lastKnownPosition);
+                }
+            }
+        }
+        #endregion
+
+        #region Abstract / Virtual Methods
+        /// <summary>
+        /// Description: Orders the movement controller to move towards a target world position.
+        /// </summary>
+        protected abstract void MoveTowards(Vector3 destination);
+
+        /// <summary>
+        /// Description: Commands the movement controller to stop immediately.
+        /// </summary>
+        protected abstract void StopMovement();
+
+        /// <summary>
+        /// Description: Checks if the phantom has reached its current navigation destination.
+        /// </summary>
+        protected abstract bool IsDestinationReached();
+
+        /// <summary>
+        /// Description: Picks a random valid destination on the navigable space and initiates movement.
+        /// </summary>
+        protected abstract void PickAndStartWanderDestination();
+
+        /// <summary>
+        /// Description: Hook called when a player enters vision.
+        /// </summary>
+        protected virtual void OnPlayerDetected(PlayerV2_Controller player)
+        {
+            Debug.Log($"[PhantomBase] '{gameObject.name}' spotted player '{player.name}' in FOV! Initiating chase.");
+        }
+
+        /// <summary>
+        /// Description: Hook called when line-of-sight to target player is lost.
+        /// </summary>
+        protected virtual void OnPlayerLost()
+        {
+            Debug.Log($"[PhantomBase] '{gameObject.name}' lost line-of-sight. Investigating last known position: {_lastKnownPosition}.");
+        }
+
+        /// <summary>
+        private void OnEctoplasmChanged(float oldVal, float newVal)
+        {
+            UpdateVisualScaleFromEctoplasm();
+        }
+
+        protected virtual void LateUpdate()
+        {
+            if (_isBeingSwallowed) return;
+
+            // Smoothly decay dynamic dash squash/stretch back to neutral
+            if (Mathf.Abs(_visualSquashStretch) > 0.001f)
+            {
+                _visualSquashStretch = Mathf.MoveTowards(_visualSquashStretch, 0f, Time.deltaTime * 4.5f);
+            }
+            else
+            {
+                _visualSquashStretch = 0f;
+            }
+
+            ApplyVisualSquashStretch();
+        }
+
+        /// <summary>
+        /// Description: Dynamically calculates scale proportional to remaining ectoplasm health,
+        /// reaching _swallowThresholdRatio right as the swallow threshold is attained.
+        /// </summary>
+        protected virtual void UpdateVisualScaleFromEctoplasm()
+        {
+            ApplyVisualSquashStretch();
+        }
+
+        /// <summary>
+        /// Description: Applies base ectoplasm scale modulated by dynamic dash squash and stretch deformation.
+        /// </summary>
+        protected virtual void ApplyVisualSquashStretch()
+        {
+            if (_isBeingSwallowed) return;
+
+            float thresholdEctoplasm = _maxEctoplasm * _swallowThresholdRatio;
+            float remainingRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEctoplasm) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEctoplasm));
+            float ectoScaleFactor = (_currentEctoplasm <= thresholdEctoplasm)
+                ? _swallowThresholdRatio
+                : Mathf.Lerp(_swallowThresholdRatio, 1.0f, remainingRatio);
+
+            Vector3 baseScale = _initialLocalScale * ectoScaleFactor;
+
+            if (Mathf.Abs(_visualSquashStretch) > 0.001f && _chosenEscapeDirection.sqrMagnitude > 0.01f)
+            {
+                Vector3 localDir = transform.InverseTransformDirection(_chosenEscapeDirection.normalized);
+
+                float axialScale = (_visualSquashStretch < 0f)
+                    ? (1.0f - _dashSquashAmount * Mathf.Abs(_visualSquashStretch))
+                    : (1.0f + _dashStretchAmount * _visualSquashStretch);
+
+                float lateralScale = (_visualSquashStretch < 0f)
+                    ? (1.0f + (_dashSquashAmount * 0.5f) * Mathf.Abs(_visualSquashStretch))
+                    : (1.0f - (_dashStretchAmount * 0.35f) * _visualSquashStretch);
+
+                float absX = Mathf.Abs(localDir.x);
+                float absY = Mathf.Abs(localDir.y);
+                float absZ = Mathf.Abs(localDir.z);
+
+                Vector3 scaleMult = new Vector3(
+                    Mathf.Lerp(lateralScale, axialScale, absX),
+                    Mathf.Lerp(lateralScale, axialScale, absY),
+                    Mathf.Lerp(lateralScale, axialScale, absZ)
+                );
+
+                transform.localScale = Vector3.Scale(baseScale, scaleMult);
+            }
+            else
+            {
+                transform.localScale = baseScale;
+            }
+        }
+
+        /// <summary>
+        /// Description: Updates behavior while trapped inside the player's mouth suction stream.
+        /// Incorporates centripetal axis attraction, nozzle drag, panic jitter, struggle escape dashes,
+        /// combat in suction, progressive scale shrinking, and high-speed swallow plunge.
+        /// </summary>
+        /// <summary>
+        /// Description: Updates behavior while trapped inside the player's mouth suction stream.
+        /// Incorporates centripetal axis attraction, nozzle drag, panic jitter, Luigi's Mansion tugging resistance,
+        /// intelligent multi-raycast escape dash AI, combat in suction, multiplayer drain rate aggregation,
+        /// progressive scale shrinking, and high-speed swallow plunge.
+        /// </summary>
+        protected virtual void UpdateBeingVacuumedState()
+        {
+            // --- 1. Final Swallow Sequence (Gulp) ---
+            if (_isBeingSwallowed)
+            {
+                _swallowTimer += Time.deltaTime;
+                Vector3 toNozzle = _lastSuctionNozzlePos - transform.position;
+                float distToNozzle = toNozzle.magnitude;
+                float step = _swallowDiveSpeed * Time.deltaTime;
+
+                // If close enough, overshot, or timed out, finalize capture immediately!
+                if (distToNozzle <= 0.45f || step >= distToNozzle || _swallowTimer >= 0.7f)
+                {
+                    if (isServer)
+                    {
+                        OnPhantomCaptured();
+                    }
+                    return;
+                }
+
+                // High-speed plunge directly into mouth nozzle
+                transform.position += toNozzle.normalized * step;
+
+                // Rapidly shrink scale to zero as it approaches the nozzle
+                float shrinkProgress = Mathf.Clamp01(distToNozzle / 1.5f);
+                transform.localScale = _initialLocalScale * (_swallowThresholdRatio * shrinkProgress);
+
+                // Spiral / vortex roll towards the mouth
+                transform.Rotate(Vector3.forward, 720f * Time.deltaTime, Space.Self);
+                return;
+            }
+
+            // --- 2. Prune Stale Suction Streams ---
+            for (int i = _activeSuctionStreams.Count - 1; i >= 0; i--)
+            {
+                if (Time.time - _activeSuctionStreams[i].LastUpdateTime > 0.25f)
+                {
+                    _activeSuctionStreams.RemoveAt(i);
+                }
+            }
+
+            // If suction stopped for more than 0.3s, break free!
+            if (_activeSuctionStreams.Count == 0 && Time.time - _lastMouthSuctionTime > 0.3f)
+            {
+                _currentEscapeVelocity = Vector3.zero;
+                _escapeDurationTimer = 0f;
+
+                if (_currentTarget != null && IsPlayerVisible(_currentTarget, out _))
+                {
+                    TransitionToState(PhantomState.Chasing);
+                }
+                else if (_hasLastKnownPosition)
+                {
+                    TransitionToState(PhantomState.Investigating);
+                }
+                else
+                {
+                    TransitionToState(PhantomState.Idle);
+                }
+                return;
+            }
+
+            // --- 3. Multiplayer Ectoplasm Drain Stacking ---
+            if (isServer)
+            {
+                float totalDrainRate = 0f;
+                for (int i = 0; i < _activeSuctionStreams.Count; i++)
+                {
+                    totalDrainRate += _activeSuctionStreams[i].DrainRate;
+                }
+
+                if (totalDrainRate > 0f)
+                {
+                    _currentEctoplasm -= totalDrainRate * Time.deltaTime;
+                    UpdateVisualScaleFromEctoplasm();
+
+                    float thresholdEctoplasm = _maxEctoplasm * _swallowThresholdRatio;
+                    if (_currentEctoplasm <= thresholdEctoplasm)
+                    {
+                        _currentEctoplasm = thresholdEctoplasm;
+                        _isBeingSwallowed = true;
+                        _swallowTimer = 0f;
+
+                        // Target closest nozzle for swallow plunge
+                        float minD = float.MaxValue;
+                        for (int i = 0; i < _activeSuctionStreams.Count; i++)
+                        {
+                            float d = Vector3.Distance(transform.position, _activeSuctionStreams[i].NozzlePos);
+                            if (d < minD)
+                            {
+                                minD = d;
+                                _lastSuctionNozzlePos = _activeSuctionStreams[i].NozzlePos;
+                            }
+                        }
+                        return;
+                    }
+                }
+            }
+
+            // --- 4. Multiplayer Combined Nozzle Vectors ---
+            if (_activeSuctionStreams.Count > 0)
+            {
+                Vector3 avgNozzle = Vector3.zero;
+                Vector3 avgFwd = Vector3.zero;
+                Vector3 avgUp = Vector3.zero;
+                Vector3 avgRight = Vector3.zero;
+
+                for (int i = 0; i < _activeSuctionStreams.Count; i++)
+                {
+                    avgNozzle += _activeSuctionStreams[i].NozzlePos;
+                    avgFwd += _activeSuctionStreams[i].ConeForward;
+                    avgUp += _activeSuctionStreams[i].ConeUp;
+                    avgRight += _activeSuctionStreams[i].ConeRight;
+                }
+
+                _lastSuctionNozzlePos = avgNozzle / _activeSuctionStreams.Count;
+                _lastConeForward = avgFwd.normalized;
+                _lastConeUp = avgUp.normalized;
+                _lastConeRight = avgRight.normalized;
+            }
+
+            // --- 5. Active Combat & Attack while in Suction ---
+            if (_currentTarget != null && _currentTarget.gameObject.activeInHierarchy)
+            {
+                float distToTarget = Vector3.Distance(transform.position, _currentTarget.WorldPosition);
+                if (distToTarget <= _attackRadius)
+                {
+                    if (Time.time - _lastAttackTime >= _attackCooldown)
+                    {
+                        _lastAttackTime = Time.time;
+                        OnAttackPlayer(_currentTarget);
+                    }
+                }
+            }
+
+            // --- 6. Centering Force (Attraction towards central cone axis) ---
+            Vector3 fromNozzle = transform.position - _lastSuctionNozzlePos;
+            float axialDistance = Vector3.Dot(fromNozzle, _lastConeForward);
+            Vector3 centerAxisPoint = _lastSuctionNozzlePos + _lastConeForward * Mathf.Max(0.01f, axialDistance);
+
+            Vector3 toAxis = centerAxisPoint - transform.position;
+            Vector3 centeringVel = Vector3.zero;
+
+            // CRITICAL: Centering force is completely suppressed during active dash so phantom physically breaks out!
+            if (!_isDashing && toAxis.sqrMagnitude > 0.001f)
+            {
+                float centeringSpeed = Mathf.Min(toAxis.magnitude * _centeringStrength, _maxCenteringSpeed);
+                // Scale centering smoothly with the active stream's pull multiplier so initial contact feels progressive rather than snapping
+                float pullScale = _activeSuctionStreams.Count > 0 ? Mathf.Clamp01(_activeSuctionStreams[0].PullMultiplier) : 1f;
+                centeringVel = toAxis.normalized * (centeringSpeed * (1f - _struggleResistance) * pullScale);
+            }
+
+            // --- 7. Axial Suction Drag vs Luigi's Mansion Resistance ---
+            Vector3 toNozzleDir = _lastSuctionNozzlePos - transform.position;
+            Vector3 pullVel = Vector3.zero;
+            Vector3 resistanceVel = Vector3.zero;
+
+            if (toNozzleDir.sqrMagnitude > 0.01f)
+            {
+                Vector3 toNozzleNorm = toNozzleDir.normalized;
+
+                // Suction pull speed (scales with stream count and upgradable pull multiplier)
+                float streamBonus = 1.0f + 0.35f * Mathf.Max(0, _activeSuctionStreams.Count - 1);
+                float avgPullMultiplier = 0f;
+                for (int i = 0; i < _activeSuctionStreams.Count; i++)
+                {
+                    avgPullMultiplier += _activeSuctionStreams[i].PullMultiplier;
+                }
+                avgPullMultiplier /= Mathf.Max(1, _activeSuctionStreams.Count);
+
+                float basePull = _suctionPullSpeed * streamBonus * avgPullMultiplier * (1f - _struggleResistance * 0.3f);
+
+                if (_isDashing)
+                {
+                    // Suppress pull heavily during dash so phantom punches through
+                    pullVel = toNozzleNorm * (basePull * 0.15f);
+                    resistanceVel = Vector3.zero;
+                }
+                else
+                {
+                    pullVel = toNozzleNorm * basePull;
+
+                    // Luigi's Mansion Resistance:
+                    // Ghost actively pulls backward away from the nozzle (-toNozzleNorm).
+                    // Resistance force is strongest at high ectoplasm, gradually weakening as drained.
+                    float thresholdEcto = _maxEctoplasm * _swallowThresholdRatio;
+                    float healthRatio = Mathf.Clamp01((_currentEctoplasm - thresholdEcto) / Mathf.Max(0.01f, _maxEctoplasm - thresholdEcto));
+
+                    // Rhythmic struggle tug pulses (tug-of-war)
+                    float tugPulse = Mathf.Max(0f, Mathf.Sin(Time.time * _struggleTugFrequency * Mathf.PI));
+                    float tugMultiplier = 1.0f + (tugPulse * _struggleTugImpulse);
+
+                    float dynamicResistance = _tuggingResistanceForce * healthRatio * tugMultiplier;
+                    resistanceVel = -toNozzleNorm * dynamicResistance;
+                }
+            }
+
+            // --- 8. Panic Jitter / Shake ---
+            float shakeTime = Time.time * _shakeFrequency;
+            float shakeMult = _isTelegraphingDash ? 2.8f : (_isDashing ? 0.2f : 1.0f);
+            Vector3 shakeOffset = (_lastConeRight * Mathf.Sin(shakeTime) + _lastConeUp * Mathf.Cos(shakeTime * 1.35f)) * (_shakeAmplitude * shakeMult);
+
+            // --- 9. Intelligent Escape Dash AI with Raycasts ---
+            _escapeTimer += Time.deltaTime;
+
+            if (!_isDashing && !_isTelegraphingDash)
+            {
+                if (_escapeTimer >= _currentEscapeInterval)
+                {
+                    _escapeTimer = 0f;
+                    _currentEscapeInterval = Random.Range(_escapeIntervalMin, _escapeIntervalMax);
+
+                    // 1. Evaluate best escape direction (flanking priority)
+                    _chosenEscapeDirection = EvaluateBestEscapeDirection(toNozzleDir);
+
+                    // 2. Begin Telegraph Wind-Up
+                    _isTelegraphingDash = true;
+                    _dashTelegraphTimer = _dashTelegraphDuration;
+                    _visualSquashStretch = -1.0f;
+                    RpcOnDashTelegraphed(_chosenEscapeDirection);
+                }
+            }
+            else if (_isTelegraphingDash)
+            {
+                _dashTelegraphTimer -= Time.deltaTime;
+                if (_dashTelegraphTimer <= 0f)
+                {
+                    // 3. Launch the Dash Burst!
+                    _isTelegraphingDash = false;
+                    _isDashing = true;
+                    _escapeDurationTimer = _escapeDashDuration;
+                    _currentEscapeVelocity = _chosenEscapeDirection.normalized * _escapeDashForce;
+                    _visualSquashStretch = 1.0f;
+                    RpcOnDashBurst(_chosenEscapeDirection);
+                }
+            }
+            else if (_isDashing)
+            {
+                _escapeDurationTimer -= Time.deltaTime;
+                if (_escapeDurationTimer <= 0f)
+                {
+                    _isDashing = false;
+                    _currentEscapeVelocity = Vector3.zero;
+                }
+            }
+
+            // Combine all physical forces
+            Vector3 totalVelocity = centeringVel + pullVel + resistanceVel + _currentEscapeVelocity;
+            transform.position += (totalVelocity * Time.deltaTime) + shakeOffset;
+
+            // Orient towards the nozzle with slight panic tilt
+            if (toNozzleDir.sqrMagnitude > 0.05f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(toNozzleDir.normalized, _lastConeUp);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 8f);
+            }
+        }
+
+        [ClientRpc]
+        protected void RpcOnDashTelegraphed(Vector3 dir)
+        {
+            _chosenEscapeDirection = dir;
+            _isTelegraphingDash = true;
+            _visualSquashStretch = -1.0f;
+        }
+
+        [ClientRpc]
+        protected void RpcOnDashBurst(Vector3 dir)
+        {
+            _chosenEscapeDirection = dir;
+            _isTelegraphingDash = false;
+            _isDashing = true;
+            _visualSquashStretch = 1.0f;
+        }
+
+        /// <summary>
+        /// Description: Generates candidate escape direction vectors for raycast testing.
+        /// Prioritizes lateral and forward-lateral flanking breakout vectors to bypass the suction cone.
+        /// Overridden by grounded phantoms (PhantomStandard) to generate horizontal floor/corridor rays.
+        /// </summary>
+        protected virtual Vector3[] GetCandidateEscapeDirections(Vector3 awayFromNozzle)
+        {
+            Vector3 right = _lastConeRight;
+            Vector3 up = _lastConeUp;
+
+            // Lateral flanks (right, left, overhead), forward-lateral flanks (past the player), and backward corridors
+            return new Vector3[]
+            {
+                right,
+                -right,
+                up,
+                (right * 0.85f - awayFromNozzle * 0.40f).normalized,   // Forward-Right flank past player
+                (-right * 0.85f - awayFromNozzle * 0.40f).normalized,  // Forward-Left flank past player
+                (up * 0.85f - awayFromNozzle * 0.40f).normalized,      // Forward-Overhead flank past player
+                (right * 0.85f + awayFromNozzle * 0.45f).normalized,   // Backward-Right retreat
+                (-right * 0.85f + awayFromNozzle * 0.45f).normalized,  // Backward-Left retreat
+                (up * 0.85f + awayFromNozzle * 0.45f).normalized,      // Backward-Overhead retreat
+                (right + up).normalized,
+                (-right + up).normalized,
+                awayFromNozzle                                         // Pure backward fallback
+            };
+        }
+
+        /// <summary>
+        /// Description: Evaluates surrounding space with multiple raycasts to determine the optimal escape trajectory.
+        /// Searches for maximal unobstructed clearance in directions leading outside the suction cone and around the player.
+        /// Records all evaluated rays for real-time visualization in PhantomGizmos.
+        /// </summary>
+        protected virtual Vector3 EvaluateBestEscapeDirection(Vector3 toNozzleDir)
+        {
+            _lastEscapeRays.Clear();
+            _lastEscapeEvaluationTime = Time.time;
+
+            Vector3 awayFromNozzle = -toNozzleDir.normalized;
+            Vector3[] candidateDirs = GetCandidateEscapeDirections(awayFromNozzle);
+
+            Vector3 bestDir = awayFromNozzle;
+            float bestScore = -float.MaxValue;
+            Vector3 origin = transform.position + Vector3.up * 0.8f;
+
+            for (int i = 0; i < candidateDirs.Length; i++)
+            {
+                Vector3 dir = candidateDirs[i];
+
+                RaycastHit[] hits = Physics.RaycastAll(origin, dir, _escapeRayDistance, _obstacleLayer, QueryTriggerInteraction.Ignore);
+                bool hit = false;
+                float distance = _escapeRayDistance;
+                Vector3 hitPoint = origin + dir * _escapeRayDistance;
+
+                if (hits != null && hits.Length > 0)
+                {
+                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                    for (int h = 0; h < hits.Length; h++)
+                    {
+                        if (hits[h].transform != null && !hits[h].transform.IsChildOf(transform))
+                        {
+                            hit = true;
+                            distance = hits[h].distance;
+                            hitPoint = hits[h].point;
+                            break;
+                        }
+                    }
+                }
+
+                // Scoring formulation:
+                // 1. Base score = distance clearance (more open space = better)
+                float score = distance;
+
+                // 2. Lateral & Overhead Flanking Bonus:
+                // Perpendicular breakout quickly leaves the cone and circumvents the vacuum stream
+                float lateralFactor = Mathf.Max(Mathf.Abs(Vector3.Dot(dir, _lastConeRight)), Mathf.Max(0f, Vector3.Dot(dir, _lastConeUp)));
+                score *= (1.0f + 0.65f * lateralFactor);
+
+                // 3. Tactical Forward-Flank Bonus:
+                // Heading forward-laterally into the player's blind spot allows circling and draining
+                float forwardFlank = -Vector3.Dot(dir, awayFromNozzle);
+                if (forwardFlank > 0.15f && distance > 2.5f)
+                {
+                    score *= 1.35f;
+                }
+
+                // 4. Immediate obstacle proximity penalty (< 1.2m)
+                if (distance < 1.2f)
+                {
+                    score *= 0.1f;
+                }
+
+                _lastEscapeRays.Add(new EscapeRaycastData
+                {
+                    Direction = dir,
+                    Distance = distance,
+                    HitObstacle = hit,
+                    HitPoint = hitPoint,
+                    Score = score
+                });
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestDir = dir;
+                }
+            }
+
+            _chosenEscapeDirection = bestDir;
+            return bestDir;
+        }
+
+        /// <summary>
+        /// Description: Hook called when a player actively vacuums this phantom with the mouth.
+        /// Passes player netId, nozzle position, cone orientation, drain rate, and pull multiplier for multiplayer stacking and struggle physics.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(uint sourceNetId, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount, float pullMultiplier = 1.0f)
+        {
+            _lastMouthSuctionTime = Time.time;
+
+            int streamIdx = -1;
+            for (int i = 0; i < _activeSuctionStreams.Count; i++)
+            {
+                if (_activeSuctionStreams[i].SourceNetId == sourceNetId)
+                {
+                    streamIdx = i;
+                    break;
+                }
+            }
+
+            SuctionStreamData stream = new SuctionStreamData
+            {
+                SourceNetId = sourceNetId,
+                NozzlePos = nozzlePos,
+                ConeForward = coneForward,
+                ConeUp = coneUp,
+                ConeRight = coneRight,
+                DrainRate = drainAmount,
+                PullMultiplier = Mathf.Max(0.1f, pullMultiplier),
+                LastUpdateTime = Time.time
+            };
+
+            if (streamIdx >= 0)
+            {
+                _activeSuctionStreams[streamIdx] = stream;
+            }
+            else
+            {
+                _activeSuctionStreams.Add(stream);
+            }
+
+            _lastSuctionNozzlePos = nozzlePos;
+            _lastConeForward = coneForward;
+            _lastConeUp = coneUp;
+            _lastConeRight = coneRight;
+
+            // Mouth suction always overrides other states (including Attacking, Chasing, Wandering, Idle)
+            if (_currentState != PhantomState.BeingVacuumed)
+            {
+                TransitionToState(PhantomState.BeingVacuumed);
+            }
+        }
+
+        /// <summary>
+        /// Description: Backward compatible overload for mouth suction application with netId.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(uint sourceNetId, Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount)
+        {
+            OnMouthSuctionApplied(sourceNetId, nozzlePos, coneForward, coneUp, coneRight, drainAmount, 1.0f);
+        }
+
+        /// <summary>
+        /// Description: Backward compatible overload for mouth suction application.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, Vector3 coneForward, Vector3 coneUp, Vector3 coneRight, float drainAmount)
+        {
+            OnMouthSuctionApplied(0, nozzlePos, coneForward, coneUp, coneRight, drainAmount);
+        }
+
+        /// <summary>
+        /// Description: Backward compatible overload for mouth suction application.
+        /// </summary>
+        public virtual void OnMouthSuctionApplied(Vector3 nozzlePos, float drainAmount)
+        {
+            Vector3 forward = (transform.position - nozzlePos).normalized;
+            Vector3 up = Vector3.up;
+            Vector3 right = Vector3.Cross(up, forward).normalized;
+            OnMouthSuctionApplied(0, nozzlePos, forward, up, right, drainAmount);
+        }
+
+        /// <summary>
+        /// Event invoked when this phantom is defeated or destroyed, notifying parent spawners.
+        /// </summary>
+        public event System.Action<PhantomBase> OnDefeated;
+
+        /// <summary>
+        /// Description: Authoritative hook called when the phantom's ectoplasm is completely depleted.
+        /// </summary>
+        protected virtual void OnPhantomCaptured()
+        {
+            Debug.Log($"<color=magenta>[PhantomBase]</color> '{gameObject.name}' was completely captured by mouth vacuum!");
+            if (!_isDefeatedInvoked)
+            {
+                _isDefeatedInvoked = true;
+                OnDefeated?.Invoke(this);
+            }
+            NetworkServer.Destroy(gameObject);
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (!_isDefeatedInvoked)
+            {
+                _isDefeatedInvoked = true;
+                OnDefeated?.Invoke(this);
+            }
+        }
+
+        /// <summary>
+        /// Description: Evaluates distance to all active players and applies proximity terror drain if line-of-sight is unobstructed.
+        /// Runs server-side. Zero allocation via PlayerV2_Controller.ActivePlayers registry.
+        /// </summary>
+        protected virtual void UpdateProximityDrain()
+        {
+            var activePlayers = PlayerV2_Controller.ActivePlayers;
+            if (activePlayers == null || activePlayers.Count == 0) return;
+
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+
+            for (int i = 0; i < activePlayers.Count; i++)
+            {
+                PlayerV2_Controller player = activePlayers[i];
+                if (player == null || !player.gameObject.activeInHierarchy) continue;
+
+                Vector3 playerTargetPos = player.LookAtPoint != null ? player.LookAtPoint.position : (player.WorldPosition + Vector3.up * 0.8f);
+                Vector3 toPlayer = playerTargetPos - eyeOrigin;
+                float distance = toPlayer.magnitude;
+
+                if (distance > _proximityDrainRadius || distance < 0.01f) continue;
+
+                // Line of sight check: solid obstacles block the terror aura!
+                if (Physics.Raycast(eyeOrigin, toPlayer.normalized, out RaycastHit hit, distance, _drainObstacleLayer, QueryTriggerInteraction.Ignore))
+                {
+                    if (!hit.transform.IsChildOf(player.transform))
+                    {
+                        // Player is safe behind cover
+                        continue;
+                    }
+                }
+
+                // Compute damage rate from distance falloff curve
+                float normalizedDist = Mathf.Clamp01(distance / _proximityDrainRadius);
+                float drainRate = _maxDrainRate * _drainFalloffCurve.Evaluate(normalizedDist);
+                float damageThisFrame = drainRate * Time.deltaTime;
+
+                if (damageThisFrame > 0f)
+                {
+                    PlayerHealth health = player.GetComponent<PlayerHealth>();
+                    if (health != null)
+                    {
+                        health.TakeDamage(damageThisFrame, Name);
+                    }
+                    else
+                    {
+                        Debug.LogError($"[PhantomBase] Critical Error: 'PlayerHealth' component is missing on player '{player.name}'! Fail loudly per workspace rules.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Description: Hook called when executing an attack on the target player.
+        /// </summary>
+        protected virtual void OnAttackPlayer(PlayerV2_Controller player)
+        {
+            if (player == null) return;
+            Debug.Log($"<color=red>[PhantomBase]</color> '{gameObject.name}' attacked player '{player.name}' dealing {_attackDamage} damage!");
+
+            PlayerHealth health = player.GetComponent<PlayerHealth>();
+            if (health != null)
+            {
+                health.TakeDamage(_attackDamage, Name);
+            }
+            else
+            {
+                Debug.LogError($"[PhantomBase] Critical Error: 'PlayerHealth' is missing on player '{player.name}' during attack! Fail loudly per workspace rules.");
+            }
+        }
+        #endregion
+
+#if UNITY_EDITOR
+        #region Editor Gizmos
+        protected virtual void OnDrawGizmosSelected()
+        {
+            // If PhantomGizmos component is attached, let it handle the dedicated visual rendering
+            if (GetComponent<PhantomGizmos>() != null) return;
+
+            Vector3 eyeOrigin = _lookAtPoint != null ? _lookAtPoint.position : (transform.position + Vector3.up * 1.5f);
+
+            // 0. Proximity Terror Drain Radius
+            if (_enableProximityDrain)
+            {
+                Gizmos.color = new Color(1f, 0f, 0.3f, 0.15f);
+                Gizmos.DrawWireSphere(transform.position, _proximityDrainRadius);
+            }
+
+            // 1. Detection sphere
+            Gizmos.color = new Color(1f, 1f, 0f, 0.25f);
+            Gizmos.DrawWireSphere(transform.position, _detectionRadius);
+
+            // 2. Vision cone
+            Vector3 forward = transform.forward;
+            Vector3 leftBoundary = Quaternion.AngleAxis(-_fieldOfViewAngle / 2f, Vector3.up) * forward;
+            Vector3 rightBoundary = Quaternion.AngleAxis(_fieldOfViewAngle / 2f, Vector3.up) * forward;
+
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(eyeOrigin, leftBoundary * _detectionRadius);
+            Gizmos.DrawRay(eyeOrigin, rightBoundary * _detectionRadius);
+
+            // 3. Last Known Position marker
+            if (_hasLastKnownPosition)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(_lastKnownPosition, 0.5f);
+                Gizmos.DrawLine(transform.position, _lastKnownPosition);
+            }
+
+            // 4. Target Chase Ray
+            if (_currentTarget != null)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(eyeOrigin, _currentTarget.WorldPosition + Vector3.up * 0.8f);
+            }
+
+            // 5. Intelligent Escape Raycasts
+            if (_lastEscapeRays != null && _lastEscapeRays.Count > 0)
+            {
+                Vector3 rayOrigin = transform.position + Vector3.up * 0.8f;
+                for (int i = 0; i < _lastEscapeRays.Count; i++)
+                {
+                    var r = _lastEscapeRays[i];
+                    if (r.HitObstacle)
+                    {
+                        Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.7f);
+                        Gizmos.DrawLine(rayOrigin, r.HitPoint);
+                        Gizmos.DrawWireSphere(r.HitPoint, 0.08f);
+                    }
+                    else
+                    {
+                        Gizmos.color = new Color(1f, 0.9f, 0.2f, 0.5f);
+                        Gizmos.DrawLine(rayOrigin, rayOrigin + r.Direction * r.Distance);
+                    }
+                }
+
+                if (_chosenEscapeDirection.sqrMagnitude > 0.01f)
+                {
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(rayOrigin, rayOrigin + _chosenEscapeDirection * 3.0f);
+                    Gizmos.DrawWireSphere(rayOrigin + _chosenEscapeDirection * 3.0f, 0.15f);
+                }
+            }
+        }
+        #endregion
+#endif
+    }
+}
+

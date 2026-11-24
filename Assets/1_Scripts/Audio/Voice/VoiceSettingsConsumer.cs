@@ -478,6 +478,9 @@ public class LocalLoopbackFilter : IAudioFilter
     private StreamedAudioSourceOutput _previewOutput;
     private bool _enabled = false;
 
+    /// <summary>
+    /// Turns the preview on or off; creates the 2D preview output on enable and disposes it on disable.
+    /// </summary>
     public bool Enabled
     {
         get => _enabled;
@@ -511,6 +514,9 @@ public class LocalLoopbackFilter : IAudioFilter
         }
     }
 
+    /// <summary>
+    /// Feeds the frame to the preview output when enabled, then passes it through unchanged.
+    /// </summary>
     public AudioFrame Run(AudioFrame frame)
     {
         if (_enabled && _previewOutput != null && frame.samples != null && frame.samples.Length > 0)
@@ -520,6 +526,9 @@ public class LocalLoopbackFilter : IAudioFilter
         return frame;
     }
 
+    /// <summary>
+    /// Releases the preview audio output.
+    /// </summary>
     public void Dispose()
     {
         if (_previewOutput != null)

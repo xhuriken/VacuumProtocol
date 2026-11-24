@@ -15,9 +15,6 @@ public class UICustomScrollView : MonoBehaviour
     [Tooltip("Role: The standard Unity ScrollRect.\nUse Case: Physics, masking, and dragging logic.\nJustification: Leveraging built-in uGUI stability.")]
     [SerializeField] private ScrollRect _scrollRect;
 
-    [Tooltip("Role: The background shape.\nUse Case: Premium vector background for the list.")]
-    [SerializeField] private Rectangle _background;
-
     [Header("Scrollbars")]
     [Tooltip("Role: Custom vertical scrollbar using Shapes.\nUse Case: Replaces Unity's native vertical scrollbar.")]
     [SerializeField] private UICustomScrollbar _verticalScrollbar;

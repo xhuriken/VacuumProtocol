@@ -20,15 +20,20 @@ public class LobbyCustomizationUI : MonoBehaviour
     public bool EnableDebugLogs = true;
 
     [Header("UI Tabs & Editor Integration")]
+    [Tooltip("Role: Tab controller of the customization menu.\nUse Case: Returns to the Appearance tab when the Texture Editor closes.")]
     public CustomizationMenuTabs MenuTabs;
+    [Tooltip("Role: Texture Editor panel used to draw custom eye textures.\nUse Case: Opened/closed by this UI; its save and close events are listened to.")]
     public TextureEditorPanelUI TextureEditor;
+    [Tooltip("Role: Index of the Appearance tab in MenuTabs.\nUse Case: Tab reopened after closing the Texture Editor.")]
     public int AppearanceTabIndex = 0;
 
     [Tooltip("Role: Elements to hide when the Texture Editor is open.\nUse Case: Fullscreen drawing.")]
     public GameObject[] ElementsToHideWhenDrawing;
 
     [Header("Custom Eyes UI")]
+    [Tooltip("Role: Prefab instantiated for each available eye texture.\nUse Case: Needs a RawImage child and a Button or UICustomButtonBase.")]
     public GameObject CustomEyeButtonPrefab;
+    [Tooltip("Role: Parent transform that receives the spawned eye buttons.")]
     public Transform CustomEyeListContainer;
     [Tooltip("Role: Base textures always available.\nUse Case: Default eyes like the Circle.")]
     public Texture2D[] DefaultEyeTextures;
@@ -63,6 +68,9 @@ public class LobbyCustomizationUI : MonoBehaviour
         SetLocalEyeTexture(newTexture);
     }
 
+    /// <summary>
+    /// Hides the elements listed in ElementsToHideWhenDrawing and shows the Texture Editor.
+    /// </summary>
     public void OpenTextureEditor()
     {
         if (ElementsToHideWhenDrawing != null)
@@ -71,7 +79,7 @@ public class LobbyCustomizationUI : MonoBehaviour
             {
                 if (element != null)
                 {
-                    if (EnableDebugLogs) Debug.Log($"[LobbyUI] Désactivation de : {element.name}");
+                    if (EnableDebugLogs) Debug.Log($"[LobbyUI] Hiding: {element.name}");
                     element.SetActive(false);
                 }
             }
@@ -79,6 +87,9 @@ public class LobbyCustomizationUI : MonoBehaviour
         if (TextureEditor != null) TextureEditor.gameObject.SetActive(true);
     }
 
+    /// <summary>
+    /// Restores the hidden elements, hides the Texture Editor and reopens the Appearance tab.
+    /// </summary>
     public void CloseTextureEditor()
     {
         if (ElementsToHideWhenDrawing != null)
@@ -87,7 +98,7 @@ public class LobbyCustomizationUI : MonoBehaviour
             {
                 if (element != null)
                 {
-                    if (EnableDebugLogs) Debug.Log($"[LobbyUI] Réactivation de : {element.name}");
+                    if (EnableDebugLogs) Debug.Log($"[LobbyUI] Showing: {element.name}");
                     element.SetActive(true);
                 }
             }
@@ -100,6 +111,9 @@ public class LobbyCustomizationUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Rebuilds the eye button list from the default textures and the custom textures saved on disk.
+    /// </summary>
     public void RefreshCustomEyeButtons()
     {
         if (CustomEyeButtonPrefab == null || CustomEyeListContainer == null) return;
@@ -154,6 +168,9 @@ public class LobbyCustomizationUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Stores the selected eye texture path in PlayerPrefs and applies the texture to the local/preview player.
+    /// </summary>
     public void SetLocalEyeTexture(Texture2D tex)
     {
         if (EnableDebugLogs) Debug.Log($"[LobbyUI] Setting local eye texture: {(tex != null ? tex.name : "null")}");

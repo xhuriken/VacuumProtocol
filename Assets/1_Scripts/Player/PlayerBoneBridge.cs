@@ -31,12 +31,17 @@ public class PlayerBoneBridge : MonoBehaviour
     // Cached lookup map of the Bone Bridge bones for fast name-based searches
     private Dictionary<string, Transform> _bridgeBonesMap = new Dictionary<string, Transform>();
 
+    /// <summary>
+    /// Description: Explicit pairing of a Bone Bridge bone name with a non-skinned visual transform.
+    /// Context: Edited in _customFollowers, auto-filled by PlayerBoneBridgeEditor.
+    /// Justification: Covers parts the automatic name matching misses, without reparenting them.
+    /// </summary>
     [System.Serializable]
     public struct CustomFollowMapping
     {
-        [Tooltip("Name of the bone in the Bone Bridge hierarchy to follow.")]
+        [Tooltip("Role: Name of the bone in the Bone Bridge hierarchy to follow.")]
         public string SourceBoneName;
-        [Tooltip("The visual transform that should follow the bone's position/rotation.")]
+        [Tooltip("Role: The visual transform that should follow the bone's position/rotation.")]
         public Transform VisualTransform;
     }
 
@@ -64,7 +69,7 @@ public class PlayerBoneBridge : MonoBehaviour
 
         foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
         {
-            // To support duplicates of same names in different paths safely, we log warnings, but keep the first/highest parent
+            // On duplicate names in different paths, the first one found (highest in the hierarchy) wins
             if (!string.IsNullOrEmpty(child.name) && !_bridgeBonesMap.ContainsKey(child.name))
             {
                 _bridgeBonesMap.Add(child.name, child);
@@ -233,9 +238,12 @@ public class PlayerBoneBridge : MonoBehaviour
 
     /// <summary>
     /// Description: Simple follower component added dynamically at runtime to sync non-skinned parts.
+    /// Context: Added by PerformRuntimeBinding to rigid visuals and custom followers.
+    /// Justification: Copies the bone pose in LateUpdate so it reads the final physics pose of the frame.
     /// </summary>
     private class RuntimeFollower : MonoBehaviour
     {
+        /// <summary>Bone Bridge transform whose world pose is copied.</summary>
         public Transform Target;
 
         private void LateUpdate()

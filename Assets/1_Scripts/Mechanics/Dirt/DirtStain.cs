@@ -1,5 +1,6 @@
 using UnityEngine;
 using Mirror;
+using VacuumProtocol.Core;
 
 namespace VacuumProtocol.Mechanics.Dirt
 {
@@ -9,7 +10,7 @@ namespace VacuumProtocol.Mechanics.Dirt
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     [RequireComponent(typeof(Collider))]
-    public class DirtStain : NetworkBehaviour
+    public class DirtStain : NetworkBehaviour, IVacuumable
     {
         [Header("Dirt Settings")]
         [Tooltip("La quantité totale de poussière/saleté que contient cette tache.")]
@@ -74,5 +75,23 @@ namespace VacuumProtocol.Mechanics.Dirt
             
             _spriteRenderer.sprite = DegradationSprites[index];
         }
+
+        #region IVacuumable Implementation
+        public Rigidbody Rigidbody => null;
+        public float PullResistance => 1.0f;
+
+        public void OnSuctionPulled(Vector3 nozzlePosition, Vector3 suctionDirection, float pullForce, float visibilityFactor)
+        {
+            // Dirt stains are static surfaces, no physics displacement
+        }
+
+        public void OnSuctionDrained(float drainAmount, NetworkConnectionToClient playerConnection)
+        {
+            // Dirt draining is routed via PlayerVacuumController CmdDrainDirt
+        }
+
+        public bool CanBeAbsorbed(float distanceToNozzle, float absorbThreshold) => false;
+        public void OnAbsorbed(PlayerVacuumController playerVacuum) { }
+        #endregion
     }
 }

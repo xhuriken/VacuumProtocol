@@ -85,6 +85,7 @@ public class MouthAnimator : NetworkBehaviour
     private float _syncTargetVolume = 0f;
     private float _lastSyncTime = 0f;
 
+    // Owner pushes its mic volume ~10 times per second; remote copies use it when UniVoice output is silent
     [Command(requiresAuthority = false)]
     private void CmdSyncVolume(float vol)
     {
@@ -255,7 +256,7 @@ public class MouthAnimator : NetworkBehaviour
                 }
             }
 
-            // Fallback réseau direct si UniVoice ne retourne rien
+            // Direct network fallback when UniVoice returns nothing
             if (targetVolume <= 0.01f)
             {
                 targetVolume = _syncTargetVolume;

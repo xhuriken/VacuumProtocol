@@ -61,12 +61,12 @@ public class MyNetworkManager : NetworkManager
                 }
                 else
                 {
-                    Debug.LogError("[MyNetworkManager] GetNextSpawnPoint a retourné null ! (Aucun point de spawn configuré dans MapSpawnManager).");
+                    Debug.LogError("[MyNetworkManager] GetNextSpawnPoint returned null! (No spawn point configured in MapSpawnManager).");
                 }
             }
             else
             {
-                Debug.LogError("[MyNetworkManager] Aucun MapSpawnManager trouvé dans la scène de jeu !");
+                Debug.LogError("[MyNetworkManager] No MapSpawnManager found in the gameplay scene!");
             }
 
             GameObject gamePlayerInstance = Instantiate(_gamePlayerPrefab, spawnPosition, spawnRotation);

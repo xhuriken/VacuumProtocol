@@ -7,7 +7,7 @@ namespace Mirror
 {
     [CustomEditor(typeof(NetworkBehaviour), true)]
     [CanEditMultipleObjects]
-    public class NetworkBehaviourInspector : Editor
+    public class NetworkBehaviourInspector : Sirenix.OdinInspector.Editor.OdinEditor
     {
         bool syncsAnything;
         SyncObjectCollectionsDrawer syncObjectCollectionsDrawer;
@@ -41,8 +41,9 @@ namespace Mirror
             return ((NetworkBehaviour)serializedObject.targetObject).HasSyncObjects();
         }
 
-        void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             // sometimes target is null. just return early.
             if (target == null) return;
 

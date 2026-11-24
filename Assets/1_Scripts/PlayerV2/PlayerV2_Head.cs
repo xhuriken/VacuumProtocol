@@ -2,51 +2,55 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// Description: Gère le mouvement physique du cou et de la tête comme un ressort de torsion.
-/// Context: Attaché au joueur (PlayerV2), s'intègre avec le script de Look pour piloter le pitch.
-/// Justification: Permet à la tête d'être affectée par la physique (forces externes) tout en suivant la direction du regard du joueur.
+/// Description: Drives the physical neck and head motion as a torsion spring.
+/// Context: Attached to the player (PlayerV2); works with the Look script, which drives the pitch.
+/// Justification: Lets the head be affected by physics (external forces) while still following the player's look direction.
 /// </summary>
 public class PlayerV2_Head : NetworkBehaviour
 {
     [Header("References")]
-    [Tooltip("Role: Liste des articulations du cou jusqu'à la tête.\nUse Case: Répartir le pitch équitablement sur l'ensemble.")]
+    [Tooltip("Role: Neck joints, from the base up to the head.\nUse Case: Spreads the pitch evenly across the whole chain.")]
     public ConfigurableJoint[] NeckJoints;
 
     [Header("Alignment Settings (Physics)")]
+    [Tooltip("Role: Enables the alignment torque that keeps the head aligned with the torso yaw and target pitch.")]
     public bool UseAlignmentForce = true;
-    [Tooltip("Force de rotation pour garder la tête alignée sur le torse. Même principe que les bras.")]
+    [Tooltip("Role: Rotation torque keeping the head aligned with the torso. Same principle as the arms.")]
     public float HeadAlignmentTorque = 1500f;
+    [Tooltip("Role: Angular damping applied by the head alignment torque.")]
     public float HeadAlignmentDamping = 100f;
 
     private PlayerV2_Controller _controller;
     private Rigidbody _headRb;
 
     [Header("Pitch Scaling")]
-    [Tooltip("Le pourcentage de l'input de pitch que la tête physique va suivre (ex: 0.7 = 70%).")]
+    [Tooltip("Role: Fraction of the pitch input followed by the physical head (e.g. 0.7 = 70%).")]
     public float PitchMultiplier = 0.7f;
 
+    [Tooltip("Role: Scaled head pitch target, synchronized so remote clients apply it to their neck joints.")]
     [SyncVar(hook = nameof(OnPitchChanged))]
     public float CurrentTargetPitch;
 
     private float _lastSentPitch = -999f;
 
     [Header("Spring Settings (Muscles)")]
-    [Tooltip("Force de rotation qui pousse la tête vers la cible. Haut = Muscle fort.")]
+    [Tooltip("Role: Rotation spring pushing the head toward the target. Higher = stronger muscle.")]
     public float SpringForce = 5000f;
-    [Tooltip("Amortissement en rotation. Haut = Moins de balancement.")]
+    [Tooltip("Role: Rotation damping. Higher = less sway.")]
     public float SpringDamper = 500f;
+    [Tooltip("Role: Maximum force of the neck joint drives (rotation and vertical).")]
     public float MaxForce = 10000f;
 
     [Header("Spring Settings (Vertical Boing)")]
-    [Tooltip("Force du ressort vertical (Y). Plus c'est bas, plus la tête rebondit (Boing-Boing).")]
+    [Tooltip("Role: Vertical (Y) spring force. The lower it is, the more the head bounces (boing-boing).")]
     public float YSpringForce = 1500f;
-    [Tooltip("Amortissement vertical. Empêche la tête de rebondir comme un yoyo infini.")]
+    [Tooltip("Role: Vertical damping. Keeps the head from bouncing like an endless yo-yo.")]
     public float YSpringDamper = 50f;
-    [Tooltip("Distance maximale (en mètres) dont le cou peut s'étirer ou s'écraser.")]
+    [Tooltip("Role: Maximum distance (in meters) the neck can stretch or compress.")]
     public float YLimit = 0.15f;
 
     [Header("Limits & Tracking")]
-    [Tooltip("Limite d'angle pour chaque os (en degrés)")]
+    [Tooltip("Role: Angle limit for each bone (in degrees).")]
     public float JointAngleLimit = 30f;
 
     private void Awake()
@@ -57,7 +61,7 @@ public class PlayerV2_Head : NetworkBehaviour
 
     private void Start()
     {
-        // Configure automatiquement les ressorts des joints au démarrage
+        // Auto-configure the joint springs at startup
         if (NeckJoints != null && NeckJoints.Length > 0)
         {
             JointDrive drive = new JointDrive
@@ -83,23 +87,23 @@ public class PlayerV2_Head : NetworkBehaviour
             {
                 if (joint != null)
                 {
-                    // CRITICAL FIX: Empêche la tête/le cou de tirer sur le Torso et de faire dévier le robot
+                    // CRITICAL FIX: keeps the head/neck from pulling on the Torso and making the robot drift
                     joint.connectedMassScale = 0.00001f;
 
-                    // On utilise SlerpDrive pour un comportement de ressort sur les 3 axes
+                    // SlerpDrive gives spring behaviour on all 3 axes
                     joint.rotationDriveMode = RotationDriveMode.Slerp;
                     joint.slerpDrive = drive;
 
-                    // Configuration du ressort vertical (Axe Y local)
+                    // Vertical spring setup (local Y axis)
                     joint.yDrive = yDrive;
                     joint.linearLimit = linearLimit;
 
-                    // Débloque l'axe Y pour permettre le rebond (Boing-Boing) et le Crouch
+                    // Unlock the Y axis to allow the bounce (boing-boing) and crouch
                     joint.xMotion = ConfigurableJointMotion.Locked;
                     joint.yMotion = ConfigurableJointMotion.Limited;
                     joint.zMotion = ConfigurableJointMotion.Locked;
 
-                    // Limite les rotations pour éviter que le cou se torde dans tous les sens
+                    // Limit rotations so the neck does not twist in every direction
                     joint.angularXMotion = ConfigurableJointMotion.Limited;
                     joint.angularYMotion = ConfigurableJointMotion.Locked;
                     joint.angularZMotion = ConfigurableJointMotion.Locked;
@@ -107,7 +111,7 @@ public class PlayerV2_Head : NetworkBehaviour
                     joint.lowAngularXLimit = new SoftJointLimit { limit = -JointAngleLimit };
                     joint.highAngularXLimit = limit;
 
-                    // Empêche les deux os connectés de se repousser physiquement (peut causer l'étirement)
+                    // Keep the two connected bones from pushing each other apart (can cause stretching)
                     joint.enableCollision = false;
                 }
             }
@@ -121,9 +125,9 @@ public class PlayerV2_Head : NetworkBehaviour
     }
 
     /// <summary>
-    /// Répartit le pitch désiré sur tous les os du cou de manière équitable.
+    /// Spreads the desired pitch evenly across all neck bones (owner only: predicted locally, then sent to the server).
     /// </summary>
-    /// <param name="targetPitch">L'angle total de pitch (haut/bas) désiré</param>
+    /// <param name="targetPitch">Total desired pitch angle (up/down).</param>
     public void SetTargetPitch(float targetPitch)
     {
         if (NeckJoints == null || NeckJoints.Length == 0) return;
@@ -132,11 +136,11 @@ public class PlayerV2_Head : NetworkBehaviour
 
         if (isOwned)
         {
-            // Appliquer localement immédiatement (Prédiction)
+            // Apply locally right away (prediction)
             CurrentTargetPitch = newPitch;
             ApplyPitchToJoints(newPitch);
 
-            // N'envoie la commande que si la différence est notable (0.5 degré)
+            // Only send the command when the change is noticeable (0.5 degree)
             if (Mathf.Abs(newPitch - _lastSentPitch) > 0.5f)
             {
                 CmdSetPitch(newPitch);
@@ -157,11 +161,11 @@ public class PlayerV2_Head : NetworkBehaviour
     {
         if (NeckJoints == null || NeckJoints.Length == 0) return;
 
-        // Diviser l'angle par le nombre d'articulations pour une courbe fluide
+        // Divide the angle by the joint count for a smooth curve
         float pitchPerJoint = pitch / NeckJoints.Length;
 
-        // Attention: ConfigurableJoint.targetRotation est inversé dans Unity par rapport au repère local
-        // On inverse le signe ici pour corriger le mouvement de la souris.
+        // Warning: in Unity, ConfigurableJoint.targetRotation is inverted relative to the local frame.
+        // The sign is flipped here to correct the mouse motion.
         Quaternion targetRot = Quaternion.Euler(-pitchPerJoint, 0f, 0f);
 
         foreach (var joint in NeckJoints)
@@ -174,14 +178,14 @@ public class PlayerV2_Head : NetworkBehaviour
     }
 
     /// <summary>
-    /// Règle la position de repos du ressort vertical pour chaque articulation (utilisé pour s'accroupir).
+    /// Sets the rest position of the vertical spring on every joint (used for crouching).
     /// </summary>
-    /// <param name="offsetY">Le décalage vertical total souhaité (ex: -0.3m pour baisser la tête)</param>
+    /// <param name="offsetY">Total desired vertical offset (e.g. -0.3 m to lower the head).</param>
     public void SetHeadHeightOffset(float offsetY)
     {
         if (NeckJoints == null || NeckJoints.Length == 0) return;
 
-        // Répartir le décalage équitablement sur chaque articulation
+        // Spread the offset evenly across every joint
         float offsetPerJoint = offsetY / NeckJoints.Length;
         Vector3 targetPos = new Vector3(0f, offsetPerJoint, 0f);
 
@@ -198,11 +202,10 @@ public class PlayerV2_Head : NetworkBehaviour
     {
         if (!isOwned || !UseAlignmentForce || _headRb == null || _controller == null || _controller.TorsoRigidbody == null) return;
 
-        // La cible: Rotation du Torso (Yaw) + Pitch désiré (X)
+        // Target: Torso rotation (yaw) + desired pitch (X)
         Quaternion torsoRot = _controller.TorsoRigidbody.rotation;
         Quaternion targetRotation = torsoRot * Quaternion.Euler(CurrentTargetPitch, 0f, 0f);
 
-        // Calcul de la différence de rotation
         Quaternion deltaRotation = targetRotation * Quaternion.Inverse(_headRb.rotation);
         deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
 
@@ -210,7 +213,6 @@ public class PlayerV2_Head : NetworkBehaviour
         {
             if (angle > 180f) angle -= 360f;
 
-            // Application de la force (torque)
             Vector3 alignmentTorque = axis * (angle * HeadAlignmentTorque * Mathf.Deg2Rad);
             Vector3 rotationalDamping = -_headRb.angularVelocity * HeadAlignmentDamping;
             Vector3 netTorque = (alignmentTorque + rotationalDamping) * _headRb.mass;

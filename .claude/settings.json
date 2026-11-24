@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "UNITY_NO_BANNER": "1",
+    "UNITY_NO_PAGER": "1"
+  },
+  "extraKnownMarketplaces": {
+    "unity-agent-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "Unity-Technologies/unity-agent-plugin"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "unity@unity-agent-plugin": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(unity status:*)",
+      "Bash(unity list:*)",
+      "Bash(unity commands:*)",
+      "Bash(unity recompile:*)",
+      "Bash(unity test:*)",
+      "Bash(unity docs:*)",
+      "Bash(unity doctor:*)",
+      "PowerShell(unity status:*)",
+      "PowerShell(unity list:*)",
+      "PowerShell(unity commands:*)",
+      "PowerShell(unity recompile:*)",
+      "PowerShell(unity test:*)",
+      "PowerShell(unity docs:*)",
+      "PowerShell(unity doctor:*)"
+    ]
+  }
+}

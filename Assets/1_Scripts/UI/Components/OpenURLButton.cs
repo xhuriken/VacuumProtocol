@@ -15,6 +15,7 @@ public class OpenURLButton : MonoBehaviour
     private string _url = "https://";
 
     [Header("Debug")]
+    [Tooltip("Role: Enables debug logs when the URL is opened.")]
     [SerializeField]
     private bool _enableDebugLogs = false;
 

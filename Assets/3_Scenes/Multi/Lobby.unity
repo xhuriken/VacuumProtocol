@@ -2594,8 +2594,8 @@ MonoBehaviour:
   stencilReadMask: 255
   stencilWriteMask: 255
   pivot: 1
-  width: 886.1001
-  height: 886.1001
+  width: -40
+  height: -40
   type: 3
   cornerRadiusMode: 0
   cornerRadii: {x: 4.88, y: 4.88, z: 4.88, w: 4.88}
@@ -9260,8 +9260,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 450, y: -686.8}
-  m_SizeDelta: {x: 900, y: 0}
+  m_AnchoredPosition: {x: 392.15, y: -570}
+  m_SizeDelta: {x: 784.3, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &856230714
 MonoBehaviour:
@@ -11974,8 +11974,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 450, y: -214.79999}
-  m_SizeDelta: {x: 900, y: 0}
+  m_AnchoredPosition: {x: 392.15, y: -98}
+  m_SizeDelta: {x: 784.3, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1139274953
 MonoBehaviour:
@@ -19199,8 +19199,8 @@ MonoBehaviour:
   stencilReadMask: 255
   stencilWriteMask: 255
   pivot: 1
-  width: 926.1001
-  height: 1036
+  width: 0
+  height: 389.79996
   type: 2
   cornerRadiusMode: 0
   cornerRadii: {x: 0.25, y: 0.25, z: 0.25, w: 0.25}
@@ -23512,6 +23512,9 @@ MonoBehaviour:
   MaxSpeed: 10
   Acceleration: 10
   Deceleration: 15
+  SprintSpeedMultiplier: 1.5
+  CrouchSpeedMultiplier: 0.5
+  CrouchHeadOffset: -0.3
   JumpForce: 9
   FallGravityMultiplier: 5
   WheelRadius: 0.15
@@ -24775,6 +24778,7 @@ MonoBehaviour:
   MinPitch: -85
   MaxPitch: 85
   HeadMovementBlend: 0.05
+  SyncPitch: 0
 --- !u!4 &2144708687214663554
 Transform:
   m_ObjectHideFlags: 0
@@ -25429,6 +25433,7 @@ MonoBehaviour:
   _shrinkLerpSpeed: 10
   _vortexTorque: 0
   _centripetalForce: 0
+  DirtDrainRatePerSecond: 500
   _drawGizmos: 1
 --- !u!1 &2930792642299867338
 GameObject:
@@ -25512,6 +25517,10 @@ MonoBehaviour:
   _rotationSpeed: 8
   _pupilRotationSpeed: 12
   _enableDebugLogs: 0
+  _enableSaccades: 1
+  _saccadeRadius: 1.5
+  _saccadeInterval: {x: 0.3, y: 2}
+  _headMovementThreshold: 30
 --- !u!1 &3180910604802074058
 GameObject:
   m_ObjectHideFlags: 0
@@ -26517,6 +26526,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  ArcHeight: 1
   ExtendForce: 350
   ExtendDamping: 12
   AlignmentTorque: 20
@@ -26527,6 +26537,9 @@ MonoBehaviour:
   HandRotationOffset: {x: 0, y: 0, z: 0}
   ShoulderRotateDuration: 0.5
   ShoulderEase: 27
+  RetractedSegmentsOffset: 1
+  RetractedSegmentsCount: 2
+  RetractionDuration: 0.25
   LockAngularX: 1
   EnableJointProjection: 1
   ShoulderExtendSpringForce: 1500
@@ -27237,6 +27250,10 @@ MonoBehaviour:
   _rotationSpeed: 6
   _pupilRotationSpeed: 12
   _enableDebugLogs: 0
+  _enableSaccades: 1
+  _saccadeRadius: 1.5
+  _saccadeInterval: {x: 0.3, y: 2}
+  _headMovementThreshold: 30
 --- !u!1 &5397057227749257311
 GameObject:
   m_ObjectHideFlags: 0
@@ -28073,6 +28090,7 @@ MonoBehaviour:
   _priorityLevel: 1
   _lookAtPoint: {fileID: 0}
   ConnectionId: -1
+  IsCrouching: 0
   HipsRigidbody: {fileID: 7765377112877572872}
   TorsoRigidbody: {fileID: 3148835304755907010}
   CameraTransform: {fileID: 0}
@@ -28110,6 +28128,9 @@ MonoBehaviour:
   SpringForce: 5000
   SpringDamper: 500
   MaxForce: 10000
+  YSpringForce: 1500
+  YSpringDamper: 50
+  YLimit: 0.15
   JointAngleLimit: 30
 --- !u!153 &6724425870951375933
 ConfigurableJoint:

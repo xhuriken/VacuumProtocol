@@ -61,12 +61,12 @@ public class WheelSteering : NetworkBehaviour
             }
         }
 
-        // On calcule la distance parcourue à cette frame sur le plan XZ
+        // Distance travelled this frame on the XZ plane
         float distanceMoved = movement.magnitude;
 
-        // L'interpolation se fait en fonction de la distance, PAS du temps !
-        // Comme les vraies roulettes de bureau, si on ne bouge pas, la roulette ne pivote pas.
-        // (On multiplie la speed pour qu'elle réagisse bien sur de courtes distances)
+        // Interpolation is driven by distance, NOT time:
+        // like real office-chair casters, a wheel that does not move does not pivot.
+        // (Speed is multiplied so it reacts well over short distances.)
         _currentSteeringAngle = Mathf.LerpAngle(_currentSteeringAngle, _targetSteeringAngle, _steeringSpeed * distanceMoved * 2f);
 
         for (int i = 0; i < _wheels.Count; i++)

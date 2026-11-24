@@ -31,11 +31,19 @@ public class PlayerCustomization : NetworkBehaviour
     [Tooltip("Role: Enable verbose logging.\nUse Case: Debugging customization.\nJustification: Used to trace whether colors are failing to load from PlayerPrefs or failing to sync over the network.")]
     public bool EnableDebugLogs = true;
 
+    /// <summary>
+    /// Description: One selectable visual style (name, UI color, body texture).
+    /// Context: Listed in VisualPresets and picked by index from the customization UI.
+    /// Justification: Lets a single synced index drive both the UI swatch and the applied body texture.
+    /// </summary>
     [System.Serializable]
     public struct PlayerVisualPreset
     {
+        [Tooltip("Role: Display name of the preset.")]
         public string PresetName;
+        [Tooltip("Role: Swatch color shown on the UI button (not applied to the material).")]
         public Color BaseColor;
+        [Tooltip("Role: Texture applied to the body material when this preset is selected.")]
         public Texture BaseMap;
     }
 
@@ -45,9 +53,11 @@ public class PlayerCustomization : NetworkBehaviour
 
     // SyncVars automatically sync from the server to all clients. 
     // When they change, they trigger the hook methods.
+    [Tooltip("Role: Synced index into VisualPresets currently applied to this player.")]
     [SyncVar(hook = nameof(OnVisualIndexChanged))]
     public int PlayerVisualIndex = 0;
 
+    [Tooltip("Role: Synced musical root note fed to the vacuum audio synthesis.")]
     [SyncVar(hook = nameof(OnNoteChanged))]
     public MusicalNote PlayerRootNote = MusicalNote.C;
 
@@ -329,6 +339,9 @@ public class PlayerCustomization : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Description: Universal entry point to preview the vacuum sound from the lobby (networked or offline dummy).
+    /// </summary>
     public void RequestVacuumTest(bool isVacuuming)
     {
         if (EnableDebugLogs) Debug.Log($"[PlayerCustomization] RequestVacuumTest called ({isVacuuming}). NetworkActive={NetworkClient.active}, isOwned={isOwned}, IsLobbyDummy={IsLobbyDummy}");
