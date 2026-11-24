@@ -64,9 +64,19 @@ public class SettingsManager : MonoBehaviour
     /// <summary>
     /// Description: Gets the current active settings data.
     /// Context: Used by consumers to read the current state of settings.
-    /// Justification: Exposes the SSOT (Single Source of Truth) read-only so external scripts cannot replace the instance, only mutate it through UpdateSettings.
+    /// Justification: Exposes the SSOT (Single Source of Truth) read-only so external scripts cannot replace the instance, only mutate it through UpdateSettings. Loads settings on demand if not yet loaded.
     /// </summary>
-    public SettingsData CurrentSettings => _currentSettings;
+    public SettingsData CurrentSettings
+    {
+        get
+        {
+            if (_currentSettings == null)
+            {
+                LoadSettings();
+            }
+            return _currentSettings;
+        }
+    }
 
     private void Awake()
     {
@@ -113,15 +123,19 @@ public class SettingsManager : MonoBehaviour
     /// <summary>
     /// Description: Updates a setting and notifies all registered consumers.
     /// Context: Called by UI presenters when a user changes a setting via slider/toggle.
-    /// Justification: Takes a lambda to mutate data, ensuring that every modification triggers a save and notifies all listeners synchronously.
+    /// Justification: Takes a lambda to mutate data, and notifies all listeners synchronously. Skips disk write if saveToDisk is false (e.g. while dragging sliders).
     /// </summary>
     /// <param name="updateAction">Lambda mutating the settings data.</param>
-    public void UpdateSettings(Action<SettingsData> updateAction)
+    /// <param name="saveToDisk">If true, immediately flushes to PlayerPrefs disk storage.</param>
+    public void UpdateSettings(Action<SettingsData> updateAction, bool saveToDisk = true)
     {
         if (updateAction == null) return;
 
         updateAction(_currentSettings);
-        SaveSettings();
+        if (saveToDisk)
+        {
+            SaveSettings();
+        }
 
         // Notify dynamic event subscribers
         OnSettingsChanged?.Invoke(_currentSettings);
@@ -151,6 +165,7 @@ public class SettingsManager : MonoBehaviour
         if (string.IsNullOrEmpty(json))
         {
             _currentSettings = new SettingsData();
+            Debug.Log($"[SettingsManager] LoadSettings -> Aucun setting sauvegardé trouvé, utilisation des valeurs par défaut (FOV={_currentSettings.FieldOfView}, Gizmos={_currentSettings.ShowDebugGizmos}).");
             
             // Fallback to active microphone if available
             if (Adrenak.UniMic.Mic.AvailableDevices != null && Adrenak.UniMic.Mic.AvailableDevices.Count > 0)
@@ -163,6 +178,7 @@ public class SettingsManager : MonoBehaviour
             try
             {
                 _currentSettings = JsonUtility.FromJson<SettingsData>(json);
+                Debug.Log($"[SettingsManager] LoadSettings -> Chargé depuis le disque : FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
             }
             catch (Exception ex)
             {
@@ -173,9 +189,9 @@ public class SettingsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Description: Saves settings data to PlayerPrefs memory.
+    /// Description: Saves settings data to PlayerPrefs memory and disk.
     /// Context: Called automatically by UpdateSettings.
-    /// Justification: Serializes the current state into JSON and stores it in Unity's PlayerPrefs. Note: Does not force disk write immediately to save performance.
+    /// Justification: Serializes the current state into JSON and flushes it immediately to disk so settings persist across scene loads and restarts.
     /// </summary>
     public void SaveSettings()
     {
@@ -185,6 +201,8 @@ public class SettingsManager : MonoBehaviour
         {
             string json = JsonUtility.ToJson(_currentSettings);
             PlayerPrefs.SetString("UserSettingsData", json);
+            PlayerPrefs.Save();
+            Debug.Log($"[SettingsManager] SaveSettings -> Enregistré sur disque (PlayerPrefs.Save) : FOV={_currentSettings.FieldOfView} | Gizmos={_currentSettings.ShowDebugGizmos}");
         }
         catch (Exception ex)
         {

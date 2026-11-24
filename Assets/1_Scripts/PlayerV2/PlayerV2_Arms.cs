@@ -32,8 +32,10 @@ public class PlayerV2_Arms : NetworkBehaviour
     public float ForwardOffset = 0f;
     [Tooltip("Role: Vertical offset of the reach target along the camera up axis.")]
     public float VerticalOffset = -0.1f;
-    [Tooltip("Role: Euler offset applied to the hand target rotation.")]
-    public Vector3 HandRotationOffset = Vector3.zero;
+    [Tooltip("Role: Euler offset applied to the left hand target rotation.")]
+    [UnityEngine.Serialization.FormerlySerializedAs("HandRotationOffset")] public Vector3 LeftHandRotationOffset = Vector3.zero;
+    [Tooltip("Role: Euler offset applied to the right hand target rotation.")]
+    public Vector3 RightHandRotationOffset = Vector3.zero;
 
     [Header("Animation")]
     [Tooltip("Role: Duration of the shoulder rotation.\nUse Case: Animation.")]
@@ -69,9 +71,9 @@ public class PlayerV2_Arms : NetworkBehaviour
     [Tooltip("Role: Elbow/wrist joint drive damper while the arm is extended.")]
     public float ElbowWristExtendDamping = 20f;
     [Tooltip("Role: Elbow/wrist joint drive spring while the arm is at rest.")]
-    public float ElbowWristRestSpringForce = 150f;
+    public float ElbowWristRestSpringForce = 350f;
     [Tooltip("Role: Elbow/wrist joint drive damper while the arm is at rest.")]
-    public float ElbowWristRestDamping = 15f;
+    public float ElbowWristRestDamping = 25f;
 
     [Tooltip("Role: Angular damping applied to every arm rigidbody.")]
     public float ArmAngularDrag = 15f;
@@ -325,8 +327,9 @@ public class PlayerV2_Arms : NetworkBehaviour
                     Vector3 torsoForward = _controller.TorsoRigidbody.transform.forward;
 
                     Vector3 p0 = armRootPos;
-                    // Control point 1 pushes along the torso axis (creates the vertical / pitch curve)
-                    Vector3 p1 = p0 + torsoForward * (armLength * ArcHeight);
+                    // Control point 1 blends the torso axis with the direct line to the target (avoids a sideways arc drifting left/right)
+                    Vector3 directToTarget = (finalTargetPosition - p0).normalized;
+                    Vector3 p1 = p0 + Vector3.Slerp(torsoForward, directToTarget, 0.45f) * (armLength * ArcHeight);
                     // Control point 2 pulls back from the target along the look axis
                     Vector3 p2 = finalTargetPosition - forward * (armLength * ArcHeight);
                     Vector3 p3 = finalTargetPosition;
@@ -348,8 +351,9 @@ public class PlayerV2_Arms : NetworkBehaviour
                 }
             }
 
-            // Hand rotation alignment
-            Quaternion targetRotation = Quaternion.LookRotation(forward, up) * Quaternion.Euler(HandRotationOffset);
+            // Rotation aligned on the hand only (avoids torque fights and removes jitter)
+            Vector3 handOffset = isLeft ? LeftHandRotationOffset : RightHandRotationOffset;
+            Quaternion targetRotation = Quaternion.LookRotation(forward, up) * Quaternion.Euler(handOffset);
             Quaternion deltaRotation = targetRotation * Quaternion.Inverse(handRb.rotation);
             deltaRotation.ToAngleAxis(out float angle, out Vector3 axis);
 
@@ -486,7 +490,7 @@ public class PlayerV2_Arms : NetworkBehaviour
                 joint.connectedMassScale = 0.00001f;
             }
 
-            if (LockAngularX) 
+            if (LockAngularX)
             {
                 bool isHand = false;
                 if (_leftElbowWristJoints.Count > 0 && joint == _leftElbowWristJoints[_leftElbowWristJoints.Count - 1]) isHand = true;

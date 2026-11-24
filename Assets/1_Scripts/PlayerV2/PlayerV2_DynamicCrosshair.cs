@@ -43,6 +43,16 @@ public class PlayerV2_DynamicCrosshair : MonoBehaviour
     {
         if (Player == null || MainCamera == null) return;
 
+        // Hide the dynamic crosshair while the player is paused (Escape menu)
+        if (Player.IsPaused)
+        {
+            if (CameraTargetCrosshair != null && CameraTargetCrosshair.gameObject.activeSelf)
+            {
+                CameraTargetCrosshair.gameObject.SetActive(false);
+            }
+            return;
+        }
+
         // 1. Desired position (camera)
         if (CameraTargetCrosshair != null && Player.CameraTransform != null)
         {

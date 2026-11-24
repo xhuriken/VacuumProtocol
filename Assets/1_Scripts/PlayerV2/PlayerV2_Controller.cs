@@ -164,6 +164,55 @@ public class PlayerV2_Controller : NetworkBehaviour, IEntity
         ActivePlayers.Remove(this);
     }
 
+    /// <summary>
+    /// Description: The player controller owned by this client.
+    /// Context: Set in OnStartLocalPlayer, cleared on destroy.
+    /// Justification: Gives local-only systems (pause menu, HUD) direct access to the local robot without scene searches.
+    /// </summary>
+    public static PlayerV2_Controller LocalInstance { get; private set; }
+
+    /// <summary>Registers this controller as the local player instance.</summary>
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        LocalInstance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (LocalInstance == this)
+        {
+            LocalInstance = null;
+        }
+    }
+
+    /// <summary>True while the local player is paused (Escape menu open).</summary>
+    public bool IsPaused { get; private set; }
+
+    /// <summary>
+    /// Description: Pauses or resumes the local player: blocks input and puts the eyes in their paused state.
+    /// </summary>
+    public void SetPaused(bool isPaused)
+    {
+        IsPaused = isPaused;
+
+        PlayerInputHandler input = GetComponent<PlayerInputHandler>();
+        if (input == null)
+        {
+            Debug.LogError($"[PlayerV2_Controller] '{name}' has no PlayerInputHandler: input cannot be blocked while paused.", this);
+        }
+        else
+        {
+            input.IsInputBlocked = isPaused;
+        }
+
+        Eye[] eyes = GetComponentsInChildren<Eye>();
+        for (int i = 0; i < eyes.Length; i++)
+        {
+            eyes[i].SetPaused(isPaused);
+        }
+    }
+
     private void Start()
     {
         if (HipsRigidbody == null || TorsoRigidbody == null)

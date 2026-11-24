@@ -31,23 +31,37 @@ public class UINavigationGroup : MonoBehaviour
     /// Context: Lifecycle event.
     /// Justification: Sets up the initial clean state of the main menu.
     /// </summary>
-    private void Start()
+    /// <summary>
+    /// Description: Réinitialise la navigation au panel par défaut et masque tous les sous-panels.
+    /// </summary>
+    public void ResetToDefault()
     {
-        // Enforce instant hiding on all panels except the default one on start
+        _history.Clear();
+
+        if (_currentRightPanel != null)
+        {
+            _currentRightPanel.Hide();
+            _currentRightPanel = null;
+        }
+
         foreach (var panel in _panels)
         {
             if (panel != null && panel != _defaultPanel)
             {
-                // Instantly deactivate non-default panels to prevent visual overlays
                 panel.Hide();
             }
         }
 
         if (_defaultPanel != null)
         {
-            // Open the main menu panel without adding it to history
-            OpenPanel(_defaultPanel, false);
+            _currentLeftPanel = _defaultPanel;
+            _defaultPanel.Show();
         }
+    }
+
+    private void Start()
+    {
+        ResetToDefault();
     }
 
     /// <summary>
@@ -139,6 +153,11 @@ public class UINavigationGroup : MonoBehaviour
             _currentRightPanel.Show();
         }
     }
+
+    /// <summary>
+    /// Description: True if there is back navigation history or an open right panel.
+    /// </summary>
+    public bool CanGoBack => _history.Count > 0 || _currentRightPanel != null;
 
     /// <summary>
     /// Description: Hides the active panel and displays the previous panel in the history stack.

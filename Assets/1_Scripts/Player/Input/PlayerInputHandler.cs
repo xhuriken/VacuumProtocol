@@ -9,26 +9,39 @@ using UnityEngine.InputSystem;
 /// </summary>
     public class PlayerInputHandler : NetworkBehaviour
     {
+        /// <summary>
+        /// Description: Active ou désactive le blocage global des inputs (ex: menu pause).
+        /// </summary>
+        public bool IsInputBlocked { get; set; } = false;
+
+        private Vector2 _rawMoveInput;
+        private Vector2 _rawLookInput;
+        private bool _rawIsSprinting;
+        private bool _rawIsCrouching;
+        private bool _rawJumpTriggered;
+        private bool _rawLeftArmPressed;
+        private bool _rawRightArmPressed;
+
         /// <summary>Gets the continuous movement vector (X, Y) from WASD or left stick.</summary>
-        public Vector2 MoveInput { get; private set; }
+        public Vector2 MoveInput => IsInputBlocked ? Vector2.zero : _rawMoveInput;
         
         /// <summary>Gets the continuous look delta from mouse movement or right stick.</summary>
-        public Vector2 LookInput { get; private set; }
+        public Vector2 LookInput => IsInputBlocked ? Vector2.zero : _rawLookInput;
         
         /// <summary>Gets a value indicating whether the sprint button is currently held down.</summary>
-        public bool IsSprinting { get; private set; }
+        public bool IsSprinting => !IsInputBlocked && _rawIsSprinting;
         
         /// <summary>Gets a value indicating whether the crouch button is currently held down.</summary>
-        public bool IsCrouching { get; private set; }
+        public bool IsCrouching => !IsInputBlocked && _rawIsCrouching;
         
         /// <summary>Gets a value indicating whether the jump button was pressed this frame.</summary>
-        public bool JumpTriggered { get; private set; }
+        public bool JumpTriggered => !IsInputBlocked && _rawJumpTriggered;
         
         /// <summary>Gets a value indicating whether the left arm (primary) action button is held.</summary>
-        public bool LeftArmPressed { get; private set; }
+        public bool LeftArmPressed => !IsInputBlocked && _rawLeftArmPressed;
         
         /// <summary>Gets a value indicating whether the right arm (secondary) action button is held.</summary>
-        public bool RightArmPressed { get; private set; }
+        public bool RightArmPressed => !IsInputBlocked && _rawRightArmPressed;
         
         /// <summary>
         /// True if both arm buttons are held simultaneously.
@@ -65,7 +78,7 @@ using UnityEngine.InputSystem;
         public void OnMove(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            MoveInput = context.ReadValue<Vector2>();
+            _rawMoveInput = context.ReadValue<Vector2>();
         }
 
         /// <summary>
@@ -76,7 +89,7 @@ using UnityEngine.InputSystem;
         public void OnLook(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            LookInput = context.ReadValue<Vector2>();
+            _rawLookInput = context.ReadValue<Vector2>();
         }
 
         /// <summary>
@@ -87,7 +100,7 @@ using UnityEngine.InputSystem;
         public void OnSprint(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            IsSprinting = context.ReadValueAsButton();
+            _rawIsSprinting = context.ReadValueAsButton();
         }
 
         /// <summary>
@@ -98,7 +111,7 @@ using UnityEngine.InputSystem;
         public void OnCrouch(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            IsCrouching = context.ReadValueAsButton();
+            _rawIsCrouching = context.ReadValueAsButton();
         }
 
         /// <summary>
@@ -109,7 +122,7 @@ using UnityEngine.InputSystem;
         public void OnJump(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            if (context.performed) JumpTriggered = true;
+            if (context.performed) _rawJumpTriggered = true;
         }
 
         /// <summary>
@@ -120,8 +133,8 @@ using UnityEngine.InputSystem;
         public void OnLeftArm(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            LeftArmPressed = context.ReadValueAsButton();
-            if (_showDebugLogs && LeftArmPressed) Debug.Log("[Input] Left Arm Pressed");
+            _rawLeftArmPressed = context.ReadValueAsButton();
+            if (_showDebugLogs && _rawLeftArmPressed) Debug.Log("[Input] Left Arm Pressed");
         }
 
         /// <summary>
@@ -132,8 +145,8 @@ using UnityEngine.InputSystem;
         public void OnRightArm(InputAction.CallbackContext context)
         {
             if (!_isInitialized) return;
-            RightArmPressed = context.ReadValueAsButton();
-            if (_showDebugLogs && RightArmPressed) Debug.Log("[Input] Right Arm Pressed");
+            _rawRightArmPressed = context.ReadValueAsButton();
+            if (_showDebugLogs && _rawRightArmPressed) Debug.Log("[Input] Right Arm Pressed");
         }
 
         /// <summary>
@@ -146,6 +159,6 @@ using UnityEngine.InputSystem;
             if (!_isInitialized) return;
             
             // Reset triggers at the end of the frame
-            JumpTriggered = false;
+            _rawJumpTriggered = false;
         }
     }

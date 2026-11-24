@@ -25796,6 +25796,7 @@ GameObject:
   - component: {fileID: 9182736451234567890}
   - component: {fileID: 9182736451234567891}
   - component: {fileID: 3129280436285379685}
+  - component: {fileID: 2454884683626434803}
   m_Layer: 7
   m_Name: Player_V2
   m_TagString: Player
@@ -26296,7 +26297,8 @@ MonoBehaviour:
   ReachLengthFactor: 3
   ForwardOffset: 0
   VerticalOffset: 0.1
-  HandRotationOffset: {x: 0, y: 0, z: 0}
+  LeftHandRotationOffset: {x: 0, y: 90, z: 0}
+  RightHandRotationOffset: {x: 0, y: -90, z: 0}
   ShoulderRotateDuration: 0.5
   ShoulderEase: 27
   RetractedSegmentsOffset: 1
@@ -26310,8 +26312,8 @@ MonoBehaviour:
   ShoulderRestDamping: 40
   ElbowWristExtendSpringForce: 1500
   ElbowWristExtendDamping: 20
-  ElbowWristRestSpringForce: 150
-  ElbowWristRestDamping: 15
+  ElbowWristRestSpringForce: 350
+  ElbowWristRestDamping: 25
   ArmAngularDrag: 15
   FreeHangAtRest: 1
 --- !u!114 &1880859776367098239
@@ -26733,6 +26735,21 @@ MonoBehaviour:
   _impactMinPerLoss: 0.04
   _impactDecay: 2.2
   _healFlashDecay: 1.8
+--- !u!114 &2454884683626434803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7637031514935271185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2c5f7f00097d0f439b735b14997dae2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerV2_FearEffects
+  FearVignetteIntensity: 0.4
+  FearVignetteColor: {r: 0.6, g: 0, b: 0, a: 1}
+  TransitionSpeed: 5
 --- !u!1 &7751720572721550308
 GameObject:
   m_ObjectHideFlags: 0
